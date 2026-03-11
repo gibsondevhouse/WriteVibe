@@ -1,0 +1,578 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		F94B67BD2F60FDAD0061B8D9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F94B67A52F60FDAC0061B8D9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F94B67AC2F60FDAC0061B8D9;
+			remoteInfo = WriteVibe;
+		};
+		F94B67C72F60FDAD0061B8D9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F94B67A52F60FDAC0061B8D9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F94B67AC2F60FDAC0061B8D9;
+			remoteInfo = WriteVibe;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F94B67AD2F60FDAC0061B8D9 /* WriteVibe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WriteVibe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F94B67BC2F60FDAD0061B8D9 /* WriteVibeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WriteVibeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F94B67C62F60FDAD0061B8D9 /* WriteVibeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WriteVibeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F94B67AF2F60FDAC0061B8D9 /* WriteVibe */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WriteVibe;
+			sourceTree = "<group>";
+		};
+		F94B67BF2F60FDAD0061B8D9 /* WriteVibeTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WriteVibeTests;
+			sourceTree = "<group>";
+		};
+		F94B67C92F60FDAD0061B8D9 /* WriteVibeUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WriteVibeUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F94B67AA2F60FDAC0061B8D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F94B67B92F60FDAD0061B8D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F94B67C32F60FDAD0061B8D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F94B67A42F60FDAC0061B8D9 = {
+			isa = PBXGroup;
+			children = (
+				F94B67AF2F60FDAC0061B8D9 /* WriteVibe */,
+				F94B67BF2F60FDAD0061B8D9 /* WriteVibeTests */,
+				F94B67C92F60FDAD0061B8D9 /* WriteVibeUITests */,
+				F94B67AE2F60FDAC0061B8D9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F94B67AE2F60FDAC0061B8D9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F94B67AD2F60FDAC0061B8D9 /* WriteVibe.app */,
+				F94B67BC2F60FDAD0061B8D9 /* WriteVibeTests.xctest */,
+				F94B67C62F60FDAD0061B8D9 /* WriteVibeUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F94B67AC2F60FDAC0061B8D9 /* WriteVibe */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F94B67D02F60FDAD0061B8D9 /* Build configuration list for PBXNativeTarget "WriteVibe" */;
+			buildPhases = (
+				F94B67A92F60FDAC0061B8D9 /* Sources */,
+				F94B67AA2F60FDAC0061B8D9 /* Frameworks */,
+				F94B67AB2F60FDAC0061B8D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F94B67AF2F60FDAC0061B8D9 /* WriteVibe */,
+			);
+			name = WriteVibe;
+			packageProductDependencies = (
+			);
+			productName = WriteVibe;
+			productReference = F94B67AD2F60FDAC0061B8D9 /* WriteVibe.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F94B67BB2F60FDAD0061B8D9 /* WriteVibeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F94B67D32F60FDAD0061B8D9 /* Build configuration list for PBXNativeTarget "WriteVibeTests" */;
+			buildPhases = (
+				F94B67B82F60FDAD0061B8D9 /* Sources */,
+				F94B67B92F60FDAD0061B8D9 /* Frameworks */,
+				F94B67BA2F60FDAD0061B8D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F94B67BE2F60FDAD0061B8D9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F94B67BF2F60FDAD0061B8D9 /* WriteVibeTests */,
+			);
+			name = WriteVibeTests;
+			packageProductDependencies = (
+			);
+			productName = WriteVibeTests;
+			productReference = F94B67BC2F60FDAD0061B8D9 /* WriteVibeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F94B67C52F60FDAD0061B8D9 /* WriteVibeUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F94B67D62F60FDAD0061B8D9 /* Build configuration list for PBXNativeTarget "WriteVibeUITests" */;
+			buildPhases = (
+				F94B67C22F60FDAD0061B8D9 /* Sources */,
+				F94B67C32F60FDAD0061B8D9 /* Frameworks */,
+				F94B67C42F60FDAD0061B8D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F94B67C82F60FDAD0061B8D9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F94B67C92F60FDAD0061B8D9 /* WriteVibeUITests */,
+			);
+			name = WriteVibeUITests;
+			packageProductDependencies = (
+			);
+			productName = WriteVibeUITests;
+			productReference = F94B67C62F60FDAD0061B8D9 /* WriteVibeUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F94B67A52F60FDAC0061B8D9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					F94B67AC2F60FDAC0061B8D9 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					F94B67BB2F60FDAD0061B8D9 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = F94B67AC2F60FDAC0061B8D9;
+					};
+					F94B67C52F60FDAD0061B8D9 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = F94B67AC2F60FDAC0061B8D9;
+					};
+				};
+			};
+			buildConfigurationList = F94B67A82F60FDAC0061B8D9 /* Build configuration list for PBXProject "WriteVibe" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F94B67A42F60FDAC0061B8D9;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F94B67AE2F60FDAC0061B8D9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F94B67AC2F60FDAC0061B8D9 /* WriteVibe */,
+				F94B67BB2F60FDAD0061B8D9 /* WriteVibeTests */,
+				F94B67C52F60FDAD0061B8D9 /* WriteVibeUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F94B67AB2F60FDAC0061B8D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F94B67BA2F60FDAD0061B8D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F94B67C42F60FDAD0061B8D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F94B67A92F60FDAC0061B8D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F94B67B82F60FDAD0061B8D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F94B67C22F60FDAD0061B8D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F94B67BE2F60FDAD0061B8D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F94B67AC2F60FDAC0061B8D9 /* WriteVibe */;
+			targetProxy = F94B67BD2F60FDAD0061B8D9 /* PBXContainerItemProxy */;
+		};
+		F94B67C82F60FDAD0061B8D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F94B67AC2F60FDAC0061B8D9 /* WriteVibe */;
+			targetProxy = F94B67C72F60FDAD0061B8D9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F94B67CE2F60FDAD0061B8D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F94B67CF2F60FDAD0061B8D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		F94B67D12F60FDAD0061B8D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrisg.WriteVibe;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F94B67D22F60FDAD0061B8D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrisg.WriteVibe;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F94B67D42F60FDAD0061B8D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrisg.WriteVibeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WriteVibe.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WriteVibe";
+			};
+			name = Debug;
+		};
+		F94B67D52F60FDAD0061B8D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrisg.WriteVibeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WriteVibe.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WriteVibe";
+			};
+			name = Release;
+		};
+		F94B67D72F60FDAD0061B8D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrisg.WriteVibeUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = WriteVibe;
+			};
+			name = Debug;
+		};
+		F94B67D82F60FDAD0061B8D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8S52QHFQL7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrisg.WriteVibeUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = WriteVibe;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F94B67A82F60FDAC0061B8D9 /* Build configuration list for PBXProject "WriteVibe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F94B67CE2F60FDAD0061B8D9 /* Debug */,
+				F94B67CF2F60FDAD0061B8D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F94B67D02F60FDAD0061B8D9 /* Build configuration list for PBXNativeTarget "WriteVibe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F94B67D12F60FDAD0061B8D9 /* Debug */,
+				F94B67D22F60FDAD0061B8D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F94B67D32F60FDAD0061B8D9 /* Build configuration list for PBXNativeTarget "WriteVibeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F94B67D42F60FDAD0061B8D9 /* Debug */,
+				F94B67D52F60FDAD0061B8D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F94B67D62F60FDAD0061B8D9 /* Build configuration list for PBXNativeTarget "WriteVibeUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F94B67D72F60FDAD0061B8D9 /* Debug */,
+				F94B67D82F60FDAD0061B8D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F94B67A52F60FDAC0061B8D9 /* Project object */;
+}
