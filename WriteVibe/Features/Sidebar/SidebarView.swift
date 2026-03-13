@@ -64,8 +64,21 @@ struct SidebarView: View {
 
                 Section {
                     if libraryExpanded {
+                        Button {
+                            appState.selectedId = nil
+                            appState.destination = .articles
+                        } label: {
+                            Label("Articles", systemImage: "newspaper")
+                                .foregroundStyle(appState.destination == .articles ? Color.accentColor : .primary)
+                                .fontWeight(appState.destination == .articles ? .semibold : .regular)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(
+                            appState.destination == .articles
+                                ? Color.accentColor.opacity(0.1)
+                                : Color.clear
+                        )
                         Label("Emails",    systemImage: "envelope.open")
-                        Label("Articles",  systemImage: "newspaper")
                         Label("Stories",   systemImage: "book.closed")
                         Label("Essays",    systemImage: "doc.text")
                         Label("Poetry",    systemImage: "text.quote")
@@ -79,7 +92,7 @@ struct SidebarView: View {
                 }
             }
 
-            // Area B — time-grouped thread sections
+            // Area B — time-grouped thread sections (only shown in chat destination)
             ForEach(sections, id: \.label) { section in
                 let isExpanded = expandedSections.contains(section.label)
                 Section {
@@ -113,6 +126,7 @@ struct SidebarView: View {
                 Button {
                     appState.pendingPrompt = nil
                     appState.selectedId = nil
+                    appState.destination = .chat
                 } label: {
                     Label("New Thread", systemImage: "square.and.pencil")
                 }

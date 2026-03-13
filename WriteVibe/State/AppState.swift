@@ -8,6 +8,13 @@ import SwiftData
 
 // MARK: - AppState
 
+// MARK: - AppDestination
+
+enum AppDestination: Equatable {
+    case chat          // default — shows WelcomeView / ChatView keyed by selectedId
+    case articles      // Articles library dashboard
+}
+
 @MainActor
 @Observable
 final class AppState {
@@ -15,6 +22,35 @@ final class AppState {
     var thinkingId: UUID?             = nil
     var availableOllamaModels: [OllamaModel] = []
     var pendingPrompt: String? = nil
+    var destination: AppDestination   = .chat
+
+    // Copilot panel
+    var isCopilotOpen: Bool = false
+    var copilotConversationId: UUID? = nil
+
+    var copilotConversation: Conversation? {
+        guard let copilotConversationId, let modelContext else { return nil }
+        let descriptor = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == copilotConversationId })
+        return try? modelContext.fetch(descriptor).first
+    }
+
+    var isThinkingInCopilot: Bool {
+        thinkingId != nil && thinkingId == copilotConversationId
+    }
+
+    func openCopilot() {
+        if copilotConversationId == nil {
+            newCopilotConversation()
+        }
+        isCopilotOpen = true
+    }
+
+    func newCopilotConversation() {
+        let conv = Conversation(model: defaultModel)
+        if defaultModel == .ollama { conv.ollamaModelName = defaultOllamaModelName }
+        modelContext?.insert(conv)
+        copilotConversationId = conv.id
+    }
 
     /// Default model applied to every new conversation. Persisted across launches.
     var defaultModel: AIModel = {

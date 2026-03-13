@@ -30,7 +30,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F94B67E12F60FDAD0061B8D9 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		F94B67E12F60FDAD0061B8D9 /* Exceptions for "WriteVibe" folder in "WriteVibe" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -43,7 +43,7 @@
 		F94B67AF2F60FDAC0061B8D9 /* WriteVibe */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F94B67E12F60FDAD0061B8D9 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				F94B67E12F60FDAD0061B8D9 /* Exceptions for "WriteVibe" folder in "WriteVibe" target */,
 			);
 			path = WriteVibe;
 			sourceTree = "<group>";

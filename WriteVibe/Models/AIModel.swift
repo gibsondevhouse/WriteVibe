@@ -148,4 +148,22 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
         case .ollama:             return nil
         }
     }
+
+    var displayName: String {
+        switch self {
+        case .ollama:             return "Ollama"
+        case .claudeHaiku:        return "Claude Haiku"
+        case .claudeSonnet:       return "Claude Sonnet"
+        case .claudeOpus:         return "Claude Opus"
+        case .gpt4oMini:          return "GPT-4o Mini"
+        case .gpt4o:              return "GPT-4o"
+        case .o3Mini:             return "o3 Mini"
+        case .geminiFlash:        return "Gemini Flash"
+        case .geminiPro:          return "Gemini Pro"
+        case .perplexitySonar:    return "Sonar"
+        case .perplexitySonarPro: return "Sonar Pro"
+        case .deepSeekR1:         return "DeepSeek R1"
+        case .deepSeekV3:         return "DeepSeek V3"
+        }
+    }
 }
