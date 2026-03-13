@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Xcode — user-specific state (never share these)
+xcuserdata/
+*.xcuserstate
+
+# Xcode — derived build output
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager caches
+.build/
+.swiftpm/
+
+# Xcode SPM workspace config (machine-local, auto-regenerated)
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/

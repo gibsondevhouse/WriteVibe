@@ -2,17 +2,11 @@
 //  Item.swift
 //  WriteVibe
 //
-//  Created by Christopher Gibson on 3/10/26.
-//
 
 import Foundation
 import SwiftData
 
-@Model
-final class Item {
-    var timestamp: Date
-    
-    init(timestamp: Date) {
-        self.timestamp = timestamp
-    }
-}
+// This file previously duplicated core models (AIModel, Message, Conversation, etc.).
+// Those types now live in dedicated files under Models/ and Resources/.
+// Keeping this file as a placeholder to preserve project references.
+
