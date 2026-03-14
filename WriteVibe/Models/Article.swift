@@ -73,6 +73,10 @@ final class Article: Identifiable {
     var subtitle: String
     var seriesName: String?       // optional group label
     var topic: String
+    var audience: String
+    var quickNotes: String
+    var outline: String
+    var summary: String
     var tone: ArticleTone
     var targetLength: ArticleLength
     var publishStatus: PublishStatus
@@ -80,6 +84,7 @@ final class Article: Identifiable {
     var updatedAt: Date
 
     @Relationship(deleteRule: .cascade) var blocks: [ArticleBlock] = []
+    @Relationship(deleteRule: .cascade) var drafts: [ArticleDraft] = []
 
     init(
         title: String = "Untitled Article",
@@ -92,6 +97,10 @@ final class Article: Identifiable {
         self.title         = title
         self.subtitle      = subtitle
         self.topic         = topic
+        self.audience      = ""
+        self.quickNotes    = ""
+        self.outline       = ""
+        self.summary       = ""
         self.tone          = tone
         self.targetLength  = targetLength
         self.publishStatus = .draft
@@ -101,11 +110,14 @@ final class Article: Identifiable {
 
     /// Approximate word count derived from all block plaintext
     var wordCount: Int {
-        blocks
-            .sorted { $0.position < $1.position }
+        sortedBlocks
             .map { $0.plainText }
             .joined(separator: " ")
             .split { $0.isWhitespace }
             .count
+    }
+
+    var sortedBlocks: [ArticleBlock] {
+        blocks.sorted { $0.position < $1.position }
     }
 }

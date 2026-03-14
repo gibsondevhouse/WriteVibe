@@ -14,15 +14,6 @@ struct WelcomeView: View {
     @State private var inputText = ""
     @FocusState private var inputFocused: Bool
 
-    private let writingModes: [(icon: String, label: String, description: String, prompt: String)] = [
-        ("doc.text",       "Essay",   "Write a well-structured essay",       "Write a well-structured essay about "),
-        ("book.closed",    "Story",   "Write a compelling short story",      "Write a compelling short story about "),
-        ("newspaper",      "Article", "Write an engaging article",           "Write an engaging article about "),
-        ("envelope",       "Email",   "Write a professional email",          "Write a professional email that "),
-        ("wand.and.stars", "Edit",    "Polish or reshape existing text",    "Please review and improve the following text: "),
-        ("list.bullet",    "Outline", "Structure your thinking",             "Create a detailed outline for "),
-    ]
-
     var body: some View {
         @Bindable var state = appState
         VStack(spacing: 0) {
@@ -68,7 +59,7 @@ struct WelcomeView: View {
                     columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
                     spacing: 8
                 ) {
-                    ForEach(writingModes, id: \.label) { mode in
+                    ForEach(WritingMode.all) { mode in
                         WritingModeCard(
                             icon: mode.icon,
                             label: mode.label,

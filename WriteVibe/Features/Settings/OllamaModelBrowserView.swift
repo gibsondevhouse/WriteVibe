@@ -223,25 +223,22 @@ struct OllamaModelBrowserView: View {
         downloadProgress[modelName] = 0.0
         downloadStatus[modelName] = "Starting download…"
 
-        OllamaService.pullModel(
-            modelName: modelName,
-            onProgress: { progress in
-                downloadProgress[modelName] = progress.fraction
-                downloadStatus[modelName] = progress.status.capitalized
-            },
-            onComplete: {
+        Task {
+            do {
+                let stream = OllamaService.pullModel(modelName: modelName)
+                for try await progress in stream {
+                    downloadProgress[modelName] = progress.fraction
+                    downloadStatus[modelName] = progress.status.capitalized
+                }
                 downloadProgress.removeValue(forKey: modelName)
                 downloadStatus.removeValue(forKey: modelName)
-                Task { await refreshStatus() }
-            },
-            onError: { error in
+                await refreshStatus()
+            } catch {
                 downloadProgress.removeValue(forKey: modelName)
                 downloadStatus[modelName] = "Download failed"
-                Task {
-                    try? await Task.sleep(nanoseconds: 3_000_000_000)
-                    downloadStatus.removeValue(forKey: modelName)
-                }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                downloadStatus.removeValue(forKey: modelName)
             }
-        )
+        }
     }
 }

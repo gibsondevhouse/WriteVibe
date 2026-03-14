@@ -23,7 +23,6 @@ struct BlockRowView: View {
     let onDeleteEmpty: () -> Void
 
     @FocusState private var isFocused: Bool
-    @State private var hoveredSpanID: UUID? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

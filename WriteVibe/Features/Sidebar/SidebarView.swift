@@ -5,7 +5,6 @@
 
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 // MARK: - SidebarView
 
@@ -25,9 +24,10 @@ struct SidebarView: View {
     private var sections: [(label: String, items: [Conversation])] {
         let now = Date()
         let cal = Calendar.current
+        let availableConversations = appState.mergedConversations(from: conversations)
         let list = searchQuery.isEmpty
-            ? conversations
-            : conversations.filter { $0.title.localizedCaseInsensitiveContains(searchQuery) }
+            ? availableConversations
+            : availableConversations.filter { $0.title.localizedCaseInsensitiveContains(searchQuery) }
 
         var today:     [Conversation] = []
         var yesterday: [Conversation] = []
@@ -50,6 +50,7 @@ struct SidebarView: View {
         List(selection: $state.selectedId) {
             // Area A — Top-level navigation
             if searchQuery.isEmpty {
+                // TODO: Implement — Apps section items are non-interactive placeholders
                 Section {
                     if appsExpanded {
                         Label("Images",     systemImage: "photo.on.rectangle.angled")
@@ -94,6 +95,22 @@ struct SidebarView: View {
             }
 
             // Area B — time-grouped thread sections (only shown in chat destination)
+            if sections.isEmpty {
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(searchQuery.isEmpty ? "No chats yet" : "No matches")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Text(searchQuery.isEmpty
+                             ? "Start a new thread to see it here."
+                             : "Try a different search term.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 6)
+                }
+            }
+
             ForEach(sections, id: \.label) { section in
                 let isExpanded = expandedSections.contains(section.label)
                 Section {
@@ -194,10 +211,11 @@ struct SidebarView: View {
 
                 Menu {
                     Button {
-                        guard let id = appState.selectedId else { return }
-                        if let content = appState.exportLastAssistantMessage(from: id) {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(content, forType: .string)
+                        guard let id = appState.selectedId,
+                              let conv = appState.fetchConversation(id)
+                        else { return }
+                        if let content = ExportService.lastAssistantMessage(from: conv) {
+                            ExportService.copyToClipboard(content)
                             toastMessage = "Copied to clipboard"
                             withAnimation { showExportToast = true }
                         } else {
@@ -212,22 +230,13 @@ struct SidebarView: View {
                         guard let id = appState.selectedId,
                               let conv = appState.fetchConversation(id)
                         else { return }
-                        
-                        let markdown = appState.buildMarkdownExport(for: id)
-                        let panel = NSSavePanel()
-                        panel.allowedContentTypes = [.plainText]
-                        panel.nameFieldStringValue = "\(conv.title).md"
-                        
-                        if panel.runModal() == .OK, let url = panel.url {
-                            do {
-                                try markdown.write(to: url, atomically: true, encoding: .utf8)
-                                toastMessage = "Saved to file"
-                                withAnimation { showExportToast = true }
-                            } catch {
-                                toastMessage = "Failed to save"
-                                withAnimation { showExportToast = true }
-                            }
+                        let markdown = ExportService.buildMarkdownExport(for: conv)
+                        if ExportService.saveAsMarkdown(content: markdown, suggestedName: "\(conv.title).md") {
+                            toastMessage = "Saved to file"
+                        } else {
+                            toastMessage = "Failed to save"
                         }
+                        withAnimation { showExportToast = true }
                     } label: {
                         Label("Save as Markdown...", systemImage: "doc.text")
                     }

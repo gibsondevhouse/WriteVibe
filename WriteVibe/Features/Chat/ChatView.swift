@@ -5,7 +5,6 @@
 
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 // MARK: - ChatView
 
@@ -45,10 +44,9 @@ struct ChatView: View {
 
                 Menu {
                     Button {
-                        guard let id = appState.selectedId else { return }
-                        if let content = appState.exportLastAssistantMessage(from: id) {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(content, forType: .string)
+                        guard let conv = conversation else { return }
+                        if let content = ExportService.lastAssistantMessage(from: conv) {
+                            ExportService.copyToClipboard(content)
                             toastMessage = "Copied to clipboard"
                             withAnimation { showExportToast = true }
                         } else {
@@ -60,25 +58,14 @@ struct ChatView: View {
                     }
                     
                     Button {
-                        guard let id = appState.selectedId,
-                              let conv = appState.fetchConversation(id)
-                        else { return }
-                        
-                        let markdown = appState.buildMarkdownExport(for: id)
-                        let panel = NSSavePanel()
-                        panel.allowedContentTypes = [.plainText]
-                        panel.nameFieldStringValue = "\(conv.title).md"
-                        
-                        if panel.runModal() == .OK, let url = panel.url {
-                            do {
-                                try markdown.write(to: url, atomically: true, encoding: .utf8)
-                                toastMessage = "Saved to file"
-                                withAnimation { showExportToast = true }
-                            } catch {
-                                toastMessage = "Failed to save"
-                                withAnimation { showExportToast = true }
-                            }
+                        guard let conv = conversation else { return }
+                        let markdown = ExportService.buildMarkdownExport(for: conv)
+                        if ExportService.saveAsMarkdown(content: markdown, suggestedName: "\(conv.title).md") {
+                            toastMessage = "Saved to file"
+                        } else {
+                            toastMessage = "Failed to save"
                         }
+                        withAnimation { showExportToast = true }
                     } label: {
                         Label("Save as Markdown...", systemImage: "doc.text")
                     }
@@ -203,18 +190,10 @@ struct ChatView: View {
 
     // MARK: - Writing Actions
 
-    private let writingActions: [(icon: String, label: String, prompt: String)] = [
-        ("wand.and.stars",                     "Improve",  "Improve and polish that. Show only the improved version."),
-        ("arrow.up.left.and.arrow.down.right", "Expand",   "Expand on that with more detail and depth."),
-        ("arrow.down.right.and.arrow.up.left", "Shorten",  "Make that more concise while keeping every key point."),
-        ("theatermasks.fill",                  "Rephrase", "Rephrase that with a fresh angle and different wording."),
-        ("text.append",                        "Continue", "Continue writing from where you left off."),
-    ]
-
     private var writingActionsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
-                ForEach(writingActions, id: \.label) { action in
+                ForEach(WritingAction.all) { action in
                     Button {
                         guard let id = appState.selectedId else { return }
                         appState.send(action.prompt, in: id)

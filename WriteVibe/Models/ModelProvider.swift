@@ -33,17 +33,9 @@ enum ModelProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Static catalog of models belonging to this provider.
-    /// The Local provider's Ollama model list is dynamic at runtime and handled separately in the picker.
+    /// Models belonging to this provider, derived from `AIModel.provider`.
     var models: [AIModel] {
-        switch self {
-        case .local:      return [.ollama]
-        case .anthropic:  return [.claudeHaiku, .claudeSonnet, .claudeOpus]
-        case .openai:     return [.gpt4oMini, .gpt4o, .o3Mini]
-        case .google:     return [.geminiFlash, .geminiPro]
-        case .perplexity: return [.perplexitySonar, .perplexitySonarPro]
-        case .deepseek:   return [.deepSeekR1, .deepSeekV3]
-        }
+        AIModel.allCases.filter { $0.provider == self }
     }
 }
 

@@ -14,162 +14,16 @@ struct MarkdownMessageText: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(parsedBlocks.enumerated()), id: \.offset) { _, block in
+            ForEach(Array(MarkdownParser.parse(content: content, isStreaming: isStreaming).enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
         }
     }
 
-    // MARK: Block model
-
-    private enum Block {
-        case h1(String), h2(String), h3(String), h4(String)
-        case bullets([String])
-        case numbered([String])
-        // lang is the optional fence info string (e.g. "swift", "bash")
-        case code(lang: String, src: String)
-        case rule
-        case blockquote([String])
-        // headers + rows (each row is an array of cell strings)
-        case table(headers: [String], rows: [[String]])
-        case body(String)
-    }
-
-    // MARK: Parser
-
-    private var parsedBlocks: [Block] {
-        let allLines = content.components(separatedBy: "\n")
-
-        // During streaming the last "line" may be a partial token run (no trailing \n yet).
-        // Never classify it as a heading/rule so its type can't thrash mid-token.
-        let committed: [String]
-        let partial: String?
-        if isStreaming && !content.hasSuffix("\n") {
-            committed = Array(allLines.dropLast())
-            partial   = allLines.last.flatMap { $0.isEmpty ? nil : $0 }
-        } else {
-            committed = allLines
-            partial   = nil
-        }
-
-        var result:           [Block]    = []
-        var pendingBullets:   [String]   = []
-        var pendingNumbered:  [String]   = []
-        var pendingBody:      [String]   = []
-        var pendingQuote:     [String]   = []
-        var pendingTableRows: [[String]] = [] // first entry is headers
-        var inCode                       = false
-        var codeLang:         String     = ""
-        var codeLines:        [String]   = []
-
-        func flushBullets()  { if !pendingBullets.isEmpty  { result.append(.bullets(pendingBullets));  pendingBullets  = [] } }
-        func flushNumbered() { if !pendingNumbered.isEmpty { result.append(.numbered(pendingNumbered)); pendingNumbered = [] } }
-        func flushBody()     { if !pendingBody.isEmpty     { result.append(.body(pendingBody.joined(separator: "\n"))); pendingBody = [] } }
-        func flushQuote()    { if !pendingQuote.isEmpty    { result.append(.blockquote(pendingQuote)); pendingQuote = [] } }
-        func flushTable() {
-            guard pendingTableRows.count >= 2 else {
-                // Not enough rows for a real table — drop it into body as-is
-                for r in pendingTableRows { pendingBody.append(r.joined(separator: " | ")) }
-                pendingTableRows = []; return
-            }
-            let headers = pendingTableRows[0]
-            // Row index 1 is the separator (---|---) — skip it
-            let rows = Array(pendingTableRows.dropFirst(2))
-            result.append(.table(headers: headers, rows: rows))
-            pendingTableRows = []
-        }
-        func flushAll() { flushBullets(); flushNumbered(); flushQuote(); flushTable(); flushBody() }
-
-        func parseTableRow(_ line: String) -> [String] {
-            var s = line.trimmingCharacters(in: .whitespaces)
-            if s.hasPrefix("|") { s = String(s.dropFirst()) }
-            if s.hasSuffix("|") { s = String(s.dropLast()) }
-            return s.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
-        }
-
-        for line in committed {
-            if inCode {
-                // A closing fence is exactly ``` with nothing (or only whitespace) after it.
-                // Lines like ```python or ```swift inside a block are content, not closers.
-                let isFenceClose = line.trimmingCharacters(in: .whitespaces) == "```"
-                if isFenceClose {
-                    inCode = false
-                    result.append(.code(lang: codeLang, src: codeLines.joined(separator: "\n")))
-                    codeLines = []; codeLang = ""
-                } else {
-                    codeLines.append(line)
-                }
-                continue
-            }
-
-            if line.hasPrefix("```") {
-                flushAll()
-                codeLang = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-                inCode = true
-                continue
-            }
-
-            // Horizontal rule: ---, ***, ===  (3+ identical chars, optional spaces)
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            let isRule = trimmed.count >= 3
-                && (trimmed.allSatisfy { $0 == "-" }
-                    || trimmed.allSatisfy { $0 == "*" }
-                    || trimmed.allSatisfy { $0 == "=" })
-            if isRule { flushAll(); result.append(.rule); continue }
-
-            // Blockquote: lines starting with "> "
-            if line.hasPrefix("> ") || line == ">" {
-                flushBullets(); flushNumbered(); flushTable(); flushBody()
-                pendingQuote.append(line.hasPrefix("> ") ? String(line.dropFirst(2)) : "")
-                continue
-            } else {
-                flushQuote()
-            }
-
-            // Table: lines containing | (and not already a heading/list)
-            let isTableRow = trimmed.hasPrefix("|") || (trimmed.contains("|") && !trimmed.hasPrefix("#") && !trimmed.hasPrefix("-") && !trimmed.hasPrefix("*"))
-            if isTableRow {
-                flushBullets(); flushNumbered(); flushBody()
-                // Separator row (e.g. |---|---|) — keep as a marker row so flushTable can skip it
-                pendingTableRows.append(parseTableRow(line))
-                continue
-            } else {
-                flushTable()
-            }
-
-            if line.hasPrefix("#### ") {
-                flushAll(); result.append(.h4(String(line.dropFirst(5))))
-            } else if line.hasPrefix("### ") {
-                flushAll(); result.append(.h3(String(line.dropFirst(4))))
-            } else if line.hasPrefix("## ") {
-                flushAll(); result.append(.h2(String(line.dropFirst(3))))
-            } else if line.hasPrefix("# ") {
-                flushAll(); result.append(.h1(String(line.dropFirst(2))))
-            } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
-                flushNumbered(); flushBody()
-                pendingBullets.append(String(line.dropFirst(2)))
-            } else if line.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil {
-                flushBullets(); flushBody()
-                pendingNumbered.append(line.replacingOccurrences(of: #"^\d+\.\s+"#, with: "", options: .regularExpression))
-            } else if trimmed.isEmpty {
-                flushAll()
-            } else {
-                flushBullets(); flushNumbered()
-                pendingBody.append(line)
-            }
-        }
-
-        flushAll()
-        // Unclosed fence at stream end — render what we have
-        if inCode && !codeLines.isEmpty { result.append(.code(lang: codeLang, src: codeLines.joined(separator: "\n"))) }
-        if let p = partial { result.append(.body(p)) }
-        return result
-    }
-
     // MARK: Rendering
 
     @ViewBuilder
-    private func blockView(_ block: Block) -> some View {
+    private func blockView(_ block: MarkdownBlock) -> some View {
         switch block {
         case .h1(let s):
             inlineText(s, 20, .bold)

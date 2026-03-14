@@ -137,6 +137,7 @@ struct ChatInputBar: View {
     }
 
     // MARK: - Capability Chips
+    // TODO: Implement — these are placeholder-only chips with no action handlers
 
     private var capabilityChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {

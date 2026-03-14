@@ -5,69 +5,73 @@
 
 import Foundation
 
-enum AnthropicError: Error {
-    case missingAPIKey
-    case httpError(Int)
-    case decodingFailed
-}
-
 @MainActor
-enum AnthropicService {
+struct AnthropicService: AIStreamingProvider {
     static let apiBase = URL(string: "https://api.anthropic.com/v1/messages")!
 
-    static func stream(
-        messages: [[String: String]],
+    nonisolated func stream(
         model: String,
-        systemPrompt: String,
-        onToken: @MainActor @escaping (String) -> Void
-    ) async throws {
-        guard let apiKey = KeychainService.load(key: "anthropic_api_key") else {
-            throw AnthropicError.missingAPIKey
-        }
+        messages: [[String: String]],
+        systemPrompt: String
+    ) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task { @MainActor in
+                do {
+                    guard let apiKey = KeychainService.load(key: "anthropic_api_key") else {
+                        throw WriteVibeError.missingAPIKey(provider: "Anthropic")
+                    }
 
-        var request = URLRequest(url: apiBase)
-        request.httpMethod = "POST"
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    var request = URLRequest(url: Self.apiBase)
+                    request.httpMethod = "POST"
+                    request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+                    request.setValue(AppConstants.anthropicAPIVersion, forHTTPHeaderField: "anthropic-version")
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = [
-            "model": model,
-            "max_tokens": 2048,
-            "stream": true,
-            "system": systemPrompt,
-            "messages": messages
-        ]
+                    let body: [String: Any] = [
+                        "model": model,
+                        "max_tokens": AppConstants.maxOutputTokens,
+                        "stream": true,
+                        "system": systemPrompt,
+                        "messages": messages
+                    ]
 
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+                    request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (result, response) = try await URLSession.shared.bytes(for: request)
+                    let (result, response) = try await URLSession.shared.bytes(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AnthropicError.decodingFailed
-        }
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw WriteVibeError.decodingFailed(context: "Invalid response from Anthropic")
+                    }
 
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw AnthropicError.httpError(httpResponse.statusCode)
-        }
+                    guard (200...299).contains(httpResponse.statusCode) else {
+                        throw WriteVibeError.apiError(provider: "Anthropic", statusCode: httpResponse.statusCode, message: nil)
+                    }
 
-        for try await line in result.lines {
-            guard line.hasPrefix("data: ") else { continue }
-            let dataString = String(line.dropFirst(6))
-            if dataString == "[DONE]" { break }
+                    for try await line in result.lines {
+                        try Task.checkCancellation()
 
-            guard let data = dataString.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            else { continue }
+                        guard line.hasPrefix("data: ") else { continue }
+                        let dataString = String(line.dropFirst(6))
+                        if dataString == "[DONE]" { break }
 
-            if let type = json["type"] as? String {
-                if type == "message_stop" { break }
-                if type == "content_block_delta",
-                   let delta = json["delta"] as? [String: Any],
-                   let deltaType = delta["type"] as? String,
-                   deltaType == "text_delta",
-                   let text = delta["text"] as? String {
-                    onToken(text)
+                        guard let data = dataString.data(using: .utf8),
+                              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                        else { continue }
+
+                        if let type = json["type"] as? String {
+                            if type == "message_stop" { break }
+                            if type == "content_block_delta",
+                               let delta = json["delta"] as? [String: Any],
+                               let deltaType = delta["type"] as? String,
+                               deltaType == "text_delta",
+                               let text = delta["text"] as? String {
+                                continuation.yield(text)
+                            }
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
                 }
             }
         }

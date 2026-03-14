@@ -46,18 +46,22 @@ enum ArticleAIService {
     /// Parses the JSON response into `ProposedEdits` with structured operations.
     static func proposeEdits(
         blocks: [ArticleBlock],
-        modelID: String
+        modelID: String,
+        provider: AIStreamingProvider? = nil
     ) async throws -> ProposedEdits {
+        let provider = provider ?? OpenRouterService()
         let articleJSON = buildArticleJSON(blocks: blocks)
         let userMessage = "Please edit this article:\n\n\(articleJSON)"
 
         var responseText = ""
-        try await OpenRouterService.stream(
-            modelID: modelID,
+        let stream = provider.stream(
+            model: modelID,
             messages: [["role": "user", "content": userMessage]],
-            systemPrompt: systemPrompt,
-            onToken: { token in responseText += token }
+            systemPrompt: systemPrompt
         )
+        for try await token in stream {
+            responseText += token
+        }
 
         return try parseProposedEdits(from: responseText, blocks: blocks)
     }

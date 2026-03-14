@@ -25,21 +25,7 @@ struct ConversationRow: View {
     }
 
     private var inferredModeIcon: (name: String, color: Color)? {
-        let lower = conversation.title.lowercased()
-        if lower.contains("essay") {
-            return ("doc.text", .blue)
-        } else if lower.contains("story") || lower.contains("fiction") {
-            return ("book.closed", .purple)
-        } else if lower.contains("article") || lower.contains("blog") {
-            return ("newspaper", .orange)
-        } else if lower.contains("email") || lower.contains("mail") {
-            return ("envelope", .green)
-        } else if lower.contains("brainstorm") || lower.contains("idea") {
-            return ("lightbulb", .yellow)
-        } else if lower.contains("edit") || lower.contains("improve") || lower.contains("rewrite") {
-            return ("wand.and.stars", .pink)
-        }
-        return nil
+        WritingMode.inferIcon(from: conversation.title)
     }
 
     private var modelLabel: String {

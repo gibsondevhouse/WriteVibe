@@ -84,10 +84,12 @@ struct MessageBubble: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
             }
 
+            // TODO: Implement — feedback collection is placeholder only
             MessageActionButton(symbol: "hand.thumbsup",   label: "Good response") { }
             MessageActionButton(symbol: "hand.thumbsdown", label: "Bad response")  { }
 
             if isLast {
+                // TODO: Implement — regenerate is placeholder only
                 MessageActionButton(symbol: "arrow.counterclockwise", label: "Regenerate") { }
             }
 
