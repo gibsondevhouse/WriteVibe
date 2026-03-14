@@ -443,23 +443,27 @@ struct ArticleWorkspaceView: View {
 
     private func importDocument() {
         Task { @MainActor in
-            guard let text = await DocumentIngestionService.pickAndExtract() else {
-                uploadStatusMessage = "No document imported."
-                return
-            }
+            do {
+                guard let text = try await DocumentIngestionService.pickAndExtract() else {
+                    uploadStatusMessage = "No document imported."
+                    return
+                }
 
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else {
-                uploadStatusMessage = "The selected document was empty."
-                return
-            }
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    uploadStatusMessage = "The selected document was empty."
+                    return
+                }
 
-            let prefix = article.quickNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? ""
-                : "\n\n---\n\n"
-            article.quickNotes += prefix + trimmed
-            article.updatedAt = Date()
-            uploadStatusMessage = "Document added to Quick Notes."
+                let prefix = article.quickNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? ""
+                    : "\n\n---\n\n"
+                article.quickNotes += prefix + trimmed
+                article.updatedAt = Date()
+                uploadStatusMessage = "Document added to Quick Notes."
+            } catch {
+                uploadStatusMessage = error.localizedDescription
+            }
         }
     }
 

@@ -46,7 +46,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     var subtitle: String {
         switch self {
         case .ollama:             return "Local · Private · Free"
-        case .appleIntelligence:  return "Legacy local model"
+        case .appleIntelligence:  return "Fast · On-device · Private"
         case .claudeHaiku:        return "Fast · Affordable"
         case .claudeSonnet:       return "Balanced · Capable"
         case .claudeOpus:         return "Most powerful"
@@ -66,7 +66,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     var tagline: String {
         switch self {
         case .ollama:             return "Your private, offline assistant"
-        case .appleIntelligence:  return "Legacy model retained for old chats"
+        case .appleIntelligence:  return "Apple's on-device foundation model"
         case .claudeHaiku:        return "Quick answers, low cost"
         case .claudeSonnet:       return "Strong writing and reasoning"
         case .claudeOpus:         return "Maximum depth and nuance"
@@ -88,7 +88,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
         case .ollama:
             return "Runs entirely on your Mac — no data ever leaves your device. Best for privacy-sensitive drafts, offline work, or experimenting without API costs."
         case .appleIntelligence:
-            return "Legacy model from older app versions. Existing chats keep loading; new chats should use Ollama or a cloud provider."
+            return "Leverages on-device Apple Intelligence for fast, private, and offline-capable generation. Optimized for everyday writing tasks like summarization and drafting."
         case .claudeHaiku:
             return "Anthropic's fastest, most affordable model. Ideal for short-form tasks: quick edits, email drafts, summarisation, and any flow where speed matters more than depth."
         case .claudeSonnet:

@@ -13,6 +13,8 @@ struct MessageBubble: View {
     let isStreaming: Bool
     let showAvatar: Bool
     let topPad:     CGFloat
+    var onFeedback: ((Message.Feedback) -> Void)? = nil
+    var onRegenerate: (() -> Void)? = nil
 
     @State private var isHovered = false
     @State private var copied    = false
@@ -84,13 +86,23 @@ struct MessageBubble: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
             }
 
-            // TODO: Implement — feedback collection is placeholder only
-            MessageActionButton(symbol: "hand.thumbsup",   label: "Good response") { }
-            MessageActionButton(symbol: "hand.thumbsdown", label: "Bad response")  { }
+            MessageActionButton(
+                symbol: message.feedback == .positive ? "hand.thumbsup.fill" : "hand.thumbsup",
+                label: "Good response"
+            ) {
+                onFeedback?(.positive)
+            }
+            MessageActionButton(
+                symbol: message.feedback == .negative ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                label: "Bad response"
+            ) {
+                onFeedback?(.negative)
+            }
 
             if isLast {
-                // TODO: Implement — regenerate is placeholder only
-                MessageActionButton(symbol: "arrow.counterclockwise", label: "Regenerate") { }
+                MessageActionButton(symbol: "arrow.counterclockwise", label: "Regenerate") {
+                    onRegenerate?()
+                }
             }
 
             Spacer()

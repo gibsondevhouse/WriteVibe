@@ -10,7 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var appState = AppState()
+    @Environment(AppState.self) private var appState
     @State private var columnVisibility = NavigationSplitViewVisibility.automatic
 
     var body: some View {
@@ -102,8 +102,10 @@ struct ContentView: View {
 // MARK: - Preview
 
 #Preview {
+    let services = ServiceContainer()
     WelcomeView()
-        .environment(AppState())
+        .environment(services)
+        .environment(AppState(services: services))
         .frame(width: 700, height: 560)
 }
 

@@ -96,7 +96,7 @@ struct WelcomeView: View {
             ToolbarItem(placement: .navigation) {
                 ModelPickerTrigger(
                     model: $state.defaultModel,
-                    ollamaModelName: $state.defaultOllamaModelName,
+                    modelIdentifier: $state.defaultModelIdentifier,
                     availableOllamaModels: state.availableOllamaModels
                 )
             }
@@ -118,7 +118,9 @@ struct WelcomeView: View {
 // MARK: - Preview
 
 #Preview {
+    let services = ServiceContainer()
     WelcomeView()
-        .environment(AppState())
+        .environment(services)
+        .environment(AppState(services: services))
         .frame(width: 720, height: 600)
 }

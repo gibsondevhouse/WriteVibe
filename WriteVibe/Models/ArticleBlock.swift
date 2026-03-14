@@ -50,22 +50,81 @@ final class ArticleBlock: Identifiable {
     var id: UUID
     // position controls display order; gaps allowed for easy reordering
     var position: Int
-    var typeRaw: Data          // BlockType encoded as JSON
+    var typeTag: String
+    var typeMetadata: String?
+    @Attribute(originalName: "typeRaw") private var legacyTypeRaw: Data?
     var content: String        // plain UTF-8 text for all text-bearing blocks
 
     init(type: BlockType, content: String = "", position: Int = 0) {
+        let storage = Self.storage(from: type)
         self.id       = UUID()
         self.position = position
+        self.typeTag = storage.tag
+        self.typeMetadata = storage.metadata
+        self.legacyTypeRaw = nil
         self.content  = content
-        self.typeRaw  = (try? JSONEncoder().encode(type)) ?? Data()
     }
 
     var blockType: BlockType {
-        get { (try? JSONDecoder().decode(BlockType.self, from: typeRaw)) ?? .paragraph }
-        set { typeRaw = (try? JSONEncoder().encode(newValue)) ?? Data() }
+        get {
+            if let legacyTypeRaw,
+               let decodedLegacyType = try? JSONDecoder().decode(BlockType.self, from: legacyTypeRaw) {
+                // Normalize migrated legacy values on first read.
+                let storage = Self.storage(from: decodedLegacyType)
+                if typeTag != storage.tag || typeMetadata != storage.metadata {
+                    typeTag = storage.tag
+                    typeMetadata = storage.metadata
+                }
+                self.legacyTypeRaw = nil
+                return decodedLegacyType
+            }
+
+            return Self.blockType(from: typeTag, metadata: typeMetadata)
+        }
+        set {
+            let storage = Self.storage(from: newValue)
+            typeTag = storage.tag
+            typeMetadata = storage.metadata
+            legacyTypeRaw = nil
+        }
     }
 
     /// Plain-text content, stripping nothing (content is already plain)
     var plainText: String { content }
+
+    private static func storage(from blockType: BlockType) -> (tag: String, metadata: String?) {
+        switch blockType {
+        case .paragraph:
+            return ("paragraph", nil)
+        case .heading(let level):
+            return ("heading", String(level))
+        case .blockquote:
+            return ("blockquote", nil)
+        case .code(let language):
+            return ("code", language)
+        case .image(let caption):
+            return ("image", caption)
+        }
+    }
+
+    private static func blockType(from tag: String, metadata: String?) -> BlockType {
+        switch tag {
+        case "paragraph":
+            return .paragraph
+        case "heading":
+            if let metadata, let level = Int(metadata) {
+                return .heading(level: level)
+            }
+            return .heading(level: 1)
+        case "blockquote":
+            return .blockquote
+        case "code":
+            return .code(language: metadata)
+        case "image":
+            return .image(caption: metadata)
+        default:
+            return .paragraph
+        }
+    }
 }
 

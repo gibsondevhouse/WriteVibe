@@ -53,10 +53,37 @@ struct SidebarView: View {
                 // TODO: Implement — Apps section items are non-interactive placeholders
                 Section {
                     if appsExpanded {
-                        Label("Images",     systemImage: "photo.on.rectangle.angled")
-                        Label("Canvas",     systemImage: "rectangle.and.pencil.and.ellipsis")
-                        Label("Templates",  systemImage: "doc.on.doc")
-                        Label("Mood Board", systemImage: "theatermask.and.paintbrush")
+                        Button {
+                            toastMessage = "Images app coming soon"
+                            withAnimation { showExportToast = true }
+                        } label: {
+                            Label("Images",     systemImage: "photo.on.rectangle.angled")
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            toastMessage = "Canvas app coming soon"
+                            withAnimation { showExportToast = true }
+                        } label: {
+                            Label("Canvas",     systemImage: "rectangle.and.pencil.and.ellipsis")
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            toastMessage = "Templates app coming soon"
+                            withAnimation { showExportToast = true }
+                        } label: {
+                            Label("Templates",  systemImage: "doc.on.doc")
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            toastMessage = "Mood Board app coming soon"
+                            withAnimation { showExportToast = true }
+                        } label: {
+                            Label("Mood Board", systemImage: "theatermask.and.paintbrush")
+                        }
+                        .buttonStyle(.plain)
                     }
                 } header: {
                     CollapsibleSectionHeader(title: "Apps", isExpanded: appsExpanded) {
@@ -80,12 +107,51 @@ struct SidebarView: View {
                                 ? Color.accentColor.opacity(0.1)
                                 : Color.clear
                         )
-                        Label("Emails",    systemImage: "envelope.open")
-                        Label("Stories",   systemImage: "book.closed")
-                        Label("Essays",    systemImage: "doc.text")
-                        Label("Poetry",    systemImage: "text.quote")
-                        Label("Scripts",   systemImage: "scroll")
-                        Label("Research",  systemImage: "magnifyingglass.circle")
+
+                        Group {
+                            Button {
+                                toastMessage = "Emails library coming soon"
+                                withAnimation { showExportToast = true }
+                            } label: {
+                                Label("Emails",    systemImage: "envelope.open")
+                            }
+
+                            Button {
+                                toastMessage = "Stories library coming soon"
+                                withAnimation { showExportToast = true }
+                            } label: {
+                                Label("Stories",   systemImage: "book.closed")
+                            }
+
+                            Button {
+                                toastMessage = "Essays library coming soon"
+                                withAnimation { showExportToast = true }
+                            } label: {
+                                Label("Essays",    systemImage: "doc.text")
+                            }
+
+                            Button {
+                                toastMessage = "Poetry library coming soon"
+                                withAnimation { showExportToast = true }
+                            } label: {
+                                Label("Poetry",    systemImage: "text.quote")
+                            }
+
+                            Button {
+                                toastMessage = "Scripts library coming soon"
+                                withAnimation { showExportToast = true }
+                            } label: {
+                                Label("Scripts",   systemImage: "scroll")
+                            }
+
+                            Button {
+                                toastMessage = "Research library coming soon"
+                                withAnimation { showExportToast = true }
+                            } label: {
+                                Label("Research",  systemImage: "magnifyingglass.circle")
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
                 } header: {
                     CollapsibleSectionHeader(title: "Library", isExpanded: libraryExpanded) {
@@ -260,9 +326,11 @@ struct SidebarView: View {
 // MARK: - Preview
 
 #Preview {
+    let services = ServiceContainer()
     NavigationStack {
         SidebarView()
-            .environment(AppState())
+            .environment(services)
+            .environment(AppState(services: services))
             .modelContainer(for: [Conversation.self, Message.self], inMemory: true)
     }
     .frame(width: 260, height: 560)

@@ -31,7 +31,7 @@ struct ConversationRow: View {
     private var modelLabel: String {
         switch conversation.model {
         case .ollama:
-            let name = conversation.ollamaModelName ?? "Local"
+            let name = conversation.modelIdentifier ?? "Local"
             return name.components(separatedBy: ":").first ?? "Local"
         default:
             return conversation.model.rawValue.components(separatedBy: " ").first ?? conversation.model.rawValue

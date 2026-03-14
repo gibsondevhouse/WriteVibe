@@ -13,7 +13,7 @@ import SwiftUI
 /// the WelcomeView default model preference.
 struct ModelPickerTrigger: View {
     @Binding var model: AIModel
-    @Binding var ollamaModelName: String?
+    @Binding var modelIdentifier: String?
     let availableOllamaModels: [OllamaModel]
 
     @State private var isOpen = false
@@ -59,7 +59,7 @@ struct ModelPickerTrigger: View {
         .popover(isPresented: $isOpen, arrowEdge: .bottom) {
             ModelPickerView(
                 model: $model,
-                ollamaModelName: $ollamaModelName,
+                modelIdentifier: $modelIdentifier,
                 availableOllamaModels: availableOllamaModels,
                 isPresented: $isOpen
             )
@@ -68,7 +68,7 @@ struct ModelPickerTrigger: View {
     }
 
     private var triggerLabel: String {
-        if model == .ollama, let name = ollamaModelName {
+        if model == .ollama, let name = modelIdentifier {
             let baseName = name.split(separator: ":").first.map(String.init) ?? name
             return "Local · \(baseName)"
         }

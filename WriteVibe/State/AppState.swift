@@ -29,7 +29,14 @@ final class AppState {
     var isCopilotOpen: Bool       = false
     var copilotConversationId: UUID? = nil
 
-    let services = ServiceContainer()
+    // Capability states (stubs)
+    var isSearchEnabled: Bool = false
+    var selectedTone: String = "Balanced"
+    var selectedLength: String = "Normal"
+    var selectedFormat: String = "Markdown"
+    var isMemoryEnabled: Bool = true
+
+    let services: ServiceContainer
 
     /// Default model applied to every new conversation. Persisted across launches.
     var defaultModel: AIModel = {
@@ -39,9 +46,14 @@ final class AppState {
         didSet { UserDefaults.standard.set(defaultModel.rawValue, forKey: "wv.defaultModel") }
     }
 
-    /// Default Ollama model name when defaultModel is .ollama. Persisted across launches.
-    var defaultOllamaModelName: String? = UserDefaults.standard.string(forKey: "wv.defaultOllamaModelName") {
-        didSet { UserDefaults.standard.set(defaultOllamaModelName, forKey: "wv.defaultOllamaModelName") }
+    /// Default model identifier when defaultModel is .ollama. Persisted across launches.
+    var defaultModelIdentifier: String? =
+        UserDefaults.standard.string(forKey: "wv.defaultModelIdentifier")
+        ?? UserDefaults.standard.string(forKey: "wv.defaultOllamaModelName") {
+        didSet {
+            UserDefaults.standard.set(defaultModelIdentifier, forKey: "wv.defaultModelIdentifier")
+            UserDefaults.standard.set(defaultModelIdentifier, forKey: "wv.defaultOllamaModelName")
+        }
     }
 
     var modelContext: ModelContext? = nil
@@ -66,10 +78,14 @@ final class AppState {
 
     // MARK: Context binding
 
+    init(services: ServiceContainer) {
+        self.services = services
+    }
+
     func bindModelContextIfNeeded(_ context: ModelContext) {
         if modelContext !== context {
             modelContext = context
-            services.conversationService.migrateLegacyModels(context: context, defaultOllamaModelName: defaultOllamaModelName)
+            services.conversationService.migrateLegacyModels(context: context, defaultModelIdentifier: defaultModelIdentifier)
             migrateArticleAudience(context: context)
         }
         reconcileConversationIDs()
@@ -95,7 +111,7 @@ final class AppState {
     @discardableResult
     func newConversation() -> UUID? {
         guard let ctx = modelContext else { reportIssue("Model context is not attached"); return nil }
-        let conv = services.conversationService.create(model: defaultModel, ollamaModelName: defaultOllamaModelName, context: ctx)
+        let conv = services.conversationService.create(model: defaultModel, modelIdentifier: defaultModelIdentifier, context: ctx)
         selectedId = conv.id
         return conv.id
     }
@@ -110,7 +126,7 @@ final class AppState {
     @discardableResult
     func newCopilotConversation() -> UUID? {
         guard let ctx = modelContext else { reportIssue("Model context is not attached"); return nil }
-        let conv = services.conversationService.create(model: defaultModel, ollamaModelName: defaultOllamaModelName, context: ctx)
+        let conv = services.conversationService.create(model: defaultModel, modelIdentifier: defaultModelIdentifier, context: ctx)
         copilotConversationId = conv.id
         return conv.id
     }
@@ -150,6 +166,35 @@ final class AppState {
         finishGeneration(for: conversationId)
     }
 
+    func setFeedback(_ feedback: Message.Feedback?, for messageId: UUID, in conversationId: UUID) {
+        guard let ctx = modelContext,
+              let conv = services.conversationService.fetch(conversationId, context: ctx),
+              let message = conv.messages.first(where: { $0.id == messageId }) else { return }
+
+        message.feedback = message.feedback == feedback ? nil : feedback
+        conv.updatedAt = Date()
+        try? ctx.save()
+    }
+
+    func regenerateLastAssistantResponse(in conversationId: UUID) {
+        guard let ctx = modelContext,
+              let conv = services.conversationService.fetch(conversationId, context: ctx) else { return }
+
+        stopGeneration(for: conversationId)
+
+        if let assistantIndex = conv.messages.lastIndex(where: { $0.role == .assistant }) {
+            let removed = conv.messages.remove(at: assistantIndex)
+            ctx.delete(removed)
+            conv.updatedAt = Date()
+            try? ctx.save()
+        }
+
+        guard conv.messages.contains(where: { $0.role == .user }) else { return }
+        thinkingId = conversationId
+        clearRuntimeIssue()
+        generateReply(to: conversationId)
+    }
+
     private func generateReply(to conversationId: UUID) {
         guard let ctx = modelContext,
               let conv = services.conversationService.fetch(conversationId, context: ctx) else {
@@ -158,6 +203,8 @@ final class AppState {
         }
 
         let model = conv.model
+        let modelIdentifier = conv.modelIdentifier
+
         let task = Task { [weak self] in
             guard let self, let ctx = self.modelContext else { return }
             defer { self.finishGeneration(for: conversationId) }
@@ -166,7 +213,7 @@ final class AppState {
                 let provider: AIStreamingProvider
 
                 if model.isLocal {
-                    guard let name = conv.ollamaModelName, !name.isEmpty else {
+                    guard let name = modelIdentifier, !name.isEmpty else {
                         self.services.conversationService.appendMessage(
                             Message(role: .assistant, content: "No Ollama model selected. Choose a model from the model picker."),
                             to: conversationId, context: ctx

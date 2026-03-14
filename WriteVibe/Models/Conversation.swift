@@ -12,7 +12,7 @@ final class Conversation: Identifiable {
     var title: String
     @Relationship(deleteRule: .cascade) var messages: [Message] = []
     var model: AIModel
-    var ollamaModelName: String?
+    @Attribute(originalName: "ollamaModelName") var modelIdentifier: String?
     var createdAt: Date
     var updatedAt: Date
 

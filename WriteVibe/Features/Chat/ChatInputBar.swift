@@ -13,6 +13,7 @@ struct ChatInputBar: View {
     let tokenUsage: Double
     var focused: FocusState<Bool>.Binding
     var onDocumentAttached: ((String) -> Void)? = nil
+    var onDocumentImportFailed: ((String) -> Void)? = nil
     let onSend: () -> Void
     let onStop: () -> Void
 
@@ -113,6 +114,9 @@ struct ChatInputBar: View {
             AttachMenu(onDocumentAttached: { text in
                 showAttachMenu = false
                 onDocumentAttached?(text)
+            }, onDocumentImportFailed: { error in
+                showAttachMenu = false
+                onDocumentImportFailed?(error)
             })
         }
     }
@@ -137,16 +141,85 @@ struct ChatInputBar: View {
     }
 
     // MARK: - Capability Chips
-    // TODO: Implement — these are placeholder-only chips with no action handlers
+
+    @Environment(AppState.self) private var appState
 
     private var capabilityChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                CapabilityChip(icon: "globe", label: "Search")
-                CapabilityChip(icon: "theatermasks", label: "Tone", hasChevron: true)
-                CapabilityChip(icon: "textformat.size", label: "Length", hasChevron: true)
-                CapabilityChip(icon: "doc.richtext", label: "Format", hasChevron: true)
-                CapabilityChip(icon: "memories", label: "Memory", hasChevron: true)
+                // Search Toggle
+                CapabilityChip(
+                    icon: "globe",
+                    label: "Search",
+                    isActive: appState.isSearchEnabled
+                ) {
+                    appState.isSearchEnabled.toggle()
+                }
+
+                // Tone Menu
+                Menu {
+                    Picker("Tone", selection: Bindable(appState).selectedTone) {
+                        Text("Balanced").tag("Balanced")
+                        Text("Professional").tag("Professional")
+                        Text("Creative").tag("Creative")
+                        Text("Concise").tag("Concise")
+                    }
+                } label: {
+                    CapabilityChip(
+                        icon: "theatermasks",
+                        label: appState.selectedTone,
+                        hasChevron: true,
+                        isActive: appState.selectedTone != "Balanced"
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
+                // Length Menu
+                Menu {
+                    Picker("Length", selection: Bindable(appState).selectedLength) {
+                        Text("Short").tag("Short")
+                        Text("Normal").tag("Normal")
+                        Text("Long").tag("Long")
+                    }
+                } label: {
+                    CapabilityChip(
+                        icon: "textformat.size",
+                        label: appState.selectedLength,
+                        hasChevron: true,
+                        isActive: appState.selectedLength != "Normal"
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
+                // Format Menu
+                Menu {
+                    Picker("Format", selection: Bindable(appState).selectedFormat) {
+                        Text("Markdown").tag("Markdown")
+                        Text("Plain Text").tag("Plain Text")
+                        Text("JSON").tag("JSON")
+                    }
+                } label: {
+                    CapabilityChip(
+                        icon: "doc.richtext",
+                        label: appState.selectedFormat,
+                        hasChevron: true,
+                        isActive: appState.selectedFormat != "Markdown"
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
+                // Memory Toggle
+                CapabilityChip(
+                    icon: "memories",
+                    label: "Memory",
+                    hasChevron: false,
+                    isActive: appState.isMemoryEnabled
+                ) {
+                    appState.isMemoryEnabled.toggle()
+                }
             }
             .padding(.horizontal, 2)
         }
@@ -190,6 +263,7 @@ struct ChatInputBar: View {
 
 struct AttachMenu: View {
     var onDocumentAttached: ((String) -> Void)? = nil
+    var onDocumentImportFailed: ((String) -> Void)? = nil
 
     private let options: [(icon: String, label: String)] = [
         ("photo.on.rectangle", "Upload Image"),
@@ -204,8 +278,12 @@ struct AttachMenu: View {
                 Button {
                     if opt.label == "Upload Document" {
                         Task { @MainActor in
-                            if let text = await DocumentIngestionService.pickAndExtract() {
-                                onDocumentAttached?(text)
+                            do {
+                                if let text = try await DocumentIngestionService.pickAndExtract() {
+                                    onDocumentAttached?(text)
+                                }
+                            } catch {
+                                onDocumentImportFailed?(error.localizedDescription)
                             }
                         }
                     }
@@ -241,23 +319,33 @@ private struct CapabilityChip: View {
     let icon: String
     let label: String
     var hasChevron: Bool = false
+    var isActive: Bool = false
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .medium))
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-            if hasChevron {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
+        Button {
+            action?()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .medium))
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                if hasChevron {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .bold))
+                }
             }
+            .foregroundStyle(isActive ? .white : Color.secondary.opacity(0.8))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                isActive ? Color.accentColor : Color.secondary.opacity(0.07),
+                in: Capsule()
+            )
         }
-        .foregroundStyle(Color.secondary.opacity(0.5))
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(Color.secondary.opacity(0.07), in: Capsule())
-        .help("\(label) · Coming soon")
+        .buttonStyle(.plain)
+        .help(action == nil ? "\(label) · Choose from menu" : "Toggle \(label)")
     }
 }
 

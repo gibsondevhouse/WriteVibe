@@ -22,9 +22,9 @@ final class ConversationService {
     }
 
     @discardableResult
-    func create(model: AIModel, ollamaModelName: String?, context: ModelContext) -> Conversation {
+    func create(model: AIModel, modelIdentifier: String?, context: ModelContext) -> Conversation {
         let conv = Conversation(model: model)
-        if model == .ollama { conv.ollamaModelName = ollamaModelName }
+        if model == .ollama { conv.modelIdentifier = modelIdentifier }
         context.insert(conv)
         try? context.save()
         cache[conv.id] = conv
@@ -53,15 +53,20 @@ final class ConversationService {
         conv.updatedAt = Date()
 
         if conv.messages.count == 1, message.role == .user {
-            let snippet = String(message.content.prefix(45))
-            let fallbackTitle = snippet.count < message.content.count ? snippet + "…" : snippet
+            let userContent = message.content
+            let snippet = String(userContent.prefix(45))
+            let fallbackTitle = snippet.count < userContent.count ? snippet + "…" : snippet
             conv.title = fallbackTitle
 
-            Task {
+            Task { @MainActor in
                 if #available(macOS 26, *) {
                     do {
-                        let newTitle = try await AppleIntelligenceService.generateTitle(userMessage: message.content)
-                        if conv.title == fallbackTitle { conv.title = newTitle }
+                        let newTitle = try await AppleIntelligenceService.generateTitle(userMessage: userContent)
+                        // Verify we are still looking at the original fallback title before updating
+                        if let updatedConv = self.fetch(conversationId, context: context),
+                           updatedConv.title == fallbackTitle {
+                            updatedConv.title = newTitle
+                        }
                     } catch {
                         // Keep fallback
                     }
@@ -85,15 +90,15 @@ final class ConversationService {
         return mergedByID.values.sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    func migrateLegacyModels(context: ModelContext, defaultOllamaModelName: String?) {
+    func migrateLegacyModels(context: ModelContext, defaultModelIdentifier: String?) {
         let descriptor = FetchDescriptor<Conversation>()
         guard let conversations = try? context.fetch(descriptor) else { return }
 
         var changed = false
         for conv in conversations where conv.model == .appleIntelligence {
             conv.model = .ollama
-            if conv.ollamaModelName == nil || conv.ollamaModelName?.isEmpty == true {
-                conv.ollamaModelName = defaultOllamaModelName
+            if conv.modelIdentifier == nil || conv.modelIdentifier?.isEmpty == true {
+                conv.modelIdentifier = defaultModelIdentifier
             }
             conv.updatedAt = Date()
             changed = true

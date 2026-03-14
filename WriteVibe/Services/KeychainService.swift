@@ -9,7 +9,7 @@ import Security
 enum KeychainService {
     static let service = "com.writevibe.app"
 
-    static func save(key: String, value: String) {
+    static func save(key: String, value: String) throws {
         let data = Data(value.utf8)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -18,8 +18,15 @@ enum KeychainService {
             kSecValueData as String: data
         ]
 
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        let deleteStatus = SecItemDelete(query as CFDictionary)
+        if deleteStatus != errSecSuccess, deleteStatus != errSecItemNotFound {
+            throw WriteVibeError.persistenceFailed(operation: "keychain delete for \(key) (OSStatus \(deleteStatus))")
+        }
+
+        let addStatus = SecItemAdd(query as CFDictionary, nil)
+        if addStatus != errSecSuccess {
+            throw WriteVibeError.persistenceFailed(operation: "keychain save for \(key) (OSStatus \(addStatus))")
+        }
     }
 
     static func load(key: String) -> String? {

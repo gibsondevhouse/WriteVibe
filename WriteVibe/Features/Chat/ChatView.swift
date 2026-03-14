@@ -35,7 +35,7 @@ struct ChatView: View {
                 ToolbarItem(placement: .navigation) {
                     ModelPickerTrigger(
                         model: $c.model,
-                        ollamaModelName: $c.ollamaModelName,
+                        modelIdentifier: $c.modelIdentifier,
                         availableOllamaModels: appState.availableOllamaModels
                     )
                 }
@@ -106,49 +106,32 @@ struct ChatView: View {
     // MARK: - Message List
 
     private var messageList: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(messages.enumerated()), id: \.element.id) { i, msg in
-                        MessageBubble(
-                            message:     msg,
-                            isLast:      i == messages.count - 1 && !appState.isThinkingInSelected,
-                            isStreaming: appState.isThinkingInSelected && i == messages.count - 1,
-                            showAvatar:  isGroupEnd(at: i),
-                            topPad:      isGroupStart(at: i) ? 28 : 8
-                        )
-                    }
-
-                    if appState.isThinkingInSelected {
-                        ThinkingIndicator()
-                            .padding(.top, 10)
-                    }
-
-                    Color.clear.frame(height: 160).id("tail")
+        ChatScrollContainer(
+            messages: messages,
+            isThinking: appState.isThinkingInSelected,
+            tailID: "tail",
+            tailHeight: 160,
+            horizontalPadding: 24,
+            verticalPadding: 20
+        ) { i, msg in
+            MessageBubble(
+                message: msg,
+                isLast: i == messages.count - 1 && !appState.isThinkingInSelected,
+                isStreaming: appState.isThinkingInSelected && i == messages.count - 1,
+                showAvatar: isGroupEnd(at: i),
+                topPad: isGroupStart(at: i) ? 28 : 8,
+                onFeedback: { feedback in
+                    guard let conversationID = appState.selectedId else { return }
+                    appState.setFeedback(feedback, for: msg.id, in: conversationID)
+                },
+                onRegenerate: {
+                    guard let conversationID = appState.selectedId else { return }
+                    appState.regenerateLastAssistantResponse(in: conversationID)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
-                .animation(.easeOut(duration: 0.2), value: messages.count)
-                .animation(.easeOut(duration: 0.2), value: appState.isThinkingInSelected)
-            }
-            .onChange(of: messages.count) {
-                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("tail") }
-            }
-            .onChange(of: appState.isThinkingInSelected) {
-                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("tail") }
-            }
-            // While a response is streaming, keep scrolling to the tail so the
-            // user always sees the latest tokens without having to scroll manually.
-            .task(id: appState.isThinkingInSelected) {
-                guard appState.isThinkingInSelected else { return }
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(150))
-                    proxy.scrollTo("tail")
-                }
-            }
+            )
         }
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Grouping Helpers
@@ -177,6 +160,10 @@ struct ChatView: View {
                 focused: $inputFocused,
                 onDocumentAttached: { extractedText in
                     inputText = "Please read the following document and help me improve it:\n\n\(extractedText)"
+                },
+                onDocumentImportFailed: { errorMessage in
+                    toastMessage = errorMessage
+                    withAnimation { showExportToast = true }
                 },
                 onSend: sendMessage,
                 onStop: stopGeneration

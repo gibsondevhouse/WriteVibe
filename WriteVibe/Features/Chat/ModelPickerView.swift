@@ -11,16 +11,16 @@ import SwiftUI
 /// Opens from ModelPickerTrigger. Selecting a model updates the binding and closes the popover.
 struct ModelPickerView: View {
     @Binding var model: AIModel
-    @Binding var ollamaModelName: String?
+    @Binding var modelIdentifier: String?
     let availableOllamaModels: [OllamaModel]
     @Binding var isPresented: Bool
 
     @State private var selectedProvider: ModelProvider
     @State private var hoveredModel: AIModel? = nil
 
-    init(model: Binding<AIModel>, ollamaModelName: Binding<String?>, availableOllamaModels: [OllamaModel], isPresented: Binding<Bool>) {
+    init(model: Binding<AIModel>, modelIdentifier: Binding<String?>, availableOllamaModels: [OllamaModel], isPresented: Binding<Bool>) {
         self._model = model
-        self._ollamaModelName = ollamaModelName
+        self._modelIdentifier = modelIdentifier
         self.availableOllamaModels = availableOllamaModels
         self._isPresented = isPresented
         self._selectedProvider = State(initialValue: model.wrappedValue.provider)
@@ -102,7 +102,7 @@ struct ModelPickerView: View {
                     onHover: { hovered in hoveredModel = hovered ? m : nil }
                 ) {
                     model = m
-                    ollamaModelName = nil
+                    modelIdentifier = nil
                     isPresented = false
                 }
             }
@@ -118,7 +118,7 @@ struct ModelPickerView: View {
             } else {
                 ForEach(availableOllamaModels) { ollamaModel in
                     let isSelected = model == .ollama
-                        && ollamaModelName == ollamaModel.name
+                        && modelIdentifier == ollamaModel.name
                     ModelRow(
                         model: .ollama,
                         displayName: ollamaModel.displayName,
@@ -127,7 +127,7 @@ struct ModelPickerView: View {
                         onHover: { hovered in hoveredModel = hovered ? .ollama : nil }
                     ) {
                         model = .ollama
-                        ollamaModelName = ollamaModel.name
+                        modelIdentifier = ollamaModel.name
                         isPresented = false
                     }
                 }

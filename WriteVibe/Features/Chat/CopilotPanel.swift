@@ -103,41 +103,18 @@ struct CopilotPanel: View {
     // MARK: - Message list
 
     private var messageList: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(messages.enumerated()), id: \.element.id) { i, msg in
-                        CopilotMessageRow(
-                            message: msg,
-                            isStreaming: appState.isThinkingInCopilot && i == messages.count - 1
-                        )
-                    }
-
-                    if appState.isThinkingInCopilot {
-                        ThinkingIndicator()
-                            .padding(.top, 10)
-                    }
-
-                    Color.clear.frame(height: 12).id("copilot-tail")
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .animation(.easeOut(duration: 0.2), value: messages.count)
-                .animation(.easeOut(duration: 0.2), value: appState.isThinkingInCopilot)
-            }
-            .onChange(of: messages.count) {
-                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("copilot-tail") }
-            }
-            .onChange(of: appState.isThinkingInCopilot) {
-                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("copilot-tail") }
-            }
-            .task(id: appState.isThinkingInCopilot) {
-                guard appState.isThinkingInCopilot else { return }
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(150))
-                    proxy.scrollTo("copilot-tail")
-                }
-            }
+        ChatScrollContainer(
+            messages: messages,
+            isThinking: appState.isThinkingInCopilot,
+            tailID: "copilot-tail",
+            tailHeight: 12,
+            horizontalPadding: 12,
+            verticalPadding: 12
+        ) { i, msg in
+            CopilotMessageRow(
+                message: msg,
+                isStreaming: appState.isThinkingInCopilot && i == messages.count - 1
+            )
         }
     }
 

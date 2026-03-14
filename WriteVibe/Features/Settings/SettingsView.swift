@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var openRouterKey: String = ""
     @State private var ollamaRunning: Bool = false
     @State private var showOllamaModelBrowser = false
+    @State private var keychainError: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -33,6 +34,11 @@ struct SettingsView: View {
                     Text("One key unlocks Claude, GPT-4o, Gemini, DeepSeek, and more. Get yours free at openrouter.ai")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if let keychainError {
+                        Text(keychainError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 } header: {
                     Text("Cloud API Keys")
                 }
@@ -61,7 +67,12 @@ struct SettingsView: View {
             SecureField("Paste key here", text: text)
                 .textFieldStyle(.roundedBorder)
                 .onChange(of: text.wrappedValue) {
-                    KeychainService.save(key: keychainKey, value: text.wrappedValue)
+                    do {
+                        try KeychainService.save(key: keychainKey, value: text.wrappedValue)
+                        keychainError = nil
+                    } catch {
+                        keychainError = error.localizedDescription
+                    }
                 }
         }
     }
