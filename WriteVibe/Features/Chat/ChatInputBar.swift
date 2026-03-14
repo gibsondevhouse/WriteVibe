@@ -127,7 +127,13 @@ struct ChatInputBar: View {
             .tint(.accentColor)
             .focused(focused)
             .textFieldStyle(.plain)
-            .onSubmit { if canSend { onSend() } }
+            // On macOS, axis:.vertical TextFields don't reliably fire onSubmit on Return,
+            // so we intercept the key directly. Shift/Option+Return still inserts a newline.
+            .onKeyPress(.return) {
+                guard canSend else { return .ignored }
+                onSend()
+                return .handled
+            }
     }
 
     // MARK: - Capability Chips
@@ -172,6 +178,7 @@ struct ChatInputBar: View {
             }
         }
         .buttonStyle(.plain)
+        .keyboardShortcut(.return, modifiers: .command)
         .disabled(!canSend && !isThinking)
         .animation(.easeInOut(duration: 0.18), value: canSend)
     }

@@ -4,11 +4,13 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - WelcomeView
 
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @State private var inputText = ""
     @FocusState private var inputFocused: Bool
 
@@ -85,6 +87,9 @@ struct WelcomeView: View {
         }
         .onAppear { inputFocused = true }
         .onAppear {
+            appState.bindModelContextIfNeeded(modelContext)
+        }
+        .onAppear {
             if let pending = appState.pendingPrompt {
                 inputText = pending
                 appState.pendingPrompt = nil
@@ -110,9 +115,12 @@ struct WelcomeView: View {
     // MARK: - Action
 
     private func startWriting(with text: String) {
+        appState.bindModelContextIfNeeded(modelContext)
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let id = appState.newConversation() else { return }
-        appState.send(trimmed, in: id)
+        if appState.send(trimmed, in: id) {
+            inputText = ""
+        }
     }
 }
 

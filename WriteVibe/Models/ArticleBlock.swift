@@ -8,7 +8,7 @@ import SwiftData
 
 // MARK: - BlockType
 
-enum BlockType: Codable, Equatable {
+nonisolated enum BlockType: Codable, Equatable {
     case paragraph
     case heading(level: Int)   // 1–4
     case blockquote
@@ -68,3 +68,4 @@ final class ArticleBlock: Identifiable {
     /// Plain-text content, stripping nothing (content is already plain)
     var plainText: String { content }
 }
+

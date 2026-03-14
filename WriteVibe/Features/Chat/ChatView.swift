@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 
 struct ChatView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @State private var inputText = ""
     @FocusState private var inputFocused: Bool
 
@@ -87,7 +88,10 @@ struct ChatView: View {
                 .help("Export thread")
             }
         }
-        .onAppear { inputFocused = true }
+        .onAppear {
+            appState.bindModelContextIfNeeded(modelContext)
+            inputFocused = true
+        }
         .onChange(of: appState.selectedId) { inputFocused = true }
         .task {
             await appState.refreshOllamaModels()
@@ -233,13 +237,23 @@ struct ChatView: View {
     // MARK: - Send
 
     private func sendMessage() {
-        guard let id = appState.selectedId else { return }
+        appState.bindModelContextIfNeeded(modelContext)
+        let id: UUID?
+        if let selectedId = appState.selectedId,
+           appState.fetchConversation(selectedId) != nil {
+            id = selectedId
+        } else {
+            id = appState.newConversation()
+        }
+        guard let id else { return }
         let text = inputText
-        inputText = ""
-        appState.send(text, in: id)
+        if appState.send(text, in: id) {
+            inputText = ""
+        }
     }
 
     private func stopGeneration() {
+        appState.bindModelContextIfNeeded(modelContext)
         guard let id = appState.selectedId else { return }
         appState.stopGeneration(for: id)
     }

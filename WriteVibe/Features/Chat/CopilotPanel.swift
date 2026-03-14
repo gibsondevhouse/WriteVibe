@@ -4,11 +4,13 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - CopilotPanel
 
 struct CopilotPanel: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @State private var inputText = ""
     @FocusState private var inputFocused: Bool
 
@@ -44,7 +46,10 @@ struct CopilotPanel: View {
             .padding(.bottom, 8)
         }
         .frame(width: 340)
-        .onAppear { inputFocused = true }
+        .onAppear {
+            appState.bindModelContextIfNeeded(modelContext)
+            inputFocused = true
+        }
     }
 
     // MARK: - Header
@@ -159,10 +164,20 @@ struct CopilotPanel: View {
     // MARK: - Actions
 
     private func sendMessage() {
+        appState.bindModelContextIfNeeded(modelContext)
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let id = appState.copilotConversationId else { return }
-        inputText = ""
-        appState.send(trimmed, in: id)
+        guard !trimmed.isEmpty else { return }
+        let id: UUID?
+        if let existingId = appState.copilotConversationId,
+           appState.fetchConversation(existingId) != nil {
+            id = existingId
+        } else {
+            id = appState.newCopilotConversation()
+        }
+        guard let id else { return }
+        if appState.send(trimmed, in: id) {
+            inputText = ""
+        }
     }
 
     private func stopGeneration() {

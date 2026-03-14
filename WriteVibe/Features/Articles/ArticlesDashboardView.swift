@@ -79,100 +79,96 @@ struct ArticlesDashboardView: View {
         VStack(spacing: 0) {
             heroCard
             Divider()
-
-            if articles.isEmpty {
-                emptyState
-            } else {
+            if !articles.isEmpty {
                 filterBar
                 Divider()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        // MARK: Single Articles section
-                        if !filteredSingles.isEmpty || filterStatus == nil {
-                            articleSectionHeader(
-                                title: "Single Articles",
-                                count: filteredSingles.count,
-                                isExpanded: singleArticlesExpanded
-                            ) {
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                    singleArticlesExpanded.toggle()
-                                }
-                            }
-
-                            if singleArticlesExpanded {
-                                if filteredSingles.isEmpty {
-                                    Text("No single articles match the current filter.")
-                                        .font(.callout)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 24)
-                                        .padding(.bottom, 20)
-                                } else {
-                                    LazyVGrid(columns: columns, spacing: 16) {
-                                        ForEach(filteredSingles) { article in
-                                            ArticleCard(article: article) {
-                                                selectedArticle = article
-                                            } onDelete: {
-                                                modelContext.delete(article)
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, 24)
-                                    .padding(.bottom, 24)
-                                }
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // MARK: Single Articles section
+                    if !filteredSingles.isEmpty || filterStatus == nil {
+                        articleSectionHeader(
+                            title: "Single Articles",
+                            count: filteredSingles.count,
+                            isExpanded: singleArticlesExpanded
+                        ) {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                singleArticlesExpanded.toggle()
                             }
                         }
 
-                        // MARK: Series section
-                        if !filteredSeriesGroups.isEmpty || filterStatus == nil {
-                            articleSectionHeader(
-                                title: "Series",
-                                count: filteredSeriesGroups.reduce(0) { $0 + $1.articles.count },
-                                isExpanded: seriesExpanded
-                            ) {
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                    seriesExpanded.toggle()
+                        if singleArticlesExpanded {
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                NewItemCard(title: "New Article", icon: "square.and.pencil") {
+                                    newTitle = ""
+                                    newSubtitle = ""
+                                    isCreating = true
                                 }
-                            }
-
-                            if seriesExpanded {
-                                if filteredSeriesGroups.isEmpty {
-                                    Text("No series articles match the current filter.")
-                                        .font(.callout)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 24)
-                                        .padding(.bottom, 20)
-                                } else {
-                                    ForEach(filteredSeriesGroups, id: \.name) { group in
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "rectangle.stack")
-                                                .font(.system(size: 11, weight: .semibold))
-                                                .foregroundStyle(.secondary)
-                                            Text(group.name)
-                                                .font(.system(size: 13, weight: .semibold))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .padding(.horizontal, 24)
-                                        .padding(.top, 8)
-                                        .padding(.bottom, 8)
-
-                                        LazyVGrid(columns: columns, spacing: 16) {
-                                            ForEach(group.articles) { article in
-                                                ArticleCard(article: article) {
-                                                    selectedArticle = article
-                                                } onDelete: {
-                                                    modelContext.delete(article)
-                                                }
-                                            }
-                                        }
-                                        .padding(.horizontal, 24)
-                                        .padding(.bottom, 20)
+                                ForEach(filteredSingles) { article in
+                                    ArticleCard(article: article) {
+                                        selectedArticle = article
+                                    } onDelete: {
+                                        modelContext.delete(article)
                                     }
                                 }
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 24)
+                        }
+                    }
+
+                    // MARK: Series section
+                    if !filteredSeriesGroups.isEmpty || filterStatus == nil {
+                        articleSectionHeader(
+                            title: "Series",
+                            count: filteredSeriesGroups.reduce(0) { $0 + $1.articles.count },
+                            isExpanded: seriesExpanded
+                        ) {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                seriesExpanded.toggle()
+                            }
+                        }
+
+                        if seriesExpanded {
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                NewItemCard(title: "New Series", icon: "rectangle.stack.badge.plus") {
+                                    newSeriesName = ""
+                                    newSeriesArticleTitle = ""
+                                    isCreatingSeries = true
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, filteredSeriesGroups.isEmpty ? 24 : 8)
+
+                            ForEach(filteredSeriesGroups, id: \.name) { group in
+                                HStack(spacing: 6) {
+                                    Image(systemName: "rectangle.stack")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                    Text(group.name)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.horizontal, 24)
+                                .padding(.top, 8)
+                                .padding(.bottom, 8)
+
+                                LazyVGrid(columns: columns, spacing: 16) {
+                                    ForEach(group.articles) { article in
+                                        ArticleCard(article: article) {
+                                            selectedArticle = article
+                                        } onDelete: {
+                                            modelContext.delete(article)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 20)
                             }
                         }
                     }
-                    .padding(.top, 8)
                 }
+                .padding(.top, 8)
             }
         }
     }
@@ -289,30 +285,6 @@ struct ArticlesDashboardView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - Empty state
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "newspaper")
-                .font(.system(size: 44))
-                .foregroundStyle(.quaternary)
-            Text("No articles yet")
-                .font(.title3.weight(.semibold))
-            Text("Hit \"New Article\" to start your first piece.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Button("New Article") {
-                newTitle = ""
-                newSubtitle = ""
-                isCreating = true
-            }
-            .buttonStyle(.borderedProminent)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - New article sheet
@@ -629,6 +601,53 @@ private struct ArticleCard: View {
         case .inProgress: return .orange
         case .done:       return .green
         }
+    }
+}
+
+// MARK: - NewItemCard
+
+private struct NewItemCard: View {
+    let title: String
+    let icon: String
+    let onTap: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.accentColor.opacity(0.3).gradient)
+                    .frame(height: 6)
+                    .clipShape(.rect(topLeadingRadius: 10, topTrailingRadius: 10))
+
+                VStack(spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .light))
+                        .foregroundStyle(Color.accentColor.opacity(0.7))
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+                .padding(14)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.accentColor.opacity(isHovered ? 0.09 : 0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(
+                        Color.accentColor.opacity(isHovered ? 0.35 : 0.15),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                    )
+            )
+            .scaleEffect(isHovered ? 1.015 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
     }
 }
 

@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 
 struct SidebarView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Conversation.updatedAt, order: .reverse) private var conversations: [Conversation]
     @State private var searchQuery = ""
     @State private var showExportToast = false
@@ -120,6 +121,15 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .searchable(text: $searchQuery, prompt: "Search threads")
+        .onAppear {
+            appState.bindModelContextIfNeeded(modelContext)
+        }
+        .onChange(of: appState.selectedId) { _, newId in
+            // Selecting any conversation switches the detail back to chat
+            if newId != nil {
+                appState.destination = .chat
+            }
+        }
         .navigationTitle("WriteVibe")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

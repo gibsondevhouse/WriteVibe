@@ -43,10 +43,35 @@ struct ContentView: View {
         .environment(appState)
         .frame(minWidth: 820, minHeight: 520)
         .onAppear {
-            appState.modelContext = modelContext
+            appState.bindModelContextIfNeeded(modelContext)
+            // Open copilot if the app starts on the articles destination
+            if appState.destination == .articles && !appState.isCopilotOpen {
+                appState.openCopilot()
+            }
+        }
+        .onChange(of: modelContext) { _, newContext in
+            appState.bindModelContextIfNeeded(newContext)
+        }
+        .onChange(of: appState.destination) { _, newDest in
+            if newDest == .articles && !appState.isCopilotOpen {
+                appState.openCopilot()
+            }
         }
         .task {
             await appState.refreshOllamaModels()
+        }
+        .overlay(alignment: .top) {
+            if let issue = appState.runtimeIssue {
+                Text(issue)
+                    .font(.footnote)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.red.opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(.top, 10)
+                    .padding(.horizontal, 12)
+            }
         }
     }
 
@@ -65,7 +90,7 @@ struct ContentView: View {
                 }
             }
         case .chat:
-            if appState.selectedId != nil, appState.selected != nil {
+            if appState.selected != nil {
                 ChatView()
             } else {
                 WelcomeView()

@@ -7,6 +7,7 @@ import Foundation
 
 enum AIModel: String, CaseIterable, Identifiable, Codable {
     case ollama             = "Ollama"
+    case appleIntelligence  = "Apple Intelligence"
     // Anthropic (via OpenRouter)
     case claudeHaiku       = "Claude Haiku"
     case claudeSonnet      = "Claude Sonnet"
@@ -45,6 +46,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     var subtitle: String {
         switch self {
         case .ollama:             return "Local · Private · Free"
+        case .appleIntelligence:  return "Legacy local model"
         case .claudeHaiku:        return "Fast · Affordable"
         case .claudeSonnet:       return "Balanced · Capable"
         case .claudeOpus:         return "Most powerful"
@@ -64,6 +66,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     var tagline: String {
         switch self {
         case .ollama:             return "Your private, offline assistant"
+        case .appleIntelligence:  return "Legacy model retained for old chats"
         case .claudeHaiku:        return "Quick answers, low cost"
         case .claudeSonnet:       return "Strong writing and reasoning"
         case .claudeOpus:         return "Maximum depth and nuance"
@@ -84,6 +87,8 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .ollama:
             return "Runs entirely on your Mac — no data ever leaves your device. Best for privacy-sensitive drafts, offline work, or experimenting without API costs."
+        case .appleIntelligence:
+            return "Legacy model from older app versions. Existing chats keep loading; new chats should use Ollama or a cloud provider."
         case .claudeHaiku:
             return "Anthropic's fastest, most affordable model. Ideal for short-form tasks: quick edits, email drafts, summarisation, and any flow where speed matters more than depth."
         case .claudeSonnet:
@@ -114,6 +119,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     var icon: String {
         switch self {
         case .ollama:                                  return "desktopcomputer"
+        case .appleIntelligence:                       return "desktopcomputer"
         case .claudeHaiku, .claudeSonnet, .claudeOpus: return "sparkles"
         case .gpt4oMini, .gpt4o, .o3Mini:              return "wand.and.stars"
         case .geminiFlash, .geminiPro:                 return "atom"
@@ -123,11 +129,11 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     }
 
     var isLocal: Bool {
-        self == .ollama
+        self == .ollama || self == .appleIntelligence
     }
 
     var requiresAPIKey: Bool {
-        self != .ollama
+        !isLocal
     }
 
     /// Returns the OpenRouter model identifier for cloud models, nil for local models.
@@ -146,12 +152,14 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
         case .deepSeekR1:         return "deepseek/deepseek-r1"
         case .deepSeekV3:         return "deepseek/deepseek-chat"
         case .ollama:             return nil
+        case .appleIntelligence:  return nil
         }
     }
 
     var displayName: String {
         switch self {
         case .ollama:             return "Ollama"
+        case .appleIntelligence:  return "Apple Intelligence"
         case .claudeHaiku:        return "Claude Haiku"
         case .claudeSonnet:       return "Claude Sonnet"
         case .claudeOpus:         return "Claude Opus"

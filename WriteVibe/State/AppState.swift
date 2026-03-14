@@ -23,15 +23,15 @@ final class AppState {
     var availableOllamaModels: [OllamaModel] = []
     var pendingPrompt: String? = nil
     var destination: AppDestination   = .chat
+    var runtimeIssue: String? = nil
 
     // Copilot panel
     var isCopilotOpen: Bool = false
     var copilotConversationId: UUID? = nil
 
     var copilotConversation: Conversation? {
-        guard let copilotConversationId, let modelContext else { return nil }
-        let descriptor = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == copilotConversationId })
-        return try? modelContext.fetch(descriptor).first
+        guard let copilotConversationId else { return nil }
+        return fetchConversation(copilotConversationId)
     }
 
     var isThinkingInCopilot: Bool {
@@ -39,17 +39,25 @@ final class AppState {
     }
 
     func openCopilot() {
-        if copilotConversationId == nil {
-            newCopilotConversation()
+        if copilotConversationId == nil || copilotConversation == nil {
+            guard newCopilotConversation() != nil else { return }
         }
         isCopilotOpen = true
     }
 
-    func newCopilotConversation() {
+    @discardableResult
+    func newCopilotConversation() -> UUID? {
+        guard let modelContext else {
+            reportIssue("Model context is not attached")
+            return nil
+        }
         let conv = Conversation(model: defaultModel)
         if defaultModel == .ollama { conv.ollamaModelName = defaultOllamaModelName }
-        modelContext?.insert(conv)
+        modelContext.insert(conv)
+        try? modelContext.save()
+        conversationCache[conv.id] = conv
         copilotConversationId = conv.id
+        return conv.id
     }
 
     /// Default model applied to every new conversation. Persisted across launches.
@@ -69,13 +77,44 @@ final class AppState {
     // This should be set by the view hierarchy on launch.
     var modelContext: ModelContext? = nil
 
+    func bindModelContextIfNeeded(_ context: ModelContext) {
+        // Always bind to the current environment context. SwiftUI can provide
+        // a new ModelContext instance across lifecycle transitions.
+        if modelContext !== context {
+            modelContext = context
+            migrateLegacyConversationModels()
+        }
+        reconcileConversationIDs()
+    }
+
+    func reconcileConversationIDs() {
+        if let id = selectedId, fetchConversation(id) == nil {
+            selectedId = nil
+        }
+        if let id = copilotConversationId, fetchConversation(id) == nil {
+            copilotConversationId = nil
+        }
+    }
+
+    func clearRuntimeIssue() {
+        runtimeIssue = nil
+    }
+
+    private func reportIssue(_ message: String) {
+        runtimeIssue = message
+    }
+
+    // In-memory cache of conversations we created this session.
+    // SwiftData's fetch() sometimes fails to return just-inserted objects even
+    // after save(), so we keep them here and check the cache first.
+    private var conversationCache: [UUID: Conversation] = [:]
+
     // In-flight generation tasks keyed by conversation ID — enables stop-button cancellation
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
     var selected: Conversation? {
-        guard let selectedId, let modelContext else { return nil }
-        let descriptor = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == selectedId })
-        return try? modelContext.fetch(descriptor).first
+        guard let selectedId else { return nil }
+        return fetchConversation(selectedId)
     }
 
     var isThinkingInSelected: Bool {
@@ -85,17 +124,36 @@ final class AppState {
     // MARK: Conversation management
 
     func fetchConversation(_ id: UUID) -> Conversation? {
-        guard let modelContext else { return nil }
-        let descriptor = FetchDescriptor<Conversation>(predicate: #Predicate { $0.id == id })
-        return try? modelContext.fetch(descriptor).first
+        // Check in-memory cache first — SwiftData fetch() can miss just-inserted objects.
+        if let cached = conversationCache[id] {
+            return cached
+        }
+        guard let modelContext else {
+            reportIssue("Model context is not attached")
+            return nil
+        }
+        let descriptor = FetchDescriptor<Conversation>()
+        do {
+            let result = try modelContext.fetch(descriptor).first(where: { $0.id == id })
+            if let result { conversationCache[id] = result }
+            return result
+        } catch {
+            reportIssue("Failed to fetch conversations: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     @discardableResult
     func newConversation() -> UUID? {
-        guard let modelContext else { return nil }
+        guard let modelContext else {
+            reportIssue("Model context is not attached")
+            return nil
+        }
         let conv = Conversation(model: defaultModel)
         if defaultModel == .ollama { conv.ollamaModelName = defaultOllamaModelName }
         modelContext.insert(conv)
+        try? modelContext.save()
+        conversationCache[conv.id] = conv
         selectedId = conv.id
         return conv.id
     }
@@ -104,6 +162,7 @@ final class AppState {
         stopGeneration(for: id)
         guard let conv = fetchConversation(id), let modelContext else { return }
         modelContext.delete(conv)
+        conversationCache.removeValue(forKey: id)
         if selectedId == id { selectedId = nil }
     }
 
@@ -115,19 +174,33 @@ final class AppState {
 
     // MARK: Messaging
 
-    func send(_ text: String, in conversationId: UUID) {
+    @discardableResult
+    func send(_ text: String, in conversationId: UUID) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, thinkingId != conversationId else { return }
+        guard !trimmed.isEmpty, thinkingId != conversationId else { return false }
 
-        // Append user message
-        appendMessage(Message(role: .user, content: trimmed), to: conversationId)
+        // Append user message first; only generate if it was actually persisted.
+        guard appendMessage(Message(role: .user, content: trimmed), to: conversationId) else { return false }
 
         thinkingId = conversationId
         generateReply(to: conversationId)
+        clearRuntimeIssue()
+        return true
     }
 
-    func appendMessage(_ message: Message, to conversationId: UUID) {
-        guard let conv = fetchConversation(conversationId) else { return }
+    @discardableResult
+    func appendMessage(_ message: Message, to conversationId: UUID) -> Bool {
+        guard let modelContext else {
+            reportIssue("Model context is not attached")
+            return false
+        }
+        guard let conv = fetchConversation(conversationId) else {
+            reportIssue("Conversation not found for message append")
+            return false
+        }
+
+        // Explicitly insert before relating to avoid dropped transient models.
+        modelContext.insert(message)
         conv.messages.append(message)
         conv.updatedAt = Date()
 
@@ -151,6 +224,15 @@ final class AppState {
                 }
             }
         }
+
+        do {
+            try modelContext.save()
+            clearRuntimeIssue()
+        } catch {
+            reportIssue("Failed to save message: \(error.localizedDescription)")
+            return false
+        }
+        return true
     }
 
     // MARK: - AI Generation
@@ -161,13 +243,17 @@ final class AppState {
     }
 
     private func generateReply(to conversationId: UUID) {
-        guard let conv = fetchConversation(conversationId) else { return }
+        guard let conv = fetchConversation(conversationId) else {
+            // Conversation not found — clear thinkingId so the UI doesn't spin forever.
+            finishGeneration(for: conversationId)
+            return
+        }
         let model = conv.model
         let task = Task { [weak self] in
             guard let self else { return }
             defer { self.finishGeneration(for: conversationId) }
             do {
-                if model == .ollama {
+                if model.isLocal {
                     try await self.streamOllamaReply(for: conversationId)
                 } else if let modelID = model.openRouterModelID {
                     try await self.streamOpenRouterReply(for: conversationId, modelID: modelID)
@@ -245,6 +331,11 @@ final class AppState {
         if !tokenBuffer.isEmpty { placeholder.content += tokenBuffer }
         // Write timestamp once after the stream finishes, not on every token
         if let c = fetchConversation(conversationId) { c.updatedAt = Date() }
+        do {
+            try modelContext?.save()
+        } catch {
+            reportIssue("Failed to save streamed response: \(error.localizedDescription)")
+        }
     }
 
     private func streamOllamaReply(for conversationId: UUID) async throws {
@@ -287,6 +378,11 @@ final class AppState {
 
         if !tokenBuffer.isEmpty { placeholder.content += tokenBuffer }
         if let c = fetchConversation(conversationId) { c.updatedAt = Date() }
+        do {
+            try modelContext?.save()
+        } catch {
+            reportIssue("Failed to save streamed response: \(error.localizedDescription)")
+        }
     }
 
     func refreshOllamaModels() async {
@@ -295,6 +391,34 @@ final class AppState {
             return
         }
         availableOllamaModels = (try? await OllamaService.installedModels()) ?? []
+    }
+
+    func migrateLegacyConversationModels() {
+        guard let modelContext else { return }
+        let descriptor = FetchDescriptor<Conversation>()
+        guard let conversations = try? modelContext.fetch(descriptor) else {
+            reportIssue("Failed to load conversations for migration")
+            return
+        }
+
+        var changed = false
+        for conv in conversations where conv.model == .appleIntelligence {
+            conv.model = .ollama
+            if conv.ollamaModelName == nil || conv.ollamaModelName?.isEmpty == true {
+                conv.ollamaModelName = defaultOllamaModelName
+            }
+            conv.updatedAt = Date()
+            changed = true
+        }
+
+        if changed {
+            do {
+                try modelContext.save()
+                clearRuntimeIssue()
+            } catch {
+                reportIssue("Failed to migrate legacy conversations: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func finishGeneration(for conversationId: UUID) {
@@ -330,3 +454,4 @@ final class AppState {
         return Double(charCount) / 4.0
     }
 }
+

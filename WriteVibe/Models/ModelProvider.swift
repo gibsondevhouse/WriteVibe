@@ -53,7 +53,7 @@ extension AIModel {
     /// Which provider this model belongs to.
     var provider: ModelProvider {
         switch self {
-        case .ollama:                                  return .local
+        case .ollama, .appleIntelligence:              return .local
         case .claudeHaiku, .claudeSonnet, .claudeOpus: return .anthropic
         case .gpt4oMini, .gpt4o, .o3Mini:              return .openai
         case .geminiFlash, .geminiPro:                 return .google

@@ -31,11 +31,6 @@ struct MessageBubble: View {
 
     private var userTurn: some View {
         VStack(alignment: .trailing, spacing: 5) {
-            Text("You")
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-
             Text(message.content)
                 .font(.body)
                 .lineSpacing(4)
@@ -62,8 +57,6 @@ struct MessageBubble: View {
 
     private var assistantTurn: some View {
         VStack(alignment: .leading, spacing: 10) {
-            agentLabel
-
             MarkdownMessageText(content: message.content, isStreaming: isStreaming)
                 .textSelection(.enabled)
 
@@ -75,18 +68,6 @@ struct MessageBubble: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.easeOut(duration: 0.15), value: isHovered)
         .animation(.easeOut(duration: 0.15), value: isLast)
-    }
-
-    private var agentLabel: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 6, height: 6)
-            Text("WriteVibe")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-        }
     }
 
     // MARK: - Message Actions

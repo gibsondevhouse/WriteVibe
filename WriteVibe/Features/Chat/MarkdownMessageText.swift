@@ -13,7 +13,7 @@ struct MarkdownMessageText: View {
     private static let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(parsedBlocks.enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
@@ -173,25 +173,25 @@ struct MarkdownMessageText: View {
         switch block {
         case .h1(let s):
             inlineText(s, 20, .bold)
-                .padding(.top, 18).padding(.bottom, 4)
+                .padding(.top, 18).padding(.bottom, 8)
         case .h2(let s):
             inlineText(s, 17, .semibold)
-                .padding(.top, 14).padding(.bottom, 3)
+                .padding(.top, 16).padding(.bottom, 7)
         case .h3(let s):
             inlineText(s, 15, .semibold)
-                .padding(.top, 10).padding(.bottom, 2)
+                .padding(.top, 12).padding(.bottom, 6)
         case .h4(let s):
             inlineText(s, 14, .semibold)
-                .padding(.top, 8).padding(.bottom, 1)
+                .padding(.top, 10).padding(.bottom, 5)
         case .rule:
             Rectangle()
                 .fill(Color.primary.opacity(0.15))
                 .frame(height: 1)
                 .padding(.vertical, 10)
         case .bullets(let items):
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .top, spacing: 9) {
+                    HStack(alignment: .top, spacing: 10) {
                         Circle()
                             .fill(Color.accentColor.opacity(0.7))
                             .frame(width: 4, height: 4)
@@ -200,11 +200,12 @@ struct MarkdownMessageText: View {
                     }
                 }
             }
-            .padding(.top, 4)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
         case .numbered(let items):
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(items.enumerated()), id: \.offset) { i, item in
-                    HStack(alignment: .top, spacing: 9) {
+                    HStack(alignment: .top, spacing: 10) {
                         Text("\(i + 1).")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.tint)
@@ -213,7 +214,8 @@ struct MarkdownMessageText: View {
                     }
                 }
             }
-            .padding(.top, 4)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
         case .code(let lang, let src):
             codeCanvas(lang: lang, src: src)
         case .blockquote(let lines):
@@ -222,7 +224,7 @@ struct MarkdownMessageText: View {
             tableView(headers: headers, rows: rows)
         case .body(let s):
             inlineText(s, 14, .regular)
-                .padding(.top, 4)
+                .padding(.vertical, 2)
         }
     }
 
@@ -303,9 +305,9 @@ struct MarkdownMessageText: View {
                 }
             }
             .padding(.leading, 12)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 
     // Table — header row + striped data rows
