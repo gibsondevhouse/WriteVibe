@@ -32,14 +32,21 @@ _Interrogation of unused capabilities and prioritised feature backlog_
 | Ollama local model support (full stack — list, pull, delete, stream) | ✅ Live |
 | In-app Ollama model browser (`OllamaModelBrowserView`) | ✅ Live |
 | Dynamic model picker (On-Device / Local / Cloud sections) | ✅ Live |
-| OpenAI API key in Settings (Keychain-stored, backend pending) | ✅ Stored — backend not wired |
-| GPT-4o / Mistral Large / Gemini 1.5 Pro backends | ⚠️ Stubbed — "not yet configured" message |
+| OpenRouter gateway (14+ models) | ✅ Live |
+| GPT-4o, Mistral, DeepSeek, Gemini via OpenRouter | ✅ Live (model ID audit recommended) |
+| Perplexity Sonar web search context injection | ✅ Live |
+| Capability chips (tone, length, format, memory, search) | ✅ Live — wired to system prompt |
+| Block-based Article editor with AI Copilot panel | ✅ Live |
+| Writing analysis panel (tone / reading level / suggestions) | ✅ Live |
+| Search spinner feedback (`isSearchFetching`) | ✅ Live |
+| ServiceContainer DI + full service layer refactor | ✅ Live |
 | Ollama download cancellation | ⚠️ Clears UI state only — network task still runs |
-| Attachment menu — image, URL, voice options | ⚠️ UI only — not wired |
-| Web search toggle | ⚠️ UI only — not wired |
+| Search layer in Ollama-only mode (no OpenRouter key) | ⚠️ Silently fails — needs key-presence guard |
+| Duplicate input bar files (ChatInputBar.swift ≈ InputBar.swift) | ⚠️ Tech debt — stale copy should be deleted |
+| Anthropic API version header | ⚠️ `"2023-06-01"` is stale — update in AppConstants |
+| Attachment menu — image, URL, voice | ⚠️ URL + document wired; image and voice are UI stubs |
 | Settings → Help footer button | ⚠️ UI stub — does nothing |
-| Diff view for Improve / Rephrase actions | ❌ Not built |
-| Tone + reading-level analysis panel | ❌ Not built |
+| Diff view in chat MessageBubble | ❌ Not built (DiffEngine exists, wired in Articles only) |
 | Multiple draft variants | ❌ Not built |
 
 ---
@@ -228,10 +235,10 @@ The OpenAI API key is stored in Keychain as of v1.3 (Settings → Cloud API Keys
 
 Remaining providers — GPT-4o, Mistral Large, Gemini 1.5 Pro — still return a "not yet configured" message. The `generateReply` routing and Settings architecture are ready.
 
-**Remaining per-model work (Phase 4):**
-- **GPT-4o / OpenAI** — key is in Keychain; `OpenAIService.swift` needs to target `api.openai.com/v1/chat/completions` with `Authorization: Bearer` and standard OpenAI SSE format.
-- **Mistral** — uses the same OpenAI-compatible API format; one service can cover both.
-- **Gemini** — different SSE format; a separate `GeminiService.swift` needed.
+**Status as of March 2026:**
+- **GPT-4o, Mistral, DeepSeek, Perplexity Sonar** — ✅ Live via `OpenRouterService`. All OpenAI-compatible models route through the same SSE path.
+- **Gemini** — ⚠️ Routed through OpenRouter; model ID strings (`"google/gemini-flash-1.5"`, `"google/gemini-pro-1.5"`) need verification against current OpenRouter catalog.
+- **Claude** — Routes through OpenRouter by preference; `AnthropicService` available as direct fallback when no OpenRouter key is set.
 - App Store privacy disclosure and explicit user opt-in for any provider before text leaves device (App Store Guideline 5.1.2).
 
 **Strategic value:** Cloud models give WriteVibe access to much larger context windows and stronger world-knowledge, covering the on-device model's biggest weakness for long-form editing tasks.
@@ -253,17 +260,19 @@ Remaining providers — GPT-4o, Mistral Large, Gemini 1.5 Pro — still return a
 | 7 | Anthropic (Claude) backend | 4 | M | 🟠 Expansion | ✅ v1.2 |
 | 8 | Document ingestion (txt / md / rtf) | 2 | S | 🟠 Workflow | ✅ v1.2 |
 | 9 | Ollama local model backend | 4 | L | 🟠 Expansion | ✅ v1.3 |
-| 10 | GPT-4o / OpenAI backend | 4 | M | 🟠 Expansion | ⚠️ Key stored, backend pending |
-| 11 | Mistral backend | 4 | S | 🟠 Expansion | |
-| 12 | Gemini backend | 4 | M | 🟠 Expansion | |
-| 13 | Diff view on rewrite actions | 2 | M | 🟠 Differentiator | |
-| 14 | Tone + reading-level analysis panel | 1 | M | 🟠 Differentiator | |
+| 10 | GPT-4o / OpenAI backend | 4 | M | 🟠 Expansion | ✅ Live via OpenRouter |
+| 11 | Mistral backend | 4 | S | 🟠 Expansion | ✅ Live via OpenRouter |
+| 12 | Gemini backend | 4 | M | 🟠 Expansion | ⚠️ Via OpenRouter — model ID needs verification |
+| 13 | Diff view in chat MessageBubble | 2 | M | 🟠 Differentiator | ⚠️ DiffEngine exists, wired in Articles only |
+| 14 | Tone + reading-level analysis panel | 1 | M | 🟠 Differentiator | ✅ Live (WritingAnalysisPanelView) |
 | 15 | Multiple draft variants | 2 | M | 🟠 Differentiator | |
-| 16 | Tool calling (clipboard, date, web) | 1 | M | 🟠 AI depth | |
+| 16 | Tool calling (clipboard, date) | 1 | M | 🟠 AI depth | |
 | 17 | App Intents (Siri / Shortcuts) | 3 | M | 🟠 Platform depth | |
 | 18 | Voice input via Speech framework | 2 | M | 🟠 Accessibility | |
 | 19 | Drag-and-drop file import | 2 | S–M | 🟠 Workflow | |
-| 20 | Image Playground cover image | 3 | M | 🔵 Delight | |
-| 21 | Writing Tools system extension | 3 | H | 🔵 Platform depth | |
-| 22 | Spotlight indexing | 3 | S | 🔵 Polish | |
-| 23 | Transcript export for Python analysis | 1 | S | 🔵 Dev tooling | |
+| 20 | Search citations panel (Sources footer) | 2 | S | 🟠 Trust/UX | |
+| 21 | Error alert state (replace ⚠️ messages) | 2 | S | 🟠 UX polish | |
+| 22 | Image Playground cover image | 3 | M | 🔵 Delight | |
+| 23 | Writing Tools system extension | 3 | H | 🔵 Platform depth | |
+| 24 | Spotlight indexing | 3 | S | 🔵 Polish | |
+| 25 | Transcript export for Python analysis | 1 | S | 🔵 Dev tooling | |

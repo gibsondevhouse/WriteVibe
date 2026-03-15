@@ -50,40 +50,63 @@ struct SidebarView: View {
         List(selection: $state.selectedId) {
             // Area A — Top-level navigation
             if searchQuery.isEmpty {
-                // TODO: Implement — Apps section items are non-interactive placeholders
                 Section {
                     if appsExpanded {
-                        Button {
-                            toastMessage = "Images app coming soon"
-                            withAnimation { showExportToast = true }
-                        } label: {
-                            Label("Images",     systemImage: "photo.on.rectangle.angled")
+                        HStack {
+                            Label("Images", systemImage: "photo.on.rectangle.angled")
+                            Spacer()
+                            Text("Soon")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.primary.opacity(0.05), in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .opacity(0.7)
+                        .padding(.vertical, 2)
 
-                        Button {
-                            toastMessage = "Canvas app coming soon"
-                            withAnimation { showExportToast = true }
-                        } label: {
-                            Label("Canvas",     systemImage: "rectangle.and.pencil.and.ellipsis")
+                        HStack {
+                            Label("Canvas", systemImage: "rectangle.and.pencil.and.ellipsis")
+                            Spacer()
+                            Text("Soon")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.primary.opacity(0.05), in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .opacity(0.7)
+                        .padding(.vertical, 2)
 
-                        Button {
-                            toastMessage = "Templates app coming soon"
-                            withAnimation { showExportToast = true }
-                        } label: {
-                            Label("Templates",  systemImage: "doc.on.doc")
+                        HStack {
+                            Label("Templates", systemImage: "doc.on.doc")
+                            Spacer()
+                            Text("Soon")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.primary.opacity(0.05), in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .opacity(0.7)
+                        .padding(.vertical, 2)
 
-                        Button {
-                            toastMessage = "Mood Board app coming soon"
-                            withAnimation { showExportToast = true }
-                        } label: {
+                        HStack {
                             Label("Mood Board", systemImage: "theatermask.and.paintbrush")
+                            Spacer()
+                            Text("Soon")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.primary.opacity(0.05), in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .opacity(0.7)
+                        .padding(.vertical, 2)
                     }
                 } header: {
                     CollapsibleSectionHeader(title: "Apps", isExpanded: appsExpanded) {
@@ -109,49 +132,52 @@ struct SidebarView: View {
                         )
 
                         Group {
-                            Button {
-                                toastMessage = "Emails library coming soon"
-                                withAnimation { showExportToast = true }
-                            } label: {
-                                Label("Emails",    systemImage: "envelope.open")
+                            HStack {
+                                Label("Emails", systemImage: "envelope.open")
+                                Spacer()
+                                Text("Soon")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
-
-                            Button {
-                                toastMessage = "Stories library coming soon"
-                                withAnimation { showExportToast = true }
-                            } label: {
-                                Label("Stories",   systemImage: "book.closed")
+                            HStack {
+                                Label("Stories", systemImage: "book.closed")
+                                Spacer()
+                                Text("Soon")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
-
-                            Button {
-                                toastMessage = "Essays library coming soon"
-                                withAnimation { showExportToast = true }
-                            } label: {
-                                Label("Essays",    systemImage: "doc.text")
+                            HStack {
+                                Label("Essays", systemImage: "doc.text")
+                                Spacer()
+                                Text("Soon")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
-
-                            Button {
-                                toastMessage = "Poetry library coming soon"
-                                withAnimation { showExportToast = true }
-                            } label: {
-                                Label("Poetry",    systemImage: "text.quote")
+                            HStack {
+                                Label("Poetry", systemImage: "text.quote")
+                                Spacer()
+                                Text("Soon")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
-
-                            Button {
-                                toastMessage = "Scripts library coming soon"
-                                withAnimation { showExportToast = true }
-                            } label: {
-                                Label("Scripts",   systemImage: "scroll")
+                            HStack {
+                                Label("Scripts", systemImage: "scroll")
+                                Spacer()
+                                Text("Soon")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
-
-                            Button {
-                                toastMessage = "Research library coming soon"
-                                withAnimation { showExportToast = true }
-                            } label: {
-                                Label("Research",  systemImage: "magnifyingglass.circle")
+                            HStack {
+                                Label("Research", systemImage: "magnifyingglass.circle")
+                                Spacer()
+                                Text("Soon")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.tertiary)
                             }
                         }
-                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .opacity(0.7)
+                        .padding(.vertical, 2)
                     }
                 } header: {
                     CollapsibleSectionHeader(title: "Library", isExpanded: libraryExpanded) {

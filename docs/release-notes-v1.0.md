@@ -2,6 +2,53 @@
 
 ---
 
+## v1.4 — OpenRouter, Search, Articles & Service Layer (March 15, 2026)
+
+Major expansion lifting WriteVibe from a single-backend prototype to a full multi-provider writing platform.
+
+### OpenRouter Gateway (14+ Cloud Models)
+- **`OpenRouterService.swift`** — new SSE provider targeting `https://openrouter.ai/api/v1/chat/completions`. Sends `HTTP-Referer: https://writevibe.app` and `X-Title: WriteVibe` headers. Supports all OpenAI-compatible models on the OpenRouter catalog.
+- **Models now live via OpenRouter**: Claude Sonnet, Claude Opus, GPT-4o, GPT-4o Mini, o3 Mini, Mistral Large, Gemini Flash, Gemini Pro, DeepSeek R1, DeepSeek V3, Llama 3.3 70B (cloud), and Perplexity Sonar, Sonar Pro.
+- `ServiceContainer.provider(for:)` routes cloud models through OpenRouter by preference, falling back to `AnthropicService` for direct Claude access when no OpenRouter key is present.
+- `ModelPickerView` — two-pane popover (640×380) replacing the old static `Menu`. Left rail: provider sections (On-Device, Local, Cloud). Center: curated model list. Right: hover detail card with use-case description.
+
+### Perplexity Sonar Web Search Layer
+- `StreamingService.fetchWebSearchContext()` — when "Search" chip is enabled, fires a Sonar Pro query through OpenRouter before streaming the main reply. Results are parsed into `[SearchResult]` (title, URL, snippet) and injected as structured JSON into the system prompt.
+- `isSearchFetching: Bool` state on `AppState` drives a `ProgressView` spinner on the Search chip in `InputBar` while the Sonar fetch is in progress.
+- **Known limitation**: Silently fails in Ollama-only mode (no OpenRouter key). Fix tracked in dev-map-003 §Bug #2.
+
+### Capability Chips (System Prompt Augmentation)
+- All five chips now inject into the system prompt: **Tone** (Balanced/Professional/Creative/Casual/Technical), **Length** (Normal/Short/Long/Concise), **Format** (Markdown/Plain Text/JSON/Bullet Points), **Memory** (enables context retention instruction), **Search** (triggers Sonar fetch).
+- Chips are fully interactive with active/inactive visual state. Search chip shows a spinner while fetching.
+
+### Block-Based Article Editor
+- **`ArticlesDashboardView`**, **`ArticleWorkspaceView`**, **`ArticleEditorView`**, **`ArticleEditorViewModel`** — complete block-based article editing pipeline.
+- **`ArticleAIService.swift`** — structured JSON edit proposals via OpenRouter. Returns `{ summary, operations: [...] }` mapped to `ProposedBlockEdit` (insert, replace, delete) operations per block.
+- **`BlockRowView.swift`** — editable block row with inline diff highlights. Green inserts / red strikethrough deletes rendered via `DiffEngine` when "Show Edits" is active. Image blocks support photo picker with persistence.
+- Article DNA panel: title, subtitle, tone picker, length picker, target audience, quick notes, publish status.
+- Hero stat card: article count, series count, in-progress/done counts, total word count.
+
+### Writing Analysis Panel
+- `AppleIntelligenceService.analyzeWriting()` — uses `@Generable` to return `WritingAnalysis { tone, readingLevel, wordCount, suggestions }` for any message content.
+- **`WritingAnalysisPanelView.swift`** — frosted glass panel surfaced via "Analyze" button on any assistant message in `MessageBubble`. Shows tone, reading level, word count, and improvement suggestions.
+
+### AI Copilot Panel
+- **`CopilotPanel.swift`** — slide-in side panel (accessible from chat toolbar) running a fully independent parallel conversation. Shares `ServiceContainer` providers but maintains its own `copilotConversationId` in `AppState`.
+
+### Service Layer Refactor
+- **`ServiceContainer.swift`** — singleton DI container. All providers and services are instantiated once here. Route handlers call `container.provider(for:)` — no direct instantiation in `AppState` or views.
+- **`ConversationService.swift`** — extracted CRUD + in-memory cache from `AppState`. `appendMessage()` auto-triggers `AppleIntelligenceService.generateTitle()` on first user message when available.
+- **`StreamingService.swift`** — extracted streaming orchestration. Handles prompt augmentation, search injection, token batching (6-token flush to SwiftData), and `CancellationError` handling.
+- `AppState.generateReply()` now calls `streamingService.streamReply()` — no provider logic in `AppState`.
+
+### Known Issues in This Release
+- **Ollama download cancellation** — Cancel button clears UI only; underlying `URLSession` task runs to completion. Fix: store owning `Task` in `@State`, call `.cancel()`.
+- **Search silently fails in Ollama-only mode** — `fetchWebSearchContext` does not guard for missing OpenRouter key before attempting the call. Fix: add Keychain presence check.
+- **Duplicate input bar files** — `ChatInputBar.swift` and `InputBar.swift` are near-identical. `ChatInputBar.swift` is the stale copy (missing search spinner). Should be deleted.
+- **Anthropic API version** — `AppConstants.anthropicAPIVersion = "2023-06-01"` is 2+ years stale. Update before next Anthropic-direct call.
+
+---
+
 ## v1.3 — Ollama Local Models (March 11, 2026)
 
 Full integration of Ollama as a free, on-device model backend. No cloud required beyond initial model downloads.

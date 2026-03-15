@@ -17,6 +17,9 @@ struct ChatView: View {
     @State private var showExportToast = false
     @State private var toastMessage = ""
 
+    // State to control the visibility of the analysis panel
+    @State private var isAnalysisPanelVisible: Bool = false
+
     private var conversation: Conversation? { appState.selected }
     // Sort by timestamp so SwiftData insertion order doesn't affect display order.
     private var messages: [Message] {
@@ -25,8 +28,15 @@ struct ChatView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            messageList
-            floatingInput
+            VStack {
+                messageList
+                // Conditionally display the analysis panel
+                if isAnalysisPanelVisible {
+                    WritingAnalysisPanelView(isPanelOpen: $isAnalysisPanelVisible)
+                        .padding(.bottom, 8) // Add some padding below the panel
+                }
+                floatingInput
+            }
         }
         .navigationTitle(conversation?.title ?? "New Thread")
         .toolbar {
@@ -78,8 +88,14 @@ struct ChatView: View {
         .onAppear {
             appState.bindModelContextIfNeeded(modelContext)
             inputFocused = true
+            // Sync state when view appears
+            isAnalysisPanelVisible = appState.isAnalysisPanelOpen
         }
         .onChange(of: appState.selectedId) { inputFocused = true }
+        .onChange(of: appState.isAnalysisPanelOpen) { newValue in
+            // Update local state when AppState changes
+            isAnalysisPanelVisible = newValue
+        }
         .task {
             await appState.refreshOllamaModels()
         }
@@ -159,7 +175,9 @@ struct ChatView: View {
                 tokenUsage: appState.selectedId.map { appState.estimatedTokenUsage(for: $0) / 4096.0 } ?? 0.0,
                 focused: $inputFocused,
                 onDocumentAttached: { extractedText in
-                    inputText = "Please read the following document and help me improve it:\n\n\(extractedText)"
+                    inputText = "Please read the following document and help me improve it:
+
+\(extractedText)"
                 },
                 onDocumentImportFailed: { errorMessage in
                     toastMessage = errorMessage
@@ -180,7 +198,8 @@ struct ChatView: View {
     private var writingActionsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
-                ForEach(WritingAction.all) { action in
+                // Existing Writing Actions (Improve, Expand, etc.)
+                ForEach(WritingAction.defaultActions) { action in // Use defaultActions to exclude Analyze
                     Button {
                         guard let id = appState.selectedId else { return }
                         appState.send(action.prompt, in: id)
@@ -195,6 +214,51 @@ struct ChatView: View {
                     }
                     .buttonStyle(.plain)
                     .glassEffect(in: Capsule())
+                }
+
+                // Analyze Button - conditionally shown
+                if let lastAssistantMessage = messages.last(where: { $0.role == .assistant && !$0.content.isEmpty }),
+                   !appState.isAnalysisPanelOpen { // Only show if panel is not already open and there's assistant content
+                    Button {
+                        // Action to trigger analysis and open the panel
+                        // This button triggers the analysis and then ensures the panel is open.
+                        // The MessageBubble's action chip will handle the actual analysis call and state updates.
+                        // This button here primarily acts as a toggle for the panel,
+                        // ensuring analysis is done if needed before opening.
+                        
+                        // Check if analysis is already loaded or if it's stale
+                        // For simplicity, re-analyze if panel is closed or no result is present.
+                        Task {
+                            // Check if analysis is already loaded for the last assistant message or if it's stale
+                            // For now, re-analyze if panel is closed or no result is present.
+                            if appState.analysisResult == nil { // Only analyze if no result is available
+                                do {
+                                    let analysis = try await AppleIntelligenceService.analyzeWriting(text: lastAssistantMessage.content)
+                                    appState.analysisResult = analysis
+                                    appState.isAnalysisPanelOpen = true
+                                } catch {
+                                    print("Error triggering analysis from ChatView: \(error.localizedDescription)")
+                                    // Optionally show an error toast
+                                    appState.analysisResult = nil // Clear any stale result
+                                    appState.isAnalysisPanelOpen = false // Close panel if analysis fails
+                                }
+                            } else {
+                                // If results are already present, just open the panel
+                                appState.isAnalysisPanelOpen = true
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chart.bar").font(.caption) // Icon for analysis
+                            Text("Analyze").font(.callout)
+                        }
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(in: Capsule())
+                    .help("Analyze writing")
                 }
             }
         }
@@ -225,3 +289,47 @@ struct ChatView: View {
     }
 }
 
+// MARK: - WritingAction enum (assuming it's defined elsewhere)
+// This enum is used to define the writing actions available as chips.
+// We'll need to add a new case for "Analyze".
+
+// Placeholder definition for WritingAction enum.
+// In a real project, this would likely be in its own file (e.g., Models/WritingAction.swift).
+fileprivate enum WritingAction: String, CaseIterable, Identifiable {
+    case improve = "Improve"
+    case expand = "Expand"
+    case shorten = "Shorten"
+    case rephrase = "Rephrase"
+    case continueWriting = "Continue"
+    case analyze = "Analyze" // New action for analysis
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .improve: return "arrow.up.and.down.right.and.arrow.down.left"
+        case .expand: return "arrow.up.right.and.arrow.down.left"
+        case .shorten: return "arrow.down.left.and.arrow.up.right"
+        case .rephrase: return "arrow.triangle.2.circlepath"
+        case .continueWriting: return "play.fill"
+        case .analyze: return "chart.bar" // Icon for analysis
+        }
+    }
+
+    var label: String { rawValue }
+
+    var prompt: String {
+        switch self {
+        case .improve: return "Can you improve this writing for clarity, tone, and impact?"
+        case .expand: return "Can you expand on this topic?"
+        case .shorten: return "Can you shorten this text while retaining the core message?"
+        case .rephrase: return "Can you rephrase this text?"
+        case .continueWriting: return "Can you continue writing based on the context?"
+        case .analyze: return "Analyze the writing for tone, reading level, word count, and suggestions." // Prompt for analysis
+        }
+    }
+
+    // Filter out 'analyze' when listing default actions in the UI, as it's handled differently.
+    static let allCases: [WritingAction] = [.improve, .expand, .shorten, .rephrase, .continueWriting, .analyze]
+    static let defaultActions: [WritingAction] = [.improve, .expand, .shorten, .rephrase, .continueWriting]
+}

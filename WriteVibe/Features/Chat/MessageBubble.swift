@@ -8,6 +8,8 @@ import SwiftUI
 // MARK: - MessageBubble
 
 struct MessageBubble: View {
+    @Environment(AppState.self) private var appState // Access AppState for analysis and panel state
+
     let message:    Message
     let isLast:     Bool
     let isStreaming: Bool
@@ -18,6 +20,7 @@ struct MessageBubble: View {
 
     @State private var isHovered = false
     @State private var copied    = false
+    @State private var isAnalyzing = false // State to track if analysis is in progress
 
     private var isUser: Bool { message.role == .user }
 
@@ -99,6 +102,29 @@ struct MessageBubble: View {
                 onFeedback?(.negative)
             }
 
+            // Analyze button for writing analysis
+            MessageActionButton(
+                symbol: isAnalyzing ? "" : "chart.bar", // Use empty string or a different icon if analyzing
+                label: isAnalyzing ? "Analyzing..." : "Analyze"
+            ) {
+                if !isAnalyzing {
+                    isAnalyzing = true
+                    Task {
+                        do {
+                            let analysis = try await AppleIntelligenceService.analyzeWriting(text: message.content)
+                            appState.analysisResult = analysis
+                            appState.isAnalysisPanelOpen = true // Open the panel
+                        } catch {
+                            // Handle error: perhaps show an alert or log it
+                            print("Error analyzing writing: \(error.localizedDescription)")
+                            appState.analysisResult = nil // Clear any previous result on error
+                        }
+                        isAnalyzing = false // Stop analyzing state
+                    }
+                }
+            }
+            .disabled(isAnalyzing) // Disable while analyzing
+
             if isLast {
                 MessageActionButton(symbol: "arrow.counterclockwise", label: "Regenerate") {
                     onRegenerate?()
@@ -124,22 +150,36 @@ struct MessageActionButton: View {
     let action: () -> Void
     @State private var isHovered = false
 
+    // Inject AppState to check for analysis state if needed for button disabling/styling
+    @Environment(AppState.self) private var appState
+
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.caption)
-                .foregroundStyle(isHovered ? Color.primary : Color.secondary)
-                .frame(width: 28, height: 28)
-                .background {
-                    if isHovered {
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    }
+            HStack { // Use HStack to potentially include spinner if needed
+                if symbol.isEmpty && label.contains("Analyzing") { // Special case for analysis spinner
+                    ProgressView()
+                        .controlSize(.mini)
+                        .scaleEffect(0.6)
+                        .frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.caption)
+                        .foregroundStyle(isHovered ? Color.primary : Color.secondary)
+                        .frame(width: 28, height: 28)
                 }
+            }
+            .background {
+                if isHovered {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+            }
         }
         .buttonStyle(.plain)
         .help(label)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.1), value: isHovered)
+        // Disable button if analysis is in progress and this is the analyze button
+        .disabled(symbol.isEmpty && label.contains("Analyzing"))
     }
 }

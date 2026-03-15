@@ -9,6 +9,8 @@ import UniformTypeIdentifiers
 // MARK: - ChatInputBar
 
 struct ChatInputBar: View {
+    @Environment(AppState.self) private var appState // Access AppState to observe isSearchFetching
+
     @Binding var text: String
     let isThinking: Bool
     let tokenUsage: Double
@@ -169,18 +171,28 @@ struct ChatInputBar: View {
 
     // MARK: - Capability Chips
 
-    @Environment(AppState.self) private var appState
-
     private var capabilityChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                // Search Toggle
+                // Search Toggle with spinner when fetching
                 CapabilityChip(
-                    icon: "globe",
-                    label: "Search",
-                    isActive: appState.isSearchEnabled
+                    icon: appState.isSearchFetching ? "" : "globe", // Hide icon when spinner is shown
+                    label: appState.isSearchFetching ? "" : "Search", // Hide label when spinner is shown
+                    isActive: appState.isSearchEnabled && !appState.isSearchFetching // Only active if enabled and not fetching
                 ) {
-                    appState.isSearchEnabled.toggle()
+                    if !appState.isSearchFetching { // Prevent toggling while fetching
+                        appState.isSearchEnabled.toggle()
+                    }
+                }
+                // Conditionally display spinner or the chip content
+                .overlay {
+                    if appState.isSearchFetching {
+                        ProgressView()
+                            .controlSize(.small)
+                            .scaleEffect(0.7)
+                            .frame(width: 32, height: 32)
+                            .padding(.horizontal, 2) // Adjust padding to align with normal chip
+                    }
                 }
 
                 // Tone Menu
@@ -283,8 +295,6 @@ struct ChatInputBar: View {
         .disabled(!canSend && !isThinking)
         .animation(.easeInOut(duration: 0.18), value: canSend)
     }
-
-
 }
 // MARK: - AttachMenu
 
@@ -366,31 +376,46 @@ private struct CapabilityChip: View {
     var hasChevron: Bool = false
     var isActive: Bool = false
     var action: (() -> Void)? = nil
+    
+    // Inject AppState to observe isSearchFetching for the spinner logic
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         Button {
             action?()
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .medium))
-                Text(label)
-                    .font(.system(size: 11, weight: .medium))
-                if hasChevron {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .bold))
+            if appState.isSearchFetching && icon == "globe" { // Special handling for search spinner
+                ProgressView()
+                    .controlSize(.small)
+                    .scaleEffect(0.7)
+                    .frame(width: 32, height: 32)
+                    .padding(.horizontal, 2) // Adjust padding to align with normal chip
+            } else {
+                HStack(spacing: 4) {
+                    if !icon.isEmpty { // Only show icon if not empty (for spinner case)
+                        Image(systemName: icon)
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    if !label.isEmpty { // Only show label if not empty (for spinner case)
+                        Text(label)
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    if hasChevron {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .bold))
+                    }
                 }
+                .foregroundStyle(isActive ? .white : Color.secondary.opacity(0.8))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(
+                    isActive ? Color.accentColor : Color.secondary.opacity(0.07),
+                    in: Capsule()
+                )
             }
-            .foregroundStyle(isActive ? .white : Color.secondary.opacity(0.8))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(
-                isActive ? Color.accentColor : Color.secondary.opacity(0.07),
-                in: Capsule()
-            )
         }
         .buttonStyle(.plain)
         .help(action == nil ? "\(label) · Choose from menu" : "Toggle \(label)")
+        .disabled(appState.isSearchFetching && icon == "globe") // Disable search chip while fetching
     }
 }
-

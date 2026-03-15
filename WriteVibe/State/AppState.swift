@@ -5,6 +5,7 @@
 
 import Foundation
 import SwiftData
+import SwiftUI // Import SwiftUI to use @EnvironmentObject or similar if needed for state sharing
 
 // MARK: - AppDestination
 
@@ -35,6 +36,13 @@ final class AppState {
     var selectedLength: String = "Normal"
     var selectedFormat: String = "Markdown"
     var isMemoryEnabled: Bool = true
+
+    // State for search fetching indicator
+    var isSearchFetching: Bool = false // Added state for search fetching
+
+    // State for writing analysis
+    var isAnalysisPanelOpen: Bool = false
+    var analysisResult: WritingAnalysis? = nil // Stores the result of the writing analysis
 
     let services: ServiceContainer
 
@@ -233,11 +241,21 @@ final class AppState {
                     return
                 }
 
+                // Set search fetching state before initiating streaming
+                if isSearchEnabled {
+                    self.isSearchFetching = true
+                }
+
                 try await self.services.streamingService.streamReply(
                     provider: provider,
                     modelName: modelName,
                     conversationId: conversationId,
-                    context: ctx
+                    context: ctx,
+                    isSearchEnabled: isSearchEnabled,
+                    tone: selectedTone,
+                    length: selectedLength,
+                    format: selectedFormat,
+                    isMemoryEnabled: isMemoryEnabled
                 )
             } catch is CancellationError {
                 // User tapped stop
@@ -251,6 +269,11 @@ final class AppState {
                     Message(role: .assistant, content: "⚠️ \(error.localizedDescription)"),
                     to: conversationId, context: ctx
                 )
+            } finally {
+                // Reset search fetching state regardless of outcome
+                if isSearchEnabled {
+                    self.isSearchFetching = false
+                }
             }
         }
         activeTasks[conversationId] = task
@@ -259,6 +282,8 @@ final class AppState {
     private func finishGeneration(for conversationId: UUID) {
         activeTasks.removeValue(forKey: conversationId)
         if thinkingId == conversationId { thinkingId = nil }
+        // Ensure search fetching state is reset if generation finishes without search errors
+        if !isSearchFetching { self.isSearchFetching = false }
     }
 
     // MARK: Ollama
@@ -301,4 +326,3 @@ final class AppState {
         if changed { try? context.save() }
     }
 }
-

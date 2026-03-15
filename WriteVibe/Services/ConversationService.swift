@@ -90,20 +90,5 @@ final class ConversationService {
         return mergedByID.values.sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    func migrateLegacyModels(context: ModelContext, defaultModelIdentifier: String?) {
-        let descriptor = FetchDescriptor<Conversation>()
-        guard let conversations = try? context.fetch(descriptor) else { return }
-
-        var changed = false
-        for conv in conversations where conv.model == .appleIntelligence {
-            conv.model = .ollama
-            if conv.modelIdentifier == nil || conv.modelIdentifier?.isEmpty == true {
-                conv.modelIdentifier = defaultModelIdentifier
-            }
-            conv.updatedAt = Date()
-            changed = true
-        }
-
-        if changed { try? context.save() }
-    }
+    // Removed: migrateLegacyModels function as it was erroneously converting Apple Intelligence conversations to Ollama.
 }

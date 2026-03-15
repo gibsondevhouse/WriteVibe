@@ -27,7 +27,10 @@ final class ServiceContainer {
         self.anthropicProvider = AnthropicService()
         self.appleIntelligenceProvider = AppleIntelligenceStreamingProvider()
         self.conversationService = ConversationService()
-        self.streamingService = StreamingService(conversationService: conversationService)
+        self.streamingService = StreamingService(
+            conversationService: conversationService,
+            searchProvider: openRouterProvider
+        )
     }
 
     /// Returns the appropriate `AIStreamingProvider` for the given model.
@@ -38,6 +41,12 @@ final class ServiceContainer {
         case .appleIntelligence:
             return appleIntelligenceProvider
         default:
+            // Prefer OpenRouter for everything cloud-based if the model has an ID for it.
+            // This ensures Claude models use the OpenRouter path as requested.
+            if model.openRouterModelID != nil {
+                return openRouterProvider
+            }
+            
             if model.provider == .anthropic {
                 return anthropicProvider
             }

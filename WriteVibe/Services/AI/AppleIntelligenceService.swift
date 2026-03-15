@@ -9,6 +9,7 @@
 
 import Foundation
 import FoundationModels
+import Models // Import Models to access Tools
 
 // MARK: - AppleIntelligenceService
 
@@ -34,6 +35,7 @@ enum AppleIntelligenceService {
 
     /// Generates a concise title for a conversation based on the first user message.
     static func generateTitle(userMessage: String) async throws -> String {
+        // Note: Tools are not typically passed to these utility methods as they are self-contained.
         let session = LanguageModelSession(instructions: "You are a helpful assistant. Generate a short, concise title (3-6 words) for the user's message. Do not use quotes.")
         let response = try await session.respond(
             to: "Generate a title for this text: \(userMessage)",
@@ -57,6 +59,16 @@ enum AppleIntelligenceService {
         let response = try await session.respond(to: text)
         return response.content
     }
+
+    /// Analyzes the writing for tone, reading level, word count, and suggestions.
+    static func analyzeWriting(text: String) async throws -> WritingAnalysis {
+        let session = LanguageModelSession(instructions: "You are a helpful writing assistant. Analyze the provided text and return a structured analysis including tone, reading level, word count, and actionable suggestions for improvement.")
+        let response = try await session.respond(
+            to: text,
+            generating: WritingAnalysis.self
+        )
+        return response.content
+    }
 }
 
 // MARK: - AppleIntelligenceStreamingProvider
@@ -77,8 +89,15 @@ struct AppleIntelligenceStreamingProvider: AIStreamingProvider {
                 }
 
                 do {
-                    // Create a session with the provided system prompt
-                    let session = LanguageModelSession(instructions: systemPrompt)
+                    // Instantiate the tools
+                    let dateTimeTool = DateTimeTool()
+                    let clipboardTool = ClipboardTool()
+                    let tools: [any Tool] = [dateTimeTool, clipboardTool]
+
+                    // Create a session with the provided system prompt and tools
+                    // Assuming LanguageModelSession initializer accepts tools. This is a common pattern.
+                    // If this initializer doesn't exist, further investigation into FoundationModels API is needed.
+                    let session = LanguageModelSession(instructions: systemPrompt, tools: tools)
 
                     // Apple Intelligence (FoundationModels) handles its own transcript state if we reuse the session.
                     // Since this stream() call is stateless (it gets the full message history),

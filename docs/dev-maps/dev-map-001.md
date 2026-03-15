@@ -67,17 +67,19 @@
   - ⚠️ Risk: schema migration — test with existing articles
   - File: `WriteVibe/Models/ArticleBlock.swift`
 
-- [ ] **Expand AppleIntelligenceService beyond title generation**
-  - Currently only generates conversation titles via `FoundationModels`
-  - Available on macOS 26+ only — consider using for: summarization, writing suggestions, on-device chat fallback
+- [x] **Expand AppleIntelligenceService beyond title generation**
+  - Expanded to include: `summarize()`, `suggestImprovements()`, `analyzeWriting()` (returns `WritingAnalysis`), and `AppleIntelligenceStreamingProvider` conformance for full chat streaming
+  - `@Generable` used for structured `WritingAnalysis { tone, readingLevel, wordCount, suggestions }` output
+  - `WritingAnalysisPanelView` surfaces results inline in `MessageBubble` via "Analyze" button
   - File: `WriteVibe/Services/AI/AppleIntelligenceService.swift`
 
 ### P3 — Low (testing & polish)
 
-- [ ] **Unit tests: services**
-  - `StreamingServiceTests` — mock `AIStreamingProvider`, verify token batching and cancellation
-  - `ConversationServiceTests` — mock `ModelContext`, verify CRUD and cache
-  - `ExportServiceTests` — verify markdown generation output
+- [x] **Unit tests: services**
+  - `StreamingServiceTests` — mock `AIStreamingProvider`, token batching + capability chip prompt augmentation verified (3 passing tests)
+  - `ConversationServiceTests` — in-memory SwiftData context, full CRUD + `appendMessage` + cache round-trip verified (8 passing tests)
+  - `ServiceContainerTests` — Claude/GPT-4o routing to OpenRouterService + Apple Intelligence routing verified (3 passing tests)
+  - **Remaining gaps**: `DocumentIngestionServiceTests` stubs exist but are unimplemented; `WriteVibeTests.swift` and `WriteVibeUITests.swift` are empty placeholders
   - `MarkdownParserTests` — all block types, edge cases (nested lists, code fences, streaming partial lines)
   - `DiffEngineTests` — property-based tests for article diff engine
   - `WritingModeTests` — icon inference for known title patterns

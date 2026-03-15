@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - BlockRowView
 
@@ -53,14 +54,67 @@ struct BlockRowView: View {
             .focused($isFocused)
             .onSubmit { onReturnAtEnd() }
         } else {
-            // Image block placeholder
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.quaternary)
-                .frame(height: 140)
-                .overlay(
-                    Label("Image", systemImage: "photo")
-                        .foregroundStyle(.secondary)
-                )
+            // Actionable image block
+            Button {
+                selectImageForBlock()
+            } label: {
+                if block.content.isEmpty {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.quaternary)
+                        .frame(height: 140)
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.system(size: 24))
+                                Text("Select Image")
+                                    .font(.callout)
+                            }
+                            .foregroundStyle(.secondary)
+                        )
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let url = URL(string: block.content), 
+                           let image = NSImage(contentsOf: url) {
+                            Image(nsImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
+                                .frame(maxHeight: 400)
+                                .cornerRadius(8)
+                        } else {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(.quaternary)
+                                .frame(height: 140)
+                                .overlay(
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 24))
+                                        Text(URL(string: block.content)?.lastPathComponent ?? "Image not found")
+                                            .font(.caption)
+                                    }
+                                    .foregroundStyle(.secondary)
+                                )
+                        }
+                        
+                        if case .image(let caption) = block.blockType, let cap = caption {
+                            Text(cap)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .italic()
+                        }
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func selectImageForBlock() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            block.content = url.absoluteString
         }
     }
 
@@ -221,3 +275,4 @@ private struct SpanReviewRow: View {
         }
     }
 }
+

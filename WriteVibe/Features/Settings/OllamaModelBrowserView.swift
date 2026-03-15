@@ -28,6 +28,7 @@ struct OllamaModelBrowserView: View {
     @State private var installedModels: [OllamaModel] = []
     @State private var downloadProgress: [String: Double] = [:]   // modelName → 0.0...1.0
     @State private var downloadStatus: [String: String] = [:]     // modelName → status string
+    @State private var downloadTasks: [String: Task<Void, Never>] = [:] // modelName → Task
     @State private var isRefreshing = false
 
     var body: some View {
@@ -46,7 +47,11 @@ struct OllamaModelBrowserView: View {
             .navigationTitle("Local Models")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        // Cancel any ongoing downloads before dismissing
+                        Task { await cancelAllDownloads() }
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -56,6 +61,10 @@ struct OllamaModelBrowserView: View {
                     }
                     .disabled(isRefreshing)
                 }
+            }
+            // Ensure any running downloads are cancelled when the view disappears
+            .onDisappear {
+                Task { await cancelAllDownloads() }
             }
         }
         .frame(width: 520, height: 620)
@@ -101,7 +110,7 @@ struct OllamaModelBrowserView: View {
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
-                ForEach(installedModels) { model in
+                ForEach(installedModels, id: \.id) { model in // Added id: \.id for ForEach
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.displayName)
@@ -186,15 +195,22 @@ struct OllamaModelBrowserView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                             .help("Installed")
-                    } else if progress != nil {
-                        Button("Cancel") {
-                            // For now — mark as cancelled in state
-                            downloadProgress.removeValue(forKey: model.name)
-                            downloadStatus.removeValue(forKey: model.name)
+                    } else if progress != nil { // Downloading or Canceled state
+                        if downloadTasks[model.name] != nil { // Task is active, show Cancel
+                            Button("Cancel") {
+                                Task { await cancelDownload(for: model.name) }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        } else { // Task was cancelled or failed and is no longer tracked, show Download again
+                            Button("Download") {
+                                downloadModel(model.name)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .disabled(ollamaRunning != true)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    } else {
+                    } else { // Not installed, no active download
                         Button("Download") {
                             downloadModel(model.name)
                         }
@@ -220,25 +236,55 @@ struct OllamaModelBrowserView: View {
     }
 
     private func downloadModel(_ modelName: String) {
+        // Ensure no duplicate tasks for the same model
+        if downloadTasks[modelName] != nil { return }
+
         downloadProgress[modelName] = 0.0
         downloadStatus[modelName] = "Starting download…"
 
-        Task {
+        let task = Task {
             do {
                 let stream = OllamaService.pullModel(modelName: modelName)
                 for try await progress in stream {
+                    // Check if the task has been cancelled externally (e.g., by user pressing Cancel)
+                    try Task.checkCancellation()
+
                     downloadProgress[modelName] = progress.fraction
                     downloadStatus[modelName] = progress.status.capitalized
                 }
+                // Download completed successfully
                 downloadProgress.removeValue(forKey: modelName)
                 downloadStatus.removeValue(forKey: modelName)
+                downloadTasks.removeValue(forKey: modelName) // Clean up task
                 await refreshStatus()
             } catch {
+                // Handle cancellation or other errors
                 downloadProgress.removeValue(forKey: modelName)
-                downloadStatus[modelName] = "Download failed"
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
                 downloadStatus.removeValue(forKey: modelName)
+                downloadTasks.removeValue(forKey: modelName) // Clean up task
+                // If error is due to cancellation, we don't need to show a failure message
+                if !(error is CancellationError) {
+                    downloadStatus[modelName] = "Download failed"
+                    try? await Task.sleep(nanoseconds: 3_000_000_000) // Show error for a few seconds
+                    downloadStatus.removeValue(forKey: modelName)
+                }
             }
+        }
+        downloadTasks[modelName] = task
+    }
+
+    // Cancels a specific download task and cleans up its state.
+    private func cancelDownload(for modelName: String) async {
+        downloadTasks[modelName]?.cancel()
+        downloadTasks.removeValue(forKey: modelName)
+        downloadProgress.removeValue(forKey: modelName)
+        downloadStatus.removeValue(forKey: modelName)
+    }
+
+    // Cancels all active download tasks and cleans up their state.
+    private func cancelAllDownloads() async {
+        for modelName in downloadTasks.keys {
+            await cancelDownload(for: modelName)
         }
     }
 }
