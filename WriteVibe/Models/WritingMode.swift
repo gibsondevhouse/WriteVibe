@@ -42,6 +42,7 @@ struct WritingAction: Identifiable {
         WritingAction(icon: "arrow.down.right.and.arrow.up.left", label: "Shorten",  prompt: "Make that more concise while keeping every key point."),
         WritingAction(icon: "theatermasks.fill",                   label: "Rephrase", prompt: "Rephrase that with a fresh angle and different wording."),
         WritingAction(icon: "text.append",                         label: "Continue", prompt: "Continue writing from where you left off."),
+        WritingAction(icon: "square.on.square",                    label: "Variants", prompt: ""),  // handled on-device via Apple Intelligence
     ]
 }
 

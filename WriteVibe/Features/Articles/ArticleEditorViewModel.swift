@@ -47,6 +47,22 @@ final class ArticleEditorViewModel {
         }
     }
 
+    // MARK: Outline insertion
+
+    /// Inserts an `ArticleOutline` produced by Apple Intelligence as heading + paragraph block pairs.
+    func insertOutlineBlocks(_ outline: ArticleOutline, into article: Article) {
+        var position = (article.sortedBlocks.last?.position ?? 0) + 1000
+        for section in outline.sections {
+            let headingBlock = ArticleBlock(type: .heading(level: 2), content: section.heading, position: position)
+            article.blocks.append(headingBlock)
+            position += 1000
+            let bodyBlock = ArticleBlock(type: .paragraph, content: section.summary, position: position)
+            article.blocks.append(bodyBlock)
+            position += 1000
+        }
+        article.updatedAt = Date()
+    }
+
     // MARK: AI edit request
 
     func requestAIEdits(for article: Article, defaultModel: AIModel) {

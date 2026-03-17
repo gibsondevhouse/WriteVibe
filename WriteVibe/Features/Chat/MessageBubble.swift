@@ -20,7 +20,9 @@ struct MessageBubble: View {
 
     @State private var isHovered = false
     @State private var copied    = false
-    @State private var isAnalyzing = false // State to track if analysis is in progress
+    @State private var isAnalyzing = false
+    @State private var isGeneratingVariants = false
+    @State private var variantPickerContent: String? = nil
 
     private var isUser: Bool { message.role == .user }
 
@@ -73,6 +75,16 @@ struct MessageBubble: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.easeOut(duration: 0.15), value: isHovered)
         .animation(.easeOut(duration: 0.15), value: isLast)
+        .sheet(item: Binding(
+            get: { variantPickerContent.map { VariantSource(text: $0) } },
+            set: { variantPickerContent = $0?.text }
+        )) { source in
+            if #available(macOS 26, *) {
+                VariantPickerView(originalText: source.text) {
+                    variantPickerContent = nil
+                }
+            }
+        }
     }
 
     // MARK: - Message Actions
@@ -124,6 +136,32 @@ struct MessageBubble: View {
                 }
             }
             .disabled(isAnalyzing) // Disable while analyzing
+
+            // Variants chip — Apple Intelligence only, shown on last assistant message
+            if isLast, #available(macOS 26, *), AppleIntelligenceService.isAvailable {
+                MessageActionButton(
+                    symbol: isGeneratingVariants ? "" : "square.on.square",
+                    label: isGeneratingVariants ? "Generating…" : "Variants"
+                ) {
+                    guard !isGeneratingVariants else { return }
+                    isGeneratingVariants = true
+                    Task {
+                        do {
+                            let result = try await AppleIntelligenceService.generateVariants(
+                                for: message.content,
+                                tone: "Balanced"
+                            )
+                            if result.variants.count >= 3 {
+                                variantPickerContent = message.content
+                            }
+                        } catch {
+                            // Silently discard — no-op if Apple Intelligence is unavailable
+                        }
+                        isGeneratingVariants = false
+                    }
+                }
+                .disabled(isGeneratingVariants)
+            }
 
             if isLast {
                 MessageActionButton(symbol: "arrow.counterclockwise", label: "Regenerate") {
@@ -182,4 +220,12 @@ struct MessageActionButton: View {
         // Disable button if analysis is in progress and this is the analyze button
         .disabled(symbol.isEmpty && label.contains("Analyzing"))
     }
+}
+
+// MARK: - VariantSource
+
+/// Thin `Identifiable` wrapper so `variantPickerContent` can drive a `.sheet(item:)`.
+private struct VariantSource: Identifiable {
+    let id = UUID()
+    let text: String
 }

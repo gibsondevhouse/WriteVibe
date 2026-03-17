@@ -1,8 +1,3 @@
-//
-//  WritingAnalysisPanelView.swift
-//  WriteVibe
-//
-
 import SwiftUI
 
 struct WritingAnalysisPanelView: View {
@@ -50,6 +45,34 @@ struct WritingAnalysisPanelView: View {
                     Text("\(analysis.wordCount)")
                 }
 
+                HStack {
+                    Text("Sentences:")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("\(analysis.sentenceCount)")
+                }
+
+                HStack {
+                    Text("Avg Words / Sentence:")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text(String(format: "%.1f", analysis.avgWordsPerSentence))
+                }
+
+                HStack {
+                    Text("Passive Voice:")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("\(analysis.passiveVoicePercent)%")
+                }
+
+                HStack {
+                    Text("Readability:")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text(analysis.readabilityScore)
+                }
+
                 Divider()
 
                 Text("Suggestions:")
@@ -64,7 +87,7 @@ struct WritingAnalysisPanelView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(analysis.suggestions, id: \.self) { suggestion in
                             HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "sparkles") // Bullet point icon
+                                Image(systemName: "sparkles")
                                     .font(.caption)
                                     .foregroundColor(.accentColor)
                                     .padding(.top, 2)
@@ -75,15 +98,20 @@ struct WritingAnalysisPanelView: View {
                     }
                 }
 
-                Spacer() // Push content to the top
+                Spacer()
             }
             .padding(16)
-            .frame(maxWidth: .infinity, maxHeight: 300, alignment: .topLeading) // Max height for the panel
-            .background(.thinMaterial) // Use a frosted glass effect
+            .frame(maxWidth: .infinity, maxHeight: 380, alignment: .topLeading)
+            .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
-            .padding(.horizontal, 24) // Match ChatView's horizontal padding
-            .padding(.bottom, 8) // Space between panel and input bar
+            .padding(.horizontal, 24)
+            .padding(.bottom, 8)
+            .onAppear {
+                if #available(macOS 26, *), AppleIntelligenceService.isAvailable {
+                    Task { await AppleIntelligenceService.prewarm(prefix: "Analyze the following text") }
+                }
+            }
         }
     }
 }

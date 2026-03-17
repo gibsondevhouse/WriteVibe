@@ -65,6 +65,9 @@ struct WelcomeView: View {
                             label: mode.label,
                             description: mode.description
                         ) {
+                            if #available(macOS 26, *), AppleIntelligenceService.isAvailable {
+                                Task { await AppleIntelligenceService.prewarm(prefix: mode.prompt) }
+                            }
                             inputText = mode.prompt
                             inputFocused = true
                         }

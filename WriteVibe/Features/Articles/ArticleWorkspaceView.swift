@@ -13,6 +13,10 @@ struct ArticleWorkspaceView: View {
 
     @State private var isEditingArticle: Bool = false
     @State private var uploadStatusMessage: String? = nil
+    @State private var isGeneratingOutline: Bool = false
+    @State private var isGeneratingWordCount: Bool = false
+    @State private var wordCountPlan: WordCountPlan? = nil
+    @State private var outlineVM = ArticleEditorViewModel()
 
     private let columns = [
         GridItem(.adaptive(minimum: 280, maximum: 520), spacing: 18)
@@ -252,12 +256,86 @@ struct ArticleWorkspaceView: View {
                     .monospacedDigit()
             }
 
+            // Word Count Plan — Apple Intelligence estimate per section
+            if #available(macOS 26, *), AppleIntelligenceService.isAvailable {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Word Count Plan")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            generateWordCountPlan()
+                        } label: {
+                            if isGeneratingWordCount {
+                                ProgressView().controlSize(.mini).scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 10))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isGeneratingWordCount)
+                        .help("Estimate words per section using Apple Intelligence")
+                    }
+
+                    if let plan = wordCountPlan {
+                        VStack(alignment: .leading, spacing: 3) {
+                            ForEach(plan.sections, id: \.heading) { section in
+                                HStack {
+                                    Text(section.heading)
+                                        .font(.system(size: 10))
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text("~\(section.estimatedWords)")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                        .monospacedDigit()
+                                }
+                            }
+                            Divider()
+                            HStack {
+                                Text("Total estimate")
+                                    .font(.system(size: 10, weight: .semibold))
+                                Spacer()
+                                Text("~\(plan.totalEstimate)")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .monospacedDigit()
+                            }
+                        }
+                    } else if !isGeneratingWordCount {
+                        Text("Tap ✦ to estimate.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
             if let uploadStatusMessage {
                 Text(uploadStatusMessage)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
+            }
+
+            // Generate Outline button — Apple Intelligence only
+            if #available(macOS 26, *), AppleIntelligenceService.isAvailable {
+                Button {
+                    generateOutline()
+                } label: {
+                    if isGeneratingOutline {
+                        Label("Generating…", systemImage: "sparkles")
+                            .font(.system(size: 12, weight: .semibold))
+                    } else {
+                        Label("Generate Outline", systemImage: "list.bullet.rectangle")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isGeneratingOutline || article.title.isEmpty)
+                .help("Use Apple Intelligence to generate a structured outline from your article metadata")
             }
 
             Spacer(minLength: 0)
@@ -437,6 +515,46 @@ struct ArticleWorkspaceView: View {
             }
         }
         .frame(height: 260)
+    }
+
+    // MARK: - Apple Intelligence Actions
+
+    private func generateOutline() {
+        guard #available(macOS 26, *), AppleIntelligenceService.isAvailable else { return }
+        isGeneratingOutline = true
+        uploadStatusMessage = nil
+        Task { @MainActor in
+            do {
+                let outline = try await AppleIntelligenceService.generateOutline(
+                    title: article.title,
+                    topic: article.topic.isEmpty ? article.title : article.topic,
+                    audience: article.audience.isEmpty ? "General" : article.audience,
+                    targetLength: article.targetLength.rawValue
+                )
+                outlineVM.insertOutlineBlocks(outline, into: article)
+                uploadStatusMessage = "Outline inserted into the editor (\(outline.sections.count) sections)."
+            } catch {
+                uploadStatusMessage = "Could not generate outline: \(error.localizedDescription)"
+            }
+            isGeneratingOutline = false
+        }
+    }
+
+    private func generateWordCountPlan() {
+        guard #available(macOS 26, *), AppleIntelligenceService.isAvailable else { return }
+        isGeneratingWordCount = true
+        Task { @MainActor in
+            do {
+                wordCountPlan = try await AppleIntelligenceService.generateWordCountPlan(
+                    title: article.title,
+                    outline: article.outline.isEmpty ? "No outline provided." : article.outline,
+                    targetLength: article.targetLength.rawValue
+                )
+            } catch {
+                // Silently discard — non-critical UI enhancement
+            }
+            isGeneratingWordCount = false
+        }
     }
 
     // MARK: - Existing actions
