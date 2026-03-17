@@ -6,7 +6,7 @@ A macOS AI writing assistant built with SwiftUI.
 
 | Light | Dark |
 |-------|------|
-| ![WriteVibe light mode](docs/screenshots/writevibe-light.png) | ![WriteVibe dark mode](docs/screenshots/writevibe-dark.png) |
+| ![WriteVibe light mode](screenshots/writevibe-light.png) | ![WriteVibe dark mode](screenshots/writevibe-dark.png) |
 
  Supports on-device Apple Intelligence, local Ollama models, and cloud AI providers — giving you a fully offline or cloud-connected writing experience.
 
