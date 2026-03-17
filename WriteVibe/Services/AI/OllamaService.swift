@@ -27,6 +27,12 @@ struct OllamaModel: Identifiable, Decodable {
         return String(format: "%.0f MB", mb)
     }
 
+    /// Embedding models don't support /v1/chat/completions — exclude them from the chat picker.
+    var isEmbeddingModel: Bool {
+        let lower = name.lowercased()
+        return lower.contains("embed") || lower.hasPrefix("nomic-")
+    }
+
     enum CodingKeys: String, CodingKey {
         case name
         case size

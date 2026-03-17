@@ -17,7 +17,6 @@ final class ServiceContainer {
     let ollamaProvider: OllamaService
     let openRouterProvider: OpenRouterService
     let anthropicProvider: AnthropicService
-    let appleIntelligenceProvider: AppleIntelligenceStreamingProvider
     let conversationService: ConversationService
     let streamingService: StreamingService
 
@@ -25,7 +24,6 @@ final class ServiceContainer {
         self.ollamaProvider = OllamaService()
         self.openRouterProvider = OpenRouterService()
         self.anthropicProvider = AnthropicService()
-        self.appleIntelligenceProvider = AppleIntelligenceStreamingProvider()
         self.conversationService = ConversationService()
         self.streamingService = StreamingService(
             conversationService: conversationService,
@@ -38,15 +36,10 @@ final class ServiceContainer {
         switch model {
         case .ollama:
             return ollamaProvider
-        case .appleIntelligence:
-            return appleIntelligenceProvider
         default:
-            // Prefer OpenRouter for everything cloud-based if the model has an ID for it.
-            // This ensures Claude models use the OpenRouter path as requested.
             if model.openRouterModelID != nil {
                 return openRouterProvider
             }
-            
             if model.provider == .anthropic {
                 return anthropicProvider
             }

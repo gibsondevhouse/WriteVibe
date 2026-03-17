@@ -116,7 +116,11 @@ struct ModelPickerView: View {
             if availableOllamaModels.isEmpty {
                 emptyOllamaState
             } else {
-                ForEach(availableOllamaModels) { ollamaModel in
+                let chatModels = availableOllamaModels.filter { !$0.isEmbeddingModel }
+                if chatModels.isEmpty {
+                    emptyOllamaState
+                } else {
+                    ForEach(chatModels) { ollamaModel in
                     let isSelected = model == .ollama
                         && modelIdentifier == ollamaModel.name
                     ModelRow(
@@ -130,6 +134,7 @@ struct ModelPickerView: View {
                         modelIdentifier = ollamaModel.name
                         isPresented = false
                     }
+                }
                 }
             }
         }

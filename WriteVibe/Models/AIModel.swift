@@ -129,7 +129,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
     }
 
     var isLocal: Bool {
-        self == .ollama || self == .appleIntelligence
+        self == .ollama
     }
 
     var requiresAPIKey: Bool {

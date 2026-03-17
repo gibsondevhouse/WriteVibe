@@ -93,7 +93,6 @@ final class AppState {
     func bindModelContextIfNeeded(_ context: ModelContext) {
         if modelContext !== context {
             modelContext = context
-            services.conversationService.migrateLegacyModels(context: context, defaultModelIdentifier: defaultModelIdentifier)
             migrateArticleAudience(context: context)
         }
         reconcileConversationIDs()
@@ -215,10 +214,24 @@ final class AppState {
 
         let task = Task { [weak self] in
             guard let self, let ctx = self.modelContext else { return }
-            defer { self.finishGeneration(for: conversationId) }
+            defer {
+                self.finishGeneration(for: conversationId)
+                // Reset search fetching state regardless of outcome
+                if self.isSearchEnabled {
+                    self.isSearchFetching = false
+                }
+            }
             do {
                 let modelName: String
                 let provider: AIStreamingProvider
+
+                guard model != .appleIntelligence else {
+                    self.services.conversationService.appendMessage(
+                        Message(role: .assistant, content: "Apple Intelligence is not available for chat. Select a different model."),
+                        to: conversationId, context: ctx
+                    )
+                    return
+                }
 
                 if model.isLocal {
                     guard let name = modelIdentifier, !name.isEmpty else {
@@ -269,11 +282,6 @@ final class AppState {
                     Message(role: .assistant, content: "⚠️ \(error.localizedDescription)"),
                     to: conversationId, context: ctx
                 )
-            } finally {
-                // Reset search fetching state regardless of outcome
-                if isSearchEnabled {
-                    self.isSearchFetching = false
-                }
             }
         }
         activeTasks[conversationId] = task

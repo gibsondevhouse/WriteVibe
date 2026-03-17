@@ -175,9 +175,11 @@ struct ChatView: View {
                 tokenUsage: appState.selectedId.map { appState.estimatedTokenUsage(for: $0) / 4096.0 } ?? 0.0,
                 focused: $inputFocused,
                 onDocumentAttached: { extractedText in
-                    inputText = "Please read the following document and help me improve it:
+                    inputText = """
+Please read the following document and help me improve it:
 
-\(extractedText)"
+\(extractedText)
+"""
                 },
                 onDocumentImportFailed: { errorMessage in
                     toastMessage = errorMessage
@@ -199,7 +201,7 @@ struct ChatView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
                 // Existing Writing Actions (Improve, Expand, etc.)
-                ForEach(WritingAction.defaultActions) { action in // Use defaultActions to exclude Analyze
+                ForEach(WritingAction.all) { action in
                     Button {
                         guard let id = appState.selectedId else { return }
                         appState.send(action.prompt, in: id)
@@ -289,47 +291,3 @@ struct ChatView: View {
     }
 }
 
-// MARK: - WritingAction enum (assuming it's defined elsewhere)
-// This enum is used to define the writing actions available as chips.
-// We'll need to add a new case for "Analyze".
-
-// Placeholder definition for WritingAction enum.
-// In a real project, this would likely be in its own file (e.g., Models/WritingAction.swift).
-fileprivate enum WritingAction: String, CaseIterable, Identifiable {
-    case improve = "Improve"
-    case expand = "Expand"
-    case shorten = "Shorten"
-    case rephrase = "Rephrase"
-    case continueWriting = "Continue"
-    case analyze = "Analyze" // New action for analysis
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .improve: return "arrow.up.and.down.right.and.arrow.down.left"
-        case .expand: return "arrow.up.right.and.arrow.down.left"
-        case .shorten: return "arrow.down.left.and.arrow.up.right"
-        case .rephrase: return "arrow.triangle.2.circlepath"
-        case .continueWriting: return "play.fill"
-        case .analyze: return "chart.bar" // Icon for analysis
-        }
-    }
-
-    var label: String { rawValue }
-
-    var prompt: String {
-        switch self {
-        case .improve: return "Can you improve this writing for clarity, tone, and impact?"
-        case .expand: return "Can you expand on this topic?"
-        case .shorten: return "Can you shorten this text while retaining the core message?"
-        case .rephrase: return "Can you rephrase this text?"
-        case .continueWriting: return "Can you continue writing based on the context?"
-        case .analyze: return "Analyze the writing for tone, reading level, word count, and suggestions." // Prompt for analysis
-        }
-    }
-
-    // Filter out 'analyze' when listing default actions in the UI, as it's handled differently.
-    static let allCases: [WritingAction] = [.improve, .expand, .shorten, .rephrase, .continueWriting, .analyze]
-    static let defaultActions: [WritingAction] = [.improve, .expand, .shorten, .rephrase, .continueWriting]
-}

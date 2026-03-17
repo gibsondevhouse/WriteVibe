@@ -6,6 +6,10 @@
 //
 
 import Foundation
+import AppKit
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 // MARK: - Tool Protocol
 
@@ -82,6 +86,8 @@ struct ClipboardTool: Tool {
 // MARK: - Writing Analysis Data Structure
 
 /// Represents the analysis of a piece of text, including tone, reading level, word count, and suggestions.
+#if canImport(FoundationModels)
+@available(macOS 26, *)
 @Generable
 struct WritingAnalysis {
     var tone: String // e.g., "Formal", "Informal", "Enthusiastic"
@@ -89,6 +95,14 @@ struct WritingAnalysis {
     var wordCount: Int
     var suggestions: [String] // List of actionable suggestions for improvement
 }
+#else
+struct WritingAnalysis {
+    var tone: String
+    var readingLevel: String
+    var wordCount: Int
+    var suggestions: [String]
+}
+#endif
 
 
 // MARK: - Tool Error

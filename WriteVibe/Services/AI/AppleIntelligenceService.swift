@@ -9,7 +9,6 @@
 
 import Foundation
 import FoundationModels
-import Models // Import Models to access Tools
 
 // MARK: - AppleIntelligenceService
 
@@ -70,55 +69,3 @@ enum AppleIntelligenceService {
         return response.content
     }
 }
-
-// MARK: - AppleIntelligenceStreamingProvider
-
-/// Conformance-bridge to allow Apple Intelligence to be used as a chat provider.
-/// Always available, but throws if called on unsupported macOS versions.
-struct AppleIntelligenceStreamingProvider: AIStreamingProvider {
-    nonisolated func stream(
-        model: String,
-        messages: [[String: String]],
-        systemPrompt: String
-    ) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task { @MainActor in
-                guard #available(macOS 26, *) else {
-                    continuation.finish(throwing: WriteVibeError.modelUnavailable(name: "Apple Intelligence (requires macOS 26+)"))
-                    return
-                }
-
-                do {
-                    // Instantiate the tools
-                    let dateTimeTool = DateTimeTool()
-                    let clipboardTool = ClipboardTool()
-                    let tools: [any Tool] = [dateTimeTool, clipboardTool]
-
-                    // Create a session with the provided system prompt and tools
-                    // Assuming LanguageModelSession initializer accepts tools. This is a common pattern.
-                    // If this initializer doesn't exist, further investigation into FoundationModels API is needed.
-                    let session = LanguageModelSession(instructions: systemPrompt, tools: tools)
-
-                    // Apple Intelligence (FoundationModels) handles its own transcript state if we reuse the session.
-                    // Since this stream() call is stateless (it gets the full message history),
-                    // we pick the last user message as the prompt.
-                    // Note: Future versions could 'replay' history into the session if FoundationModels adds transcript injection.
-                    guard let lastUserMessage = messages.last(where: { $0["role"] == "user" })?["content"] else {
-                        continuation.finish()
-                        return
-                    }
-
-                    let stream = session.streamResponse(to: lastUserMessage)
-                    for try await chunk in stream {
-                        try Task.checkCancellation()
-                        continuation.yield(chunk.content)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-        }
-    }
-}
-

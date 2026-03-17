@@ -6,7 +6,6 @@
 import Foundation
 import SwiftData
 import Security // Import Security framework for Keychain access
-import Models // Import the Models directory to access SearchResult
 
 @MainActor
 @Observable
@@ -47,55 +46,35 @@ final class StreamingService {
         if tone != "Balanced" {
             switch tone {
             case "Professional":
-                augmentedPrompt += "
-
-Tone: Maintain a formal, authoritative, and professional tone. Use industry-standard terminology where appropriate."
+                augmentedPrompt += "\n\nTone: Maintain a formal, authoritative, and professional tone. Use industry-standard terminology where appropriate."
             case "Creative":
-                augmentedPrompt += "
-
-Tone: Use an imaginative, expressive, and engaging tone. Feel free to use metaphors and creative phrasing."
+                augmentedPrompt += "\n\nTone: Use an imaginative, expressive, and engaging tone. Feel free to use metaphors and creative phrasing."
             case "Concise":
-                augmentedPrompt += "
-
-Tone: Be extremely brief and to the point. Avoid any filler or unnecessary explanation."
+                augmentedPrompt += "\n\nTone: Be extremely brief and to the point. Avoid any filler or unnecessary explanation."
             default:
-                augmentedPrompt += "
-
-Tone: Respond in a \(tone.lowercased()) tone."
+                augmentedPrompt += "\n\nTone: Respond in a \(tone.lowercased()) tone."
             }
         }
         
         if length != "Normal" {
             switch length {
             case "Short":
-                augmentedPrompt += "
-
-Length: Keep the response very brief, ideally under 100 words."
+                augmentedPrompt += "\n\nLength: Keep the response very brief, ideally under 100 words."
             case "Long":
-                augmentedPrompt += "
-
-Length: Provide a detailed and comprehensive response, covering all aspects in depth."
+                augmentedPrompt += "\n\nLength: Provide a detailed and comprehensive response, covering all aspects in depth."
             default:
-                augmentedPrompt += "
-
-Length: Make your response \(length.lowercased())."
+                augmentedPrompt += "\n\nLength: Make your response \(length.lowercased())."
             }
         }
         
         if format != "Markdown" {
             switch format {
             case "Plain Text":
-                augmentedPrompt += "
-
-Format: Do not use any markdown formatting. Output raw plain text only."
+                augmentedPrompt += "\n\nFormat: Do not use any markdown formatting. Output raw plain text only."
             case "JSON":
-                augmentedPrompt += "
-
-Format: Structure your entire response as a valid JSON object."
+                augmentedPrompt += "\n\nFormat: Structure your entire response as a valid JSON object."
             default:
-                augmentedPrompt += "
-
-Format: Format your response as \(format)."
+                augmentedPrompt += "\n\nFormat: Format your response as \(format)."
             }
         }
         
@@ -106,9 +85,7 @@ Format: Format your response as \(format)."
                 : (AIModel.perplexitySonarPro.openRouterModelID ?? "perplexity/sonar-pro")
 
             if selectedModelIsSearchNative {
-                augmentedPrompt += "
-
-Search: Use your built-in web retrieval. Ground factual claims in retrieved sources and include citations/links when possible. If retrieval fails, say that clearly instead of inventing details."
+                augmentedPrompt += "\n\nSearch: Use your built-in web retrieval. Ground factual claims in retrieved sources and include citations/links when possible. If retrieval fails, say that clearly instead of inventing details."
             } else if let query = conv.messages.reversed().first(where: { $0.role == .user && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })?.content {
                 do {
                     // Fetch web context, which now includes API key check and structured parsing
@@ -117,38 +94,23 @@ Search: Use your built-in web retrieval. Ground factual claims in retrieved sour
                         encoder.outputFormatting = .prettyPrinted
                         if let jsonData = try? encoder.encode(searchResults) {
                             if let jsonString = String(data: jsonData, encoding: .utf8) {
-                                augmentedPrompt += "
-
-WebResearchContext (from \(searchLayerModel)):
-\(jsonString)
-
-Use the provided JSON WebResearchContext. For each fact you state that comes from this context, append an inline citation like [Source: {URL}]."
+                                augmentedPrompt += "\n\nWebResearchContext (from \(searchLayerModel)):\n\(jsonString)\n\nUse the provided JSON WebResearchContext. For each fact you state that comes from this context, append an inline citation like [Source: {URL}]."
                             } else {
-                                augmentedPrompt += "
-
-Search: Could not format web search results as JSON. Do not claim web verification."
+                                augmentedPrompt += "\n\nSearch: Could not format web search results as JSON. Do not claim web verification."
                             }
                         } else {
-                            augmentedPrompt += "
-
-Search: Failed to encode search results to JSON. Do not claim web verification."
+                            augmentedPrompt += "\n\nSearch: Failed to encode search results to JSON. Do not claim web verification."
                         }
                     } else {
                         // This branch is hit if fetchWebSearchContext returns nil without throwing
-                        augmentedPrompt += "
-
-Search: The web search layer returned no usable findings. Do not claim verified web results."
+                        augmentedPrompt += "\n\nSearch: The web search layer returned no usable findings. Do not claim verified web results."
                     }
                 } catch {
                     // Catch errors from fetchWebSearchContext, including missing API key
-                    augmentedPrompt += "
-
-Search: The web search layer is unavailable right now (\(error.localizedDescription)). Do not claim web verification."
+                    augmentedPrompt += "\n\nSearch: The web search layer is unavailable right now (\(error.localizedDescription)). Do not claim web verification."
                 }
             } else {
-                augmentedPrompt += "
-
-Search: No user query was available for web retrieval. Do not claim web verification."
+                augmentedPrompt += "\n\nSearch: No user query was available for web retrieval. Do not claim web verification."
             }
         }
         
@@ -156,17 +118,12 @@ Search: No user query was available for web retrieval. Do not claim web verifica
         if isSearchEnabled {
             let selectedModel = AIModel(rawValue: modelName) ?? .ollama // Fallback to ollama if modelName is not found
             if selectedModel.isLocal {
-                augmentedPrompt += """
-
-                IMPORTANT: Your only sources for dates, names, titles, and roles are the WebResearchContext above. If a fact is not in the context, say "I don't have current data on this" rather than guessing.
-                """
+                augmentedPrompt += "\n\nIMPORTANT: Your only sources for dates, names, titles, and roles are the WebResearchContext above. If a fact is not in the context, say \"I don't have current data on this\" rather than guessing."
             }
         }
 
         if isMemoryEnabled {
-            augmentedPrompt += "
-
-Memory: Recall relevant details from previous turns and user preferences to ensure continuity."
+            augmentedPrompt += "\n\nMemory: Recall relevant details from previous turns and user preferences to ensure continuity."
         }
 
         var tokenBuffer = ""

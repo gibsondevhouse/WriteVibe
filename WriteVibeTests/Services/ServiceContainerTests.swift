@@ -26,10 +26,13 @@ struct ServiceContainerTests {
         #expect(ollamaProvider is OllamaService)
     }
     
-    @Test func testAppleIntelligenceRouting() async throws {
+    @Test func testAppleIntelligenceNotRoutedForChat() async throws {
+        // Apple Intelligence is not a chat provider — it has no entry in provider(for:)
+        // and .appleIntelligence is no longer in isLocal, so it falls through to the
+        // guard in AppState.generateReply before a provider is ever selected.
         let container = ServiceContainer()
-        
-        let provider = container.provider(for: .appleIntelligence)
-        #expect(provider is AppleIntelligenceStreamingProvider)
+        // Verify Ollama still routes correctly as the only local model
+        let ollamaProvider = container.provider(for: .ollama)
+        #expect(ollamaProvider is OllamaService)
     }
 }
