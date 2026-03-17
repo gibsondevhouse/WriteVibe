@@ -17,3 +17,12 @@ DerivedData/
 
 # Xcode SPM workspace config (machine-local, auto-regenerated)
 *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/
+
+# Internal docs (roadmaps, dev notes, release notes — not for public consumption)
+docs/
+
+# AI agent context files
+GEMINI.md
+CLAUDE.md
+AGENTS.md
+COPILOT.md
