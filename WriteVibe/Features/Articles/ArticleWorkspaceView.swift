@@ -94,13 +94,13 @@ struct ArticleWorkspaceView: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: WVSpace.md) {
             Button(action: onBack) {
-                HStack(spacing: 5) {
+                HStack(spacing: WVSpace.xs) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.wvLabel)
                     Text("Articles")
-                        .font(.callout)
+                        .font(.wvActionLabel)
                 }
                 .foregroundStyle(.secondary)
             }
@@ -108,29 +108,29 @@ struct ArticleWorkspaceView: View {
 
             Divider().frame(height: 16)
 
-            HStack(spacing: 5) {
+            HStack(spacing: WVSpace.xs) {
                 Image(systemName: article.publishStatus.icon)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.wvLabel)
                     .foregroundStyle(statusColor)
                 Text(article.publishStatus.rawValue)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.wvLabel)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, WVSpace.sm)
+            .padding(.vertical, WVSpace.xs)
             .background(Color.secondary.opacity(0.08), in: Capsule())
 
             Spacer()
 
             Text(article.updatedAt, style: .relative)
-                .font(.system(size: 11))
+                .font(.wvFootnote)
                 .foregroundStyle(.quaternary)
 
             Button {
                 importDocument()
             } label: {
                 Label("Import", systemImage: "doc.badge.plus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -139,7 +139,7 @@ struct ArticleWorkspaceView: View {
                 saveDraftSnapshot()
             } label: {
                 Label("Snapshot", systemImage: "camera")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -148,47 +148,47 @@ struct ArticleWorkspaceView: View {
                 isEditingArticle = true
             } label: {
                 Label("Open Editor", systemImage: "square.and.pencil")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+        .padding(.horizontal, WVSpace.xl)
+        .padding(.vertical, WVSpace.sm)
     }
 
     private var articleDNAPanel: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("ARTICLE DNA")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.9)
+        VStack(alignment: .leading, spacing: WVSpace.lg) {
+            Text("Article DNA")
+                .wvSectionLabel()
 
-            TextField("Title", text: $article.title)
-                .textFieldStyle(.plain)
-                .font(.system(size: 28, weight: .bold))
-                .onChange(of: article.title) { _, _ in
-                    article.updatedAt = Date()
-                }
+            VStack(alignment: .leading, spacing: WVSpace.xs) {
+                TextField("Title", text: $article.title)
+                    .textFieldStyle(.plain)
+                    .font(.wvHeroTitle)
+                    .onChange(of: article.title) { _, _ in
+                        article.updatedAt = Date()
+                    }
 
-            TextField("Subtitle", text: $article.subtitle)
-                .textFieldStyle(.plain)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .onChange(of: article.subtitle) { _, _ in
-                    article.updatedAt = Date()
-                }
+                TextField("Subtitle", text: $article.subtitle)
+                    .textFieldStyle(.plain)
+                    .font(.wvBody)
+                    .foregroundStyle(.secondary)
+                    .onChange(of: article.subtitle) { _, _ in
+                        article.updatedAt = Date()
+                    }
+            }
 
             Text("Set the voice, scope, and publishing intent before you draft.")
-                .font(.system(size: 11))
+                .font(.wvFootnote)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: WVSpace.xs) {
                 Text("Tone")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
                     .foregroundStyle(.secondary)
                 Picker("Tone", selection: $article.tone) {
                     ForEach(ArticleTone.allCases, id: \.self) { tone in
@@ -203,12 +203,12 @@ struct ArticleWorkspaceView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: WVSpace.sm) {
                 Text("Target Length")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
                     .foregroundStyle(.secondary)
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 98, maximum: 110), spacing: 6)], spacing: 6) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 98, maximum: 110), spacing: WVSpace.xs)], spacing: WVSpace.xs) {
                     ForEach(ArticleLength.allCases, id: \.self) { len in
                         WorkspaceLengthChip(
                             label: len.rawValue,
@@ -222,9 +222,9 @@ struct ArticleWorkspaceView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: WVSpace.xs) {
                 Text("Publish Status")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
                     .foregroundStyle(.secondary)
 
                 Picker("Status", selection: $article.publishStatus) {
@@ -242,26 +242,26 @@ struct ArticleWorkspaceView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: WVSpace.xs) {
                 Text("Word Progress")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.wvActionLabel)
                     .foregroundStyle(.secondary)
 
                 ProgressView(value: Double(article.wordCount), total: Double(targetWordCeiling))
                     .tint(.accentColor)
 
                 Text("\(article.wordCount) / \(targetWordCeiling) words")
-                    .font(.system(size: 11))
+                    .font(.wvFootnote)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
 
             // Word Count Plan — Apple Intelligence estimate per section
             if #available(macOS 26, *), AppleIntelligenceService.isAvailable {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: WVSpace.xs) {
                     HStack {
                         Text("Word Count Plan")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.wvActionLabel)
                             .foregroundStyle(.secondary)
                         Spacer()
                         Button {
@@ -271,7 +271,7 @@ struct ArticleWorkspaceView: View {
                                 ProgressView().controlSize(.mini).scaleEffect(0.7)
                             } else {
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 10))
+                                    .font(.wvNano)
                             }
                         }
                         .buttonStyle(.plain)
@@ -284,11 +284,11 @@ struct ArticleWorkspaceView: View {
                             ForEach(plan.sections, id: \.heading) { section in
                                 HStack {
                                     Text(section.heading)
-                                        .font(.system(size: 10))
+                                        .font(.wvNano)
                                         .lineLimit(1)
                                     Spacer()
                                     Text("~\(section.estimatedWords)")
-                                        .font(.system(size: 10))
+                                        .font(.wvNano)
                                         .foregroundStyle(.secondary)
                                         .monospacedDigit()
                                 }
@@ -296,16 +296,21 @@ struct ArticleWorkspaceView: View {
                             Divider()
                             HStack {
                                 Text("Total estimate")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.wvLabel)
                                 Spacer()
                                 Text("~\(plan.totalEstimate)")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.wvLabel)
                                     .monospacedDigit()
                             }
                         }
+                        .padding(WVSpace.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: WVRadius.card)
+                                .fill(Color.secondary.opacity(0.06))
+                        )
                     } else if !isGeneratingWordCount {
                         Text("Tap ✦ to estimate.")
-                            .font(.system(size: 10))
+                            .font(.wvNano)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -313,10 +318,10 @@ struct ArticleWorkspaceView: View {
 
             if let uploadStatusMessage {
                 Text(uploadStatusMessage)
-                    .font(.system(size: 11))
+                    .font(.wvFootnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 2)
+                    .padding(.top, WVSpace.xs)
             }
 
             // Generate Outline button — Apple Intelligence only
@@ -326,10 +331,10 @@ struct ArticleWorkspaceView: View {
                 } label: {
                     if isGeneratingOutline {
                         Label("Generating…", systemImage: "sparkles")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.wvActionLabel)
                     } else {
                         Label("Generate Outline", systemImage: "list.bullet.rectangle")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.wvActionLabel)
                     }
                 }
                 .buttonStyle(.bordered)
@@ -344,31 +349,22 @@ struct ArticleWorkspaceView: View {
                 importDocument()
             } label: {
                 Label("Upload Document", systemImage: "doc.badge.plus")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.wvActionLabel)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
         }
-        .padding(18)
-        .frame(width: 248, alignment: .topLeading)
+        .padding(WVSpace.lg)
+        .frame(width: 252, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.secondary.opacity(0.09),
-                    Color.secondary.opacity(0.045)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .background(.background.opacity(0.6))
     }
 
     private var foundationCanvas: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: WVSpace.xxl) {
             studioHero
 
-            LazyVGrid(columns: columns, spacing: 18) {
+            LazyVGrid(columns: columns, spacing: WVSpace.lg) {
                 textCard(
                     title: "Premise",
                     subtitle: "Your argument in one or two sentences. What must the reader leave believing?",
@@ -400,84 +396,72 @@ struct ArticleWorkspaceView: View {
 
             draftsStrip
         }
-        .padding(24)
+        .padding(WVSpace.xxl)
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var studioHero: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Writing Studio")
-                .font(.system(size: 28, weight: .bold))
-            Text("Build your piece from premise to sources, then capture snapshots as you refine each draft.")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .top, spacing: 0) {
+            // Accent rule along the left edge
+            Rectangle()
+                .fill(Color.accentColor.opacity(0.45))
+                .frame(width: 3)
+                .clipShape(.rect(topLeadingRadius: WVRadius.panel, bottomLeadingRadius: WVRadius.panel))
 
-            HStack(spacing: 8) {
-                WorkspacePill(icon: "lightbulb", text: "Premise")
-                WorkspacePill(icon: "person.2", text: "Audience")
-                WorkspacePill(icon: "list.bullet.rectangle", text: "Outline")
-                WorkspacePill(icon: "books.vertical", text: "Sources")
+            VStack(alignment: .leading, spacing: WVSpace.sm) {
+                HStack(alignment: .firstTextBaseline, spacing: WVSpace.sm) {
+                    Text("Writing Studio")
+                        .font(.wvHeroTitle)
+                    Spacer()
+                    HStack(spacing: WVSpace.xs) {
+                        WorkspacePill(icon: "lightbulb", text: "Premise")
+                        WorkspacePill(icon: "person.2", text: "Audience")
+                        WorkspacePill(icon: "list.bullet.rectangle", text: "Outline")
+                        WorkspacePill(icon: "books.vertical", text: "Sources")
+                    }
+                }
+                Text("Build your piece from premise to sources, then capture snapshots as you refine each draft.")
+                    .font(.wvBody)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(WVSpace.lg)
         }
-        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.accentColor.opacity(0.1),
-                            Color.secondary.opacity(0.05)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-        )
+        .wvPanelCard()
     }
 
     private var draftsStrip: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: WVSpace.sm) {
+            HStack(spacing: WVSpace.sm) {
                 Text("Draft History")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.wvActionLabel)
                 WorkspacePill(icon: "doc.plaintext", text: "\(article.drafts.count) drafts")
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: WVSpace.sm) {
                     if sortedDrafts.isEmpty {
                         Text("No snapshots yet. Save one from the toolbar.")
-                            .font(.system(size: 12))
+                            .font(.wvBody)
                             .foregroundStyle(.tertiary)
                     } else {
                         ForEach(sortedDrafts) { draft in
-                            VStack(alignment: .leading, spacing: 3) {
+                            VStack(alignment: .leading, spacing: WVSpace.xs) {
                                 Text(draft.title)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.wvSubhead)
                                 Text("\(draft.wordCount) words")
-                                    .font(.system(size: 11))
+                                    .font(.wvFootnote)
                                     .foregroundStyle(.secondary)
+                                    .monospacedDigit()
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.secondary.opacity(0.09))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                            )
+                            .padding(.horizontal, WVSpace.md)
+                            .padding(.vertical, WVSpace.sm)
+                            .wvCard()
                         }
                     }
                 }
-                .padding(.vertical, 2)
+                .padding(.vertical, WVSpace.xs)
             }
         }
     }
@@ -496,7 +480,7 @@ struct ArticleWorkspaceView: View {
             ZStack(alignment: .topLeading) {
                 if text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(placeholder)
-                        .font(.system(size: 12))
+                        .font(.wvBody)
                         .foregroundStyle(.tertiary)
                         .padding(.top, 8)
                         .padding(.leading, 5)
@@ -504,7 +488,7 @@ struct ArticleWorkspaceView: View {
                 }
 
                 TextEditor(text: text)
-                    .font(.system(size: 13))
+                    .font(.wvBody)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 156)
                     .padding(.horizontal, -4)

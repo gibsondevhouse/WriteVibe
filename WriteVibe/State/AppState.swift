@@ -5,44 +5,30 @@
 
 import Foundation
 import SwiftData
-import SwiftUI // Import SwiftUI to use @EnvironmentObject or similar if needed for state sharing
-
-// MARK: - AppDestination
-
-enum AppDestination: Equatable {
-    case chat
-    case articles
-}
+import SwiftUI
 
 // MARK: - AppState
 
 @MainActor
 @Observable
 final class AppState {
-    var selectedId: UUID?                      = nil
     var thinkingId: UUID?                      = nil
     var availableOllamaModels: [OllamaModel]   = []
-    var pendingPrompt: String?                 = nil
-    var destination: AppDestination            = .chat
     var runtimeIssue: String?                  = nil
 
-    // Copilot panel
-    var isCopilotOpen: Bool       = false
-    var copilotConversationId: UUID? = nil
-
-    // Capability states (stubs)
+    // Capability chips / search state
     var isSearchEnabled: Bool = false
+    var isSearchFetching: Bool = false
+
+    // Capability selections
     var selectedTone: String = "Balanced"
     var selectedLength: String = "Normal"
     var selectedFormat: String = "Markdown"
     var isMemoryEnabled: Bool = true
 
-    // State for search fetching indicator
-    var isSearchFetching: Bool = false // Added state for search fetching
-
-    // State for writing analysis
-    var isAnalysisPanelOpen: Bool = false
-    var analysisResult: WritingAnalysis? = nil // Stores the result of the writing analysis
+    // Copilot panel
+    var isCopilotOpen: Bool          = false
+    var copilotConversationId: UUID? = nil
 
     let services: ServiceContainer
 
@@ -71,18 +57,12 @@ final class AppState {
 
     // MARK: Computed helpers
 
-    var selected: Conversation? {
-        guard let selectedId, let ctx = modelContext else { return nil }
-        return services.conversationService.fetch(selectedId, context: ctx)
-    }
-
     var copilotConversation: Conversation? {
         guard let copilotConversationId, let ctx = modelContext else { return nil }
         return services.conversationService.fetch(copilotConversationId, context: ctx)
     }
 
-    var isThinkingInSelected: Bool { thinkingId != nil && thinkingId == selectedId }
-    var isThinkingInCopilot: Bool  { thinkingId != nil && thinkingId == copilotConversationId }
+    var isThinkingInCopilot: Bool { thinkingId != nil && thinkingId == copilotConversationId }
 
     // MARK: Context binding
 
@@ -100,12 +80,7 @@ final class AppState {
 
     func reconcileConversationIDs() {
         guard let ctx = modelContext else { return }
-        if let id = selectedId, services.conversationService.fetch(id, context: ctx) == nil { selectedId = nil }
         if let id = copilotConversationId, services.conversationService.fetch(id, context: ctx) == nil { copilotConversationId = nil }
-    }
-
-    func mergedConversations(from fetched: [Conversation]) -> [Conversation] {
-        services.conversationService.mergedConversations(from: fetched)
     }
 
     // MARK: Conversation management
@@ -113,14 +88,6 @@ final class AppState {
     func fetchConversation(_ id: UUID) -> Conversation? {
         guard let ctx = modelContext else { reportIssue("Model context is not attached"); return nil }
         return services.conversationService.fetch(id, context: ctx)
-    }
-
-    @discardableResult
-    func newConversation() -> UUID? {
-        guard let ctx = modelContext else { reportIssue("Model context is not attached"); return nil }
-        let conv = services.conversationService.create(model: defaultModel, modelIdentifier: defaultModelIdentifier, context: ctx)
-        selectedId = conv.id
-        return conv.id
     }
 
     func openCopilot() {
@@ -136,18 +103,6 @@ final class AppState {
         let conv = services.conversationService.create(model: defaultModel, modelIdentifier: defaultModelIdentifier, context: ctx)
         copilotConversationId = conv.id
         return conv.id
-    }
-
-    func deleteConversation(_ id: UUID) {
-        stopGeneration(for: id)
-        guard let ctx = modelContext else { return }
-        services.conversationService.delete(id, context: ctx)
-        if selectedId == id { selectedId = nil }
-    }
-
-    func renameConversation(_ id: UUID, to newTitle: String) {
-        guard let ctx = modelContext else { return }
-        services.conversationService.rename(id, to: newTitle, context: ctx)
     }
 
     // MARK: Messaging
@@ -173,35 +128,6 @@ final class AppState {
         finishGeneration(for: conversationId)
     }
 
-    func setFeedback(_ feedback: Message.Feedback?, for messageId: UUID, in conversationId: UUID) {
-        guard let ctx = modelContext,
-              let conv = services.conversationService.fetch(conversationId, context: ctx),
-              let message = conv.messages.first(where: { $0.id == messageId }) else { return }
-
-        message.feedback = message.feedback == feedback ? nil : feedback
-        conv.updatedAt = Date()
-        try? ctx.save()
-    }
-
-    func regenerateLastAssistantResponse(in conversationId: UUID) {
-        guard let ctx = modelContext,
-              let conv = services.conversationService.fetch(conversationId, context: ctx) else { return }
-
-        stopGeneration(for: conversationId)
-
-        if let assistantIndex = conv.messages.lastIndex(where: { $0.role == .assistant }) {
-            let removed = conv.messages.remove(at: assistantIndex)
-            ctx.delete(removed)
-            conv.updatedAt = Date()
-            try? ctx.save()
-        }
-
-        guard conv.messages.contains(where: { $0.role == .user }) else { return }
-        thinkingId = conversationId
-        clearRuntimeIssue()
-        generateReply(to: conversationId)
-    }
-
     private func generateReply(to conversationId: UUID) {
         guard let ctx = modelContext,
               let conv = services.conversationService.fetch(conversationId, context: ctx) else {
@@ -214,20 +140,14 @@ final class AppState {
 
         let task = Task { [weak self] in
             guard let self, let ctx = self.modelContext else { return }
-            defer {
-                self.finishGeneration(for: conversationId)
-                // Reset search fetching state regardless of outcome
-                if self.isSearchEnabled {
-                    self.isSearchFetching = false
-                }
-            }
+            defer { self.finishGeneration(for: conversationId) }
             do {
                 let modelName: String
                 let provider: AIStreamingProvider
 
                 guard model != .appleIntelligence else {
                     self.services.conversationService.appendMessage(
-                        Message(role: .assistant, content: "Apple Intelligence is not available for chat. Select a different model."),
+                        Message(role: .assistant, content: "Apple Intelligence is not available here. Select a different model."),
                         to: conversationId, context: ctx
                     )
                     return
@@ -236,7 +156,7 @@ final class AppState {
                 if model.isLocal {
                     guard let name = modelIdentifier, !name.isEmpty else {
                         self.services.conversationService.appendMessage(
-                            Message(role: .assistant, content: "No Ollama model selected. Choose a model from the model picker."),
+                            Message(role: .assistant, content: "No Ollama model selected. Choose a model from Settings."),
                             to: conversationId, context: ctx
                         )
                         return
@@ -254,21 +174,19 @@ final class AppState {
                     return
                 }
 
-                // Set search fetching state before initiating streaming
-                if isSearchEnabled {
-                    self.isSearchFetching = true
-                }
-
+                // Reflect UI capability chips into the streaming call
+                if self.isSearchEnabled { self.isSearchFetching = true }
+                defer { if self.isSearchEnabled { self.isSearchFetching = false } }
                 try await self.services.streamingService.streamReply(
                     provider: provider,
                     modelName: modelName,
                     conversationId: conversationId,
                     context: ctx,
-                    isSearchEnabled: isSearchEnabled,
-                    tone: selectedTone,
-                    length: selectedLength,
-                    format: selectedFormat,
-                    isMemoryEnabled: isMemoryEnabled
+                    isSearchEnabled: self.isSearchEnabled,
+                    tone: self.selectedTone,
+                    length: self.selectedLength,
+                    format: self.selectedFormat,
+                    isMemoryEnabled: self.isMemoryEnabled
                 )
             } catch is CancellationError {
                 // User tapped stop
@@ -290,8 +208,6 @@ final class AppState {
     private func finishGeneration(for conversationId: UUID) {
         activeTasks.removeValue(forKey: conversationId)
         if thinkingId == conversationId { thinkingId = nil }
-        // Ensure search fetching state is reset if generation finishes without search errors
-        if !isSearchFetching { self.isSearchFetching = false }
     }
 
     // MARK: Ollama

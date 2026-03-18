@@ -22,7 +22,7 @@ struct ArticleCard: View {
                 Rectangle()
                     .fill(bandColor.gradient)
                     .frame(height: 6)
-                    .clipShape(.rect(topLeadingRadius: 10, topTrailingRadius: 10))
+                    .clipShape(.rect(topLeadingRadius: WVRadius.card, topTrailingRadius: WVRadius.card))
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -36,7 +36,7 @@ struct ArticleCard: View {
                     }
 
                     Text(article.title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.wvSubhead)
                         .foregroundStyle(.primary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -68,19 +68,19 @@ struct ArticleCard: View {
                 .frame(minHeight: 120, alignment: .topLeading)
             }
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: WVRadius.card)
                     .fill(.background)
                     .shadow(color: .black.opacity(isHovered ? 0.14 : 0.07), radius: isHovered ? 10 : 5, y: 2)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: WVRadius.card)
                     .strokeBorder(Color.primary.opacity(isHovered ? 0.12 : 0.07), lineWidth: 1)
             )
             .scaleEffect(isHovered ? 1.015 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .animation(WVAnim.card, value: isHovered)
         .contextMenu {
             Button(role: .destructive) { onDelete() } label: {
                 Label("Delete Article", systemImage: "trash")
@@ -112,7 +112,7 @@ struct NewItemCard: View {
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.3).gradient)
                     .frame(height: 6)
-                    .clipShape(.rect(topLeadingRadius: 10, topTrailingRadius: 10))
+                    .clipShape(.rect(topLeadingRadius: WVRadius.card, topTrailingRadius: WVRadius.card))
 
                 VStack(spacing: 10) {
                     Image(systemName: icon)
@@ -126,11 +126,11 @@ struct NewItemCard: View {
                 .padding(14)
             }
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: WVRadius.card)
                     .fill(Color.accentColor.opacity(isHovered ? 0.09 : 0.05))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: WVRadius.card)
                     .strokeBorder(
                         Color.accentColor.opacity(isHovered ? 0.35 : 0.15),
                         style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
@@ -140,7 +140,7 @@ struct NewItemCard: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .animation(WVAnim.card, value: isHovered)
     }
 }
 
@@ -164,11 +164,11 @@ struct LengthChip: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: 7)
+                RoundedRectangle(cornerRadius: WVRadius.chip)
                     .fill(isActive ? AnyShapeStyle(Color.accentColor.opacity(0.12)) : AnyShapeStyle(.quaternary))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 7)
+                RoundedRectangle(cornerRadius: WVRadius.chip)
                     .strokeBorder(isActive ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1)
             )
             .foregroundStyle(isActive ? Color.accentColor : .secondary)
@@ -201,11 +201,11 @@ struct LibraryStatPill: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: WVRadius.chipLg)
                 .fill(.background.opacity(0.8))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: WVRadius.chipLg)
                 .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
         )
     }
@@ -242,34 +242,26 @@ struct WorkspaceCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: WVSpace.xs) {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.wvSubhead)
                 Text(subtitle)
-                    .font(.system(size: 12))
+                    .font(.wvFootnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 13)
-            .padding(.bottom, 11)
+            .padding(.horizontal, WVSpace.base)
+            .padding(.top, WVSpace.md)
+            .padding(.bottom, WVSpace.sm)
 
             Divider()
 
             content()
-                .padding(14)
+                .padding(WVSpace.base)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(minHeight: 178, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.background)
-                .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-        )
+        .wvCardLg()
     }
 }
 
@@ -280,15 +272,15 @@ struct WorkspacePill: View {
     let text: String
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: WVSpace.xs) {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .medium))
+                .font(.wvNano)
             Text(text)
-                .font(.system(size: 11, weight: .medium))
+                .font(.wvLabel)
         }
         .foregroundStyle(.secondary)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4)
+        .padding(.horizontal, WVSpace.sm + WVSpace.xs)
+        .padding(.vertical, WVSpace.xs)
         .background(Color.secondary.opacity(0.09), in: Capsule())
     }
 }
@@ -305,20 +297,20 @@ struct WorkspaceLengthChip: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.wvLabel)
                 Text(sub)
-                    .font(.system(size: 9))
-                    .foregroundStyle(isActive ? .primary : .secondary)
+                    .font(.wvNano)
+                    .foregroundStyle(isActive ? Color.accentColor.opacity(0.8) : .secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, WVSpace.sm)
+            .padding(.vertical, WVSpace.xs + 2)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: WVRadius.chipLg)
                     .fill(isActive ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.08))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: WVRadius.chipLg)
                     .strokeBorder(isActive ? Color.accentColor.opacity(0.32) : .clear, lineWidth: 1)
             )
         }

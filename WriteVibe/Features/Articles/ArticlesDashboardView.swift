@@ -14,7 +14,7 @@ struct ArticlesDashboardView: View {
 
     @State private var selectedArticle: Article? = nil
     @State private var filterStatus: PublishStatus? = nil
-    @State private var singleArticlesExpanded: Bool = true
+    @State private var piecesExpanded: Bool = true
     @State private var seriesExpanded: Bool = true
     @State private var isCreatingSeries = false
     @State private var newSeriesName = ""
@@ -76,19 +76,19 @@ struct ArticlesDashboardView: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // MARK: Single Articles section
+                    // MARK: Pieces section
                     if !filteredSingles.isEmpty || filterStatus == nil {
                         articleSectionHeader(
-                            title: "Single Articles",
+                            title: "Pieces",
                             count: filteredSingles.count,
-                            isExpanded: singleArticlesExpanded
+                            isExpanded: piecesExpanded
                         ) {
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                singleArticlesExpanded.toggle()
+                                piecesExpanded.toggle()
                             }
                         }
 
-                        if singleArticlesExpanded {
+                        if piecesExpanded {
                             LazyVGrid(columns: columns, spacing: 16) {
                                 NewItemCard(title: "New Article", icon: "square.and.pencil") {
                                     createArticle()
@@ -164,66 +164,135 @@ struct ArticlesDashboardView: View {
 
     private var heroCard: some View {
         let seriesCount = Set(articles.compactMap { $0.seriesName }).count
+        let piecesCount = articles.filter { $0.seriesName == nil }.count
+        let seriesArticleCount = articles.filter { $0.seriesName != nil }.count
         let totalWords = articles.reduce(0) { $0 + $1.wordCount }
-        let inProgressCount = articles.filter { $0.publishStatus == .inProgress }.count
-        let doneCount = articles.filter { $0.publishStatus == .done }.count
         let wordLabel = totalWords > 999
             ? String(format: "%.1fk", Double(totalWords) / 1000)
             : "\(totalWords)"
 
-        return VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 12) {
-                // Identity
-                HStack(spacing: 12) {
-                    Image(systemName: "newspaper.fill")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Articles")
-                            .font(.system(size: 22, weight: .bold))
-                        Text("Your personal writing library")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
+        let wp = articles.filter { $0.seriesName == nil }.reduce(0) { $0 + $1.wordCount }
+        let wLabel = wp > 999 ? String(format: "%.1fk", Double(wp) / 1000) : "\(wp)"
+
+        return HStack(alignment: .top, spacing: 16) {
+            // MARK: Pieces card
+            VStack(alignment: .leading, spacing: 0) {
+                // Subtle 2pt accent rule
+                Rectangle()
+                    .fill(Color.accentColor.opacity(0.5))
+                    .frame(height: 2)
+                    .clipShape(.rect(topLeadingRadius: WVRadius.cardLg, topTrailingRadius: WVRadius.cardLg))
+
+                VStack(alignment: .leading, spacing: WVSpace.lg) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.accentColor.opacity(0.1))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "doc.text.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Pieces")
+                                .font(.wvHeadline)
+                            Text("Standalone articles")
+                                .font(.wvFootnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text("\(piecesCount)")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            Text("total")
+                                .font(.wvNano)
+                                .foregroundStyle(.quaternary)
+                        }
                     }
+
+                    HStack(spacing: WVSpace.sm) {
+                        LibraryStatPill(value: wLabel, label: "words", icon: "text.alignleft")
+                        LibraryStatPill(
+                            value: "\(articles.filter { $0.seriesName == nil && $0.publishStatus == .inProgress }.count)",
+                            label: "in progress",
+                            icon: "pencil.circle"
+                        )
+                    }
+
+                    Button { createArticle() } label: {
+                        Label("New Article", systemImage: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
                 }
+                .padding(WVSpace.lg)
+            }
+            .wvCardLg()
+            .frame(maxWidth: .infinity)
 
-                Spacer()
+            // MARK: Series card
+            VStack(alignment: .leading, spacing: 0) {
+                // Subtle 2pt neutral rule
+                Rectangle()
+                    .fill(Color.primary.opacity(0.15))
+                    .frame(height: 2)
+                    .clipShape(.rect(topLeadingRadius: WVRadius.cardLg, topTrailingRadius: WVRadius.cardLg))
 
-                // Actions
-                HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: WVSpace.lg) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.primary.opacity(0.07))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "rectangle.stack.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Series")
+                                .font(.wvHeadline)
+                            Text("Multi-part collections")
+                                .font(.wvFootnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text("\(seriesCount)")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            Text("total")
+                                .font(.wvNano)
+                                .foregroundStyle(.quaternary)
+                        }
+                    }
+
+                    HStack(spacing: WVSpace.sm) {
+                        LibraryStatPill(value: "\(seriesArticleCount)", label: "articles", icon: "doc.text")
+                        LibraryStatPill(value: wordLabel, label: "total words", icon: "text.alignleft")
+                    }
+
                     Button {
                         newSeriesName = ""
                         newSeriesArticleTitle = ""
                         isCreatingSeries = true
                     } label: {
                         Label("New Series", systemImage: "rectangle.stack.badge.plus")
-                            .font(.callout.weight(.semibold))
+                            .font(.system(size: 13, weight: .semibold))
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-
-                    Button {
-                        createArticle()
-                    } label: {
-                        Label("New Article", systemImage: "plus")
-                            .font(.callout.weight(.semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
                 }
+                .padding(WVSpace.lg)
             }
-
-            // Stats row
-            HStack(spacing: 10) {
-                LibraryStatPill(value: "\(articles.count)", label: articles.count == 1 ? "piece" : "pieces", icon: "doc.text")
-                LibraryStatPill(value: "\(seriesCount)", label: seriesCount == 1 ? "series" : "series", icon: "rectangle.stack")
-                LibraryStatPill(value: "\(inProgressCount)", label: "in progress", icon: "pencil.circle")
-                LibraryStatPill(value: "\(doneCount)", label: "published", icon: "checkmark.circle.fill")
-                LibraryStatPill(value: wordLabel, label: "total words", icon: "text.alignleft")
-            }
+            .wvCardLg()
+            .frame(maxWidth: .infinity)
         }
-        .padding(24)
-        .background(Color.accentColor.opacity(0.06))
+        .padding(WVSpace.xxl)
+        .background(Color(.windowBackgroundColor))
     }
 
     private var filterBar: some View {
@@ -364,10 +433,8 @@ struct ArticlesDashboardView: View {
 
     @ViewBuilder
     private func sheetSectionLabel(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .tracking(0.8)
+        Text(text)
+            .wvSectionLabel()
             .padding(.bottom, 8)
     }
 
