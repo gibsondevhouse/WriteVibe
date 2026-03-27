@@ -50,14 +50,8 @@ enum WVRadius {
 
 /// Standard animation presets. Always use WVAnim.* to keep motion consistent.
 enum WVAnim {
-    /// Standard panel / sidebar spring (response 0.25, damping 0.85)
-    static let spring     = Animation.spring(response: 0.25, dampingFraction: 0.85)
-    /// Fast dismissal spring (response 0.2, damping 0.9)
-    static let springFast = Animation.spring(response: 0.2,  dampingFraction: 0.9)
     /// Hover card micro-animation (ease 0.15s)
     static let card       = Animation.easeInOut(duration: 0.15)
-    /// Fade / opacity transitions (ease 0.2s)
-    static let fade       = Animation.easeInOut(duration: 0.2)
 }
 
 // MARK: - Font Scale

@@ -26,7 +26,7 @@ WriteVibe is a macOS AI writing assistant built with SwiftUI. It supports multip
 ## 🛠 Tech Stack & Architecture
 
 ### State Management
-- **`AppState`** (`State/AppState.swift`): Central `@Observable` controller. Manages conversation lifecycle, message appending, AI task tracking (`activeTasks: [UUID: Task<Void, Never>]`), capability chip state, search fetching flag, and writing analysis result.
+- **`AppState`** (`State/AppState.swift`): Central `@Observable` controller. Manages conversation lifecycle, message appending, AI task tracking (`activeTasks: [UUID: Task<Void, Never>]`), capability chip state, search fetching flag, and writing analysis result. Generation orchestration and data migration were extracted to dedicated services (see below).
 - **`ServiceContainer`** (`Services/ServiceContainer.swift`): Singleton DI container. All AI providers and services are instantiated here. Route handlers call `provider(for: AIModel)` — never instantiate providers directly.
 
 ### AI Provider Protocol
@@ -56,8 +56,12 @@ protocol AIStreamingProvider: Sendable {
 ### Services (`Services/`)
 | File | Responsibility |
 |---|---|
-| `StreamingService.swift` | Orchestrates streaming: capability chip prompt augmentation, search context injection, token batching (6 tokens), SwiftData writes |
+| `StreamingService.swift` | Orchestrates streaming: token batching (6 tokens), SwiftData writes. Delegates to sub-modules in `Services/Streaming/` |
+| `Streaming/PromptAugmentationEngine.swift` | Capability chip prompt augmentation (tone, length, format, memory) |
+| `Streaming/WebSearchContextProvider.swift` | Perplexity Sonar web search context fetch and injection |
 | `ConversationService.swift` | CRUD + in-memory cache for Conversation/Message; auto-triggers title generation |
+| `ConversationGenerationManager.swift` | AI reply generation orchestration (extracted from AppState) |
+| `DataMigrationService.swift` | SwiftData schema migrations (extracted from AppState) |
 | `DocumentIngestionService.swift` | NSOpenPanel (.txt/.md/.rtf) + URL fetch with HTML stripping, 8000-char truncation |
 | `ExportService.swift` | Clipboard + NSSavePanel markdown export |
 | `KeychainService.swift` | Generic Keychain save/load/delete (service: "com.writevibe.app") |
@@ -73,10 +77,17 @@ Defined in `Resources/SystemPrompt.swift` as `writeVibeSystemPrompt`. Injected b
 - `SidebarView.swift` — time-grouped conversation list, search, collapsible Apps/Library sections
 - `WelcomeView.swift` — brand header + 3-column `WritingModeCard` grid + `InputBar`
 - `ChatView.swift` — message list, model picker toolbar, writing action chips, `InputBar`
-- `InputBar.swift` — multi-line field, send/stop, capability chips, search spinner (`isSearchFetching`)
+- `InputBar.swift` — coordinator view; sub-components extracted to `Features/Chat/Components/`:
+  - `AttachMenu`, `CapabilityChip`, `CapabilityChipsBar`, `ChatInputField`, `ChatSendButton`, `TokenUsageBar`
+- `MarkdownMessageText.swift` — streaming Markdown renderer; sub-components extracted to `Features/Chat/Components/`:
+  - `MarkdownCodeBlock`, `MarkdownBlockquote`, `MarkdownTable`
 - `MessageBubble.swift` — markdown rendering, hover actions (copy/feedback/regenerate/analyze), `WritingAnalysisPanelView` toggle
 - `CopilotPanel.swift` — parallel AI conversation panel with its own `ChatScrollContainer`
-- `ArticlesDashboardView.swift` / `ArticleWorkspaceView.swift` / `ArticleEditorView.swift` — full article pipeline
+- `ArticlesDashboardView.swift` — coordinator; sub-components in `Features/Articles/Components/`:
+  - `DashboardHeroCard`, `NewSeriesSheet`, `ArticleGridView`, `ArticleFilterBar`
+- `ArticleWorkspaceView.swift` — coordinator; sub-components in `Features/Articles/Components/`:
+  - `ArticleWorkspaceTopBar`, `ArticleDNAPanel`, `ArticleAIActionsPanel`, `ArticleFoundationCanvas`
+- `ArticleEditorView.swift` — block-based article editing
 - `ModelPickerView.swift` — two-pane provider/model picker (640×380 popover)
 - `OllamaModelBrowserView.swift` — live Ollama connection status, install/delete/download-with-progress
 
@@ -129,7 +140,7 @@ See `docs/dev-maps/dev-map-003.md` for the current sprint plan and full prioriti
 **Known bugs (fix before new features):**
 - ⚠️ Ollama download cancellation clears UI only — network task keeps running
 - ⚠️ Search layer silently fails in Ollama-only mode (missing OpenRouter key guard)
-- ⚠️ Duplicate input bar files (`ChatInputBar.swift` ≈ `InputBar.swift`) — delete the stale copy
+- ~~⚠️ Duplicate input bar files — resolved (ChatInputBar.swift deleted, InputBar.swift split into components)~~
 - ⚠️ Anthropic API version header `"2023-06-01"` is stale — update in `AppConstants`
 
 **Next priorities (in sprint order):**
@@ -143,4 +154,4 @@ See `docs/dev-maps/dev-map-003.md` for the current sprint plan and full prioriti
 8. Voice input + Writing Tools system extension
 
 ---
-*Last Updated: March 15, 2026*
+*Last Updated: March 27, 2026*

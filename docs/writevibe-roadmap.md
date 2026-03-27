@@ -42,7 +42,7 @@ _Interrogation of unused capabilities and prioritised feature backlog_
 | ServiceContainer DI + full service layer refactor | ✅ Live |
 | Ollama download cancellation | ⚠️ Clears UI state only — network task still runs |
 | Search layer in Ollama-only mode (no OpenRouter key) | ⚠️ Silently fails — needs key-presence guard |
-| Duplicate input bar files (ChatInputBar.swift ≈ InputBar.swift) | ⚠️ Tech debt — stale copy should be deleted |
+| Duplicate input bar files (ChatInputBar.swift ≈ InputBar.swift) | ✅ Resolved — ChatInputBar deleted, InputBar split into components |
 | Anthropic API version header | ⚠️ `"2023-06-01"` is stale — update in AppConstants |
 | Attachment menu — image, URL, voice | ⚠️ URL + document wired; image and voice are UI stubs |
 | Settings → Help footer button | ⚠️ UI stub — does nothing |

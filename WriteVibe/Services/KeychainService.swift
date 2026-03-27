@@ -9,7 +9,19 @@ import Security
 enum KeychainService {
     static let service = "com.writevibe.app"
 
+    private static let maxValueLength = 4096
+
     static func save(key: String, value: String) throws {
+        guard !key.isEmpty else {
+            throw WriteVibeError.persistenceFailed(operation: "keychain save — key must not be empty")
+        }
+        guard !value.isEmpty else {
+            throw WriteVibeError.persistenceFailed(operation: "keychain save — value must not be empty")
+        }
+        guard value.count <= maxValueLength else {
+            throw WriteVibeError.persistenceFailed(operation: "keychain save — value exceeds \(maxValueLength) characters")
+        }
+
         let data = Data(value.utf8)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -30,6 +42,8 @@ enum KeychainService {
     }
 
     static func load(key: String) -> String? {
+        guard !key.isEmpty else { return nil }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -48,6 +62,8 @@ enum KeychainService {
     }
 
     static func delete(key: String) {
+        guard !key.isEmpty else { return }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

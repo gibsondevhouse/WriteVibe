@@ -49,7 +49,11 @@ enum DocumentIngestionService {
         guard let url = URL(string: urlString) else {
             throw WriteVibeError.decodingFailed(context: "Invalid URL format.")
         }
-        
+
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            throw WriteVibeError.decodingFailed(context: "Only http and https URLs are supported.")
+        }
+
         let (data, response) = try await URLSession.shared.data(from: url)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw WriteVibeError.apiError(provider: "URL Fetch", statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0, message: nil)
@@ -71,19 +75,43 @@ enum DocumentIngestionService {
     }
     
     private static func stripHTML(_ html: String) -> String {
-        // Very basic HTML stripping using regex
-        let regex = try? NSRegularExpression(pattern: "<[^>]+>", options: .caseInsensitive)
-        let range = NSRange(location: 0, length: html.utf16.count)
-        let result = regex?.stringByReplacingMatches(in: html, options: [], range: range, withTemplate: " ") ?? html
-        
+        var text = html
+
+        // Remove script and style blocks (content + tags)
+        let blockPatterns = [
+            "<script[^>]*>[\\s\\S]*?</script>",
+            "<style[^>]*>[\\s\\S]*?</style>"
+        ]
+        for pattern in blockPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                text = regex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
+            }
+        }
+
+        // Remove HTML comments
+        if let commentRegex = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: []) {
+            text = commentRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
+        }
+
+        // Remove all remaining tags (including self-closing)
+        if let tagRegex = try? NSRegularExpression(pattern: "<[^>]+>", options: .caseInsensitive) {
+            text = tagRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
+        }
+
         // Decode common HTML entities
-        return result
+        text = text
             .replacingOccurrences(of: "&nbsp;", with: " ")
             .replacingOccurrences(of: "&amp;", with: "&")
             .replacingOccurrences(of: "&lt;", with: "<")
             .replacingOccurrences(of: "&gt;", with: ">")
             .replacingOccurrences(of: "&quot;", with: "\"")
             .replacingOccurrences(of: "&apos;", with: "'")
-            .replacingOccurrences(of: "  ", with: " ")
+
+        // Collapse runs of whitespace into a single space
+        if let wsRegex = try? NSRegularExpression(pattern: "\\s{2,}", options: []) {
+            text = wsRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
+        }
+
+        return text
     }
 }

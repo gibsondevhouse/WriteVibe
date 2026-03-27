@@ -4,6 +4,12 @@ Now I have a thorough picture of the entire codebase. Let me compile the develop
 
 ## WriteVibe — Development Plan (March 2026)
 
+> **Status Update (March 27, 2026):**
+> - **B4 (Duplicate input bar):** Resolved — `ChatInputBar.swift` deleted, `InputBar.swift` split into components in `Features/Chat/Components/`.
+> - **WritingMode.swift:** Deleted as dead code (unused `WritingMode`/`WritingAction` structs). References to `WritingMode.swift` in §P1.2 below are obsolete.
+> - **Major file splits completed:** InputBar (580→114), ArticleWorkspaceView (610→116), ArticlesDashboardView (500→107), StreamingService (340→123), MarkdownMessageText (350→94), AppState (295→172).
+> - **Security hardening applied:** prompt injection protection in StreamingService, SSRF fix in DocumentIngestionService, model name validation in OllamaService, input validation in KeychainService.
+
 ### Architecture Snapshot
 
 WriteVibe is a macOS SwiftUI app targeting macOS 26+ with a clean, well-structured layered architecture:[1][2]

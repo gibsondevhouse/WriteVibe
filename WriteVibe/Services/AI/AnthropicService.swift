@@ -44,7 +44,16 @@ struct AnthropicService: AIStreamingProvider {
                     }
 
                     guard (200...299).contains(httpResponse.statusCode) else {
-                        throw WriteVibeError.apiError(provider: "Anthropic", statusCode: httpResponse.statusCode, message: nil)
+                        var errorBody = ""
+                        for try await line in result.lines {
+                            errorBody += line
+                            if errorBody.count > 4096 { break }
+                        }
+                        throw WriteVibeError.apiError(
+                            provider: "Anthropic",
+                            statusCode: httpResponse.statusCode,
+                            message: Self.parseErrorMessage(from: errorBody)
+                        )
                     }
 
                     for try await line in result.lines {
@@ -75,5 +84,16 @@ struct AnthropicService: AIStreamingProvider {
                 }
             }
         }
+    }
+
+    private static func parseErrorMessage(from body: String) -> String? {
+        guard let data = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = json["error"] as? [String: Any],
+              let message = error["message"] as? String
+        else {
+            return body.isEmpty ? nil : String(body.prefix(200))
+        }
+        return message
     }
 }

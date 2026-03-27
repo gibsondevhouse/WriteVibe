@@ -144,16 +144,19 @@ Standalone services (static/enum):
 
 ### File Size Report
 
+> **Updated March 27, 2026:** Major file-splitting refactoring completed. All formerly oversized files are now well under 250 lines. Extracted components live in `Features/Chat/Components/`, `Features/Articles/Components/`, and `Services/Streaming/`. `ConversationGenerationManager` and `DataMigrationService` were extracted from `AppState`. `WritingMode.swift` was deleted as dead code.
+
 | File | Lines | Status |
 |------|-------|--------|
-| AppState.swift | 295 | ⚠️ Over 250 |
+| AppState.swift | 172 | ✅ Under 250 |
+| InputBar.swift | 114 | ✅ Under 250 (was 580; extracted to Chat/Components/) |
+| ArticleWorkspaceView.swift | 116 | ✅ Under 250 (was 610; extracted to Articles/Components/) |
+| ArticlesDashboardView.swift | 107 | ✅ Under 250 (was 500; extracted to Articles/Components/) |
+| StreamingService.swift | 123 | ✅ Under 250 (was 340; extracted to Services/Streaming/) |
+| MarkdownMessageText.swift | 94 | ✅ Under 250 (was 350; extracted to Chat/Components/) |
 | ChatView.swift | 227 | ✅ Under 250 |
 | CopilotPanel.swift | 217 | ✅ Under 250 |
 | SidebarView.swift | 272 | ⚠️ Over 250 |
-| MarkdownMessageText.swift | 218 | ✅ Under 250 |
-| ArticleEditorView.swift | 234 | ✅ Under 250 |
-| ArticleWorkspaceView.swift | 491 | ⚠️ Over 250 |
-| ArticlesDashboardView.swift | 424 | ⚠️ Over 250 |
 
 ### Completed Refactoring Summary
 

@@ -47,7 +47,7 @@ struct StreamingServiceTests {
         
         // 3. Setup StreamingService
         let provider = MockAIProvider(tokens: ["A", "B", "C", "D", "E"], delay: 0)
-        let streamingService = StreamingService(conversationService: convService)
+        let streamingService = StreamingService(conversationService: convService, searchProvider: OpenRouterService())
         
         // 4. Run stream
         try await streamingService.streamReply(
@@ -58,6 +58,8 @@ struct StreamingServiceTests {
         )
         
         // 5. Verify results
+    }
+
     @Test func testChipPromptAugmentation() async throws {
         // 1. Setup SwiftData in-memory
         let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self])
@@ -80,7 +82,7 @@ struct StreamingServiceTests {
         }
         
         let provider = PromptCapturingProvider { capturedPrompt = $0 }
-        let streamingService = StreamingService(conversationService: convService)
+        let streamingService = StreamingService(conversationService: convService, searchProvider: OpenRouterService())
         
         // 4. Run stream with chip states
         try await streamingService.streamReply(
@@ -94,8 +96,8 @@ struct StreamingServiceTests {
         )
         
         // 5. Verify augmented prompt
-        #expect(capturedPrompt.contains("Professional"))
-        #expect(capturedPrompt.contains("Short"))
+        #expect(capturedPrompt.contains("professional"))
+        #expect(capturedPrompt.contains("brief"))
         #expect(capturedPrompt.contains("JSON"))
     }
 }

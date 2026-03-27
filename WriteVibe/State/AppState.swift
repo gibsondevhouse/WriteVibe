@@ -26,11 +26,16 @@ final class AppState {
     var selectedFormat: String = "Markdown"
     var isMemoryEnabled: Bool = true
 
+    // Sidebar navigation
+    var selectedDestination: SidebarDestination = .articles
+    var isArticlesSectionExpanded: Bool = true
+
     // Copilot panel
     var isCopilotOpen: Bool          = false
     var copilotConversationId: UUID? = nil
 
     let services: ServiceContainer
+    private let generationManager: ConversationGenerationManager
 
     /// Default model applied to every new conversation. Persisted across launches.
     var defaultModel: AIModel = {
@@ -52,9 +57,6 @@ final class AppState {
 
     var modelContext: ModelContext? = nil
 
-    // In-flight generation tasks keyed by conversation ID
-    private var activeTasks: [UUID: Task<Void, Never>] = [:]
-
     // MARK: Computed helpers
 
     var copilotConversation: Conversation? {
@@ -64,16 +66,19 @@ final class AppState {
 
     var isThinkingInCopilot: Bool { thinkingId != nil && thinkingId == copilotConversationId }
 
-    // MARK: Context binding
+    // MARK: Init
 
     init(services: ServiceContainer) {
         self.services = services
+        self.generationManager = ConversationGenerationManager(services: services)
     }
+
+    // MARK: Context binding
 
     func bindModelContextIfNeeded(_ context: ModelContext) {
         if modelContext !== context {
             modelContext = context
-            migrateArticleAudience(context: context)
+            DataMigrationService.migrateArticleAudience(context: context)
         }
         reconcileConversationIDs()
     }
@@ -124,90 +129,28 @@ final class AppState {
     // MARK: AI Generation
 
     func stopGeneration(for conversationId: UUID) {
-        activeTasks[conversationId]?.cancel()
-        finishGeneration(for: conversationId)
+        generationManager.cancel(for: conversationId)
+        if thinkingId == conversationId { thinkingId = nil }
     }
 
     private func generateReply(to conversationId: UUID) {
-        guard let ctx = modelContext,
-              let conv = services.conversationService.fetch(conversationId, context: ctx) else {
-            finishGeneration(for: conversationId)
+        guard let ctx = modelContext else {
+            if thinkingId == conversationId { thinkingId = nil }
             return
         }
-
-        let model = conv.model
-        let modelIdentifier = conv.modelIdentifier
-
-        let task = Task { [weak self] in
-            guard let self, let ctx = self.modelContext else { return }
-            defer { self.finishGeneration(for: conversationId) }
-            do {
-                let modelName: String
-                let provider: AIStreamingProvider
-
-                guard model != .appleIntelligence else {
-                    self.services.conversationService.appendMessage(
-                        Message(role: .assistant, content: "Apple Intelligence is not available here. Select a different model."),
-                        to: conversationId, context: ctx
-                    )
-                    return
-                }
-
-                if model.isLocal {
-                    guard let name = modelIdentifier, !name.isEmpty else {
-                        self.services.conversationService.appendMessage(
-                            Message(role: .assistant, content: "No Ollama model selected. Choose a model from Settings."),
-                            to: conversationId, context: ctx
-                        )
-                        return
-                    }
-                    modelName = name
-                    provider = self.services.ollamaProvider
-                } else if let openRouterID = model.openRouterModelID {
-                    modelName = openRouterID
-                    provider = self.services.provider(for: model)
-                } else {
-                    self.services.conversationService.appendMessage(
-                        Message(role: .assistant, content: "This model is not yet configured."),
-                        to: conversationId, context: ctx
-                    )
-                    return
-                }
-
-                // Reflect UI capability chips into the streaming call
-                if self.isSearchEnabled { self.isSearchFetching = true }
-                defer { if self.isSearchEnabled { self.isSearchFetching = false } }
-                try await self.services.streamingService.streamReply(
-                    provider: provider,
-                    modelName: modelName,
-                    conversationId: conversationId,
-                    context: ctx,
-                    isSearchEnabled: self.isSearchEnabled,
-                    tone: self.selectedTone,
-                    length: self.selectedLength,
-                    format: self.selectedFormat,
-                    isMemoryEnabled: self.isMemoryEnabled
-                )
-            } catch is CancellationError {
-                // User tapped stop
-            } catch let error as WriteVibeError {
-                self.services.conversationService.appendMessage(
-                    Message(role: .assistant, content: error.localizedDescription),
-                    to: conversationId, context: ctx
-                )
-            } catch {
-                self.services.conversationService.appendMessage(
-                    Message(role: .assistant, content: "⚠️ \(error.localizedDescription)"),
-                    to: conversationId, context: ctx
-                )
+        generationManager.generateReply(
+            to: conversationId,
+            context: ctx,
+            isSearchEnabled: isSearchEnabled,
+            tone: selectedTone,
+            length: selectedLength,
+            format: selectedFormat,
+            isMemoryEnabled: isMemoryEnabled,
+            onSearchFetchingChanged: { [weak self] fetching in self?.isSearchFetching = fetching },
+            onFinish: { [weak self] in
+                if self?.thinkingId == conversationId { self?.thinkingId = nil }
             }
-        }
-        activeTasks[conversationId] = task
-    }
-
-    private func finishGeneration(for conversationId: UUID) {
-        activeTasks.removeValue(forKey: conversationId)
-        if thinkingId == conversationId { thinkingId = nil }
+        )
     }
 
     // MARK: Ollama
@@ -230,23 +173,4 @@ final class AppState {
     func clearRuntimeIssue() { runtimeIssue = nil }
 
     private func reportIssue(_ message: String) { runtimeIssue = message }
-
-    // MARK: - Data migration
-
-    private func migrateArticleAudience(context: ModelContext) {
-        let sentinel = "§AUDIENCE§"
-        let endSentinel = "§END§"
-        let descriptor = FetchDescriptor<Article>()
-        guard let articles = try? context.fetch(descriptor) else { return }
-
-        var changed = false
-        for article in articles where article.quickNotes.hasPrefix(sentinel) {
-            guard let endRange = article.quickNotes.range(of: endSentinel) else { continue }
-            let audienceStart = article.quickNotes.index(article.quickNotes.startIndex, offsetBy: sentinel.count)
-            article.audience = String(article.quickNotes[audienceStart..<endRange.lowerBound])
-            article.quickNotes = String(article.quickNotes[endRange.upperBound...])
-            changed = true
-        }
-        if changed { try? context.save() }
-    }
 }

@@ -19,7 +19,14 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 300)
         } detail: {
             HStack(spacing: 0) {
-                ArticlesDashboardView()
+                switch appState.selectedDestination {
+                case .articles:
+                    ArticlesDashboardView()
+                case .series:
+                    SeriesDashboardView()
+                case .styles:
+                    StylesDashboardView()
+                }
                 if appState.isCopilotOpen {
                     Divider()
                     CopilotPanel()

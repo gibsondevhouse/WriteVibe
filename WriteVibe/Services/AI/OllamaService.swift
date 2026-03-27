@@ -59,6 +59,17 @@ struct OllamaPullProgress {
 struct OllamaService: AIStreamingProvider {
     static let baseURL = AppConstants.ollamaBaseURL
 
+    static let modelNamePattern = #"^[a-zA-Z0-9._:/\-]+$"#
+
+    static func validateModelName(_ name: String) throws {
+        guard !name.isEmpty,
+              name.count <= 128,
+              name.range(of: modelNamePattern, options: .regularExpression) != nil
+        else {
+            throw WriteVibeError.modelUnavailable(name: "Invalid model name")
+        }
+    }
+
     // MARK: - Connection
 
     static func isRunning() async -> Bool {
@@ -89,6 +100,7 @@ struct OllamaService: AIStreamingProvider {
         AsyncThrowingStream { continuation in
             Task {
                 do {
+                    try Self.validateModelName(modelName)
                     let url = Self.baseURL.appendingPathComponent("api/pull")
                     var request = URLRequest(url: url)
                     request.httpMethod = "POST"
@@ -128,6 +140,7 @@ struct OllamaService: AIStreamingProvider {
     // MARK: - Delete a Model
 
     static func deleteModel(modelName: String) async throws {
+        try Self.validateModelName(modelName)
         let url = Self.baseURL.appendingPathComponent("api/delete")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -153,6 +166,7 @@ struct OllamaService: AIStreamingProvider {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
                 do {
+                    try Self.validateModelName(model)
                     let url = Self.baseURL.appendingPathComponent("v1/chat/completions")
 
                     guard await Self.isRunning() else {

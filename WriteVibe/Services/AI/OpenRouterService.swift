@@ -42,11 +42,19 @@ struct OpenRouterService: AIStreamingProvider {
                     request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
-                    guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                    guard let http = response as? HTTPURLResponse else {
+                        throw WriteVibeError.decodingFailed(context: "Invalid response from OpenRouter")
+                    }
+                    guard (200...299).contains(http.statusCode) else {
+                        var errorBody = ""
+                        for try await line in bytes.lines {
+                            errorBody += line
+                            if errorBody.count > 4096 { break }
+                        }
                         throw WriteVibeError.apiError(
                             provider: "OpenRouter",
-                            statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0,
-                            message: nil
+                            statusCode: http.statusCode,
+                            message: Self.parseErrorMessage(from: errorBody)
                         )
                     }
 
@@ -72,5 +80,16 @@ struct OpenRouterService: AIStreamingProvider {
                 }
             }
         }
+    }
+
+    private static func parseErrorMessage(from body: String) -> String? {
+        guard let data = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = json["error"] as? [String: Any],
+              let message = error["message"] as? String
+        else {
+            return body.isEmpty ? nil : String(body.prefix(200))
+        }
+        return message
     }
 }
