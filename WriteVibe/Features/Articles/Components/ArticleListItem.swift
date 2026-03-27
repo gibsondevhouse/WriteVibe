@@ -14,22 +14,31 @@ struct ArticleListItem: View {
 
     @State private var isHovered = false
 
+    private var readingTime: Int {
+        max(1, article.wordCount / 200)
+    }
+
     var body: some View {
         Button(action: onOpen) {
-            HStack(alignment: .top, spacing: WVSpace.lg) {
-                leftContent
-                Spacer(minLength: WVSpace.sm)
-                rightContent
+            VStack(alignment: .leading, spacing: WVSpace.sm) {
+                titleLine
+                if !article.subtitle.isEmpty {
+                    Text(article.subtitle)
+                        .font(.wvFootnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                metadataLine
             }
-            .padding(WVSpace.base)
-            .background(
-                RoundedRectangle(cornerRadius: WVRadius.card)
-                    .fill(isHovered ? Color.primary.opacity(0.04) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: WVRadius.card)
-                    .strokeBorder(Color.primary.opacity(isHovered ? 0.10 : 0.05), lineWidth: 1)
-            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, WVSpace.lg)
+            .background(isHovered ? Color.primary.opacity(0.03) : Color.clear)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(height: 1)
+            }
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
@@ -41,59 +50,41 @@ struct ArticleListItem: View {
         }
     }
 
-    // MARK: - Left Content
-
-    private var leftContent: some View {
-        VStack(alignment: .leading, spacing: WVSpace.xs) {
-            Text(article.title)
-                .font(.wvSubhead)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-
-            if !article.subtitle.isEmpty {
-                Text(article.subtitle)
-                    .font(.wvFootnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
+    private var titleLine: some View {
+        Text(article.title)
+            .font(.wvSubhead)
+            .foregroundStyle(.primary)
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
     }
 
-    // MARK: - Right Content
-
-    private var rightContent: some View {
-        VStack(alignment: .trailing, spacing: WVSpace.xs) {
-            statusBadge
-            metadataStack
+    private var metadataLine: some View {
+        HStack(spacing: WVSpace.sm) {
+            statusPill
+            Text("·")
+                .foregroundStyle(.tertiary)
+            Text("Updated \(article.updatedAt, style: .relative)")
+                .foregroundStyle(.tertiary)
+            Text("·")
+                .foregroundStyle(.tertiary)
+            Text("\(article.wordCount.formatted()) words · ~\(readingTime) min read")
+                .foregroundStyle(.tertiary)
         }
+        .font(.wvMicro)
     }
 
-    // MARK: - Status Badge
-
-    private var statusBadge: some View {
-        Label(article.publishStatus.rawValue, systemImage: article.publishStatus.icon)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(statusColor)
-            .padding(.horizontal, WVSpace.sm)
-            .padding(.vertical, 3)
-            .background(
-                Capsule().fill(statusColor.opacity(0.12))
-            )
-    }
-
-    // MARK: - Metadata
-
-    private var metadataStack: some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            Text(article.updatedAt, style: .relative)
-                .font(.wvNano)
-                .foregroundStyle(.quaternary)
-
-            Text("\(article.wordCount.formatted()) words")
-                .font(.wvNano)
-                .foregroundStyle(.quaternary)
+    private var statusPill: some View {
+        HStack(spacing: WVSpace.xs) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 5, height: 5)
+            Text(article.publishStatus.rawValue)
+                .foregroundStyle(statusColor)
         }
+        .font(.wvMicro)
+        .padding(.horizontal, WVSpace.sm)
+        .padding(.vertical, 2)
+        .background(Capsule().fill(statusColor.opacity(0.10)))
     }
 
     private var statusColor: Color {

@@ -30,7 +30,7 @@ struct ArticleListHeader: View {
             VStack(alignment: .leading, spacing: WVSpace.xs) {
                 Text("Articles")
                     .font(.wvTitle)
-                Text("Your writing collection")
+                Text("Your writing library")
                     .font(.wvFootnote)
                     .foregroundStyle(.secondary)
             }

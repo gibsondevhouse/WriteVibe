@@ -2,22 +2,15 @@
 //  ArticleEditorView.swift
 //  WriteVibe
 //
-//  Block-based article editor with AI edit highlighting and accept/reject review.
-//
 
 import SwiftUI
 import SwiftData
 
-// MARK: - ArticleEditorView
-
 struct ArticleEditorView: View {
     @Bindable var article: Article
-    /// Called when the user navigates back to the dashboard.
-    let onBack: () -> Void
 
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
-
     @State private var vm = ArticleEditorViewModel()
 
     var body: some View {
@@ -37,49 +30,12 @@ struct ArticleEditorView: View {
     }
 
     // MARK: - Toolbar
-
     private var editorToolbar: some View {
         HStack(spacing: 12) {
-            // Back
-            Button { onBack() } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Articles")
-                        .font(.callout)
-                }
-                .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-
-            Divider().frame(height: 16)
-
-            // Status picker
-            Menu {
-                ForEach(PublishStatus.allCases, id: \.self) { status in
-                    Button {
-                        article.publishStatus = status
-                    } label: {
-                        Label(status.rawValue, systemImage: status.icon)
-                    }
-                }
-            } label: {
-                Label(article.publishStatus.rawValue, systemImage: article.publishStatus.icon)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(statusColor)
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
+            blockInserterMenu
 
             Spacer()
 
-            // Word count
-            Text("\(article.wordCount) words")
-                .font(.system(size: 11))
-                .foregroundStyle(.quaternary)
-                .monospacedDigit()
-
-            // Show / hide edits toggle — only relevant when changes exist
             if vm.hasPendingChanges {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { vm.showEdits.toggle() }
@@ -93,7 +49,6 @@ struct ArticleEditorView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
-                // Accept all
                 Button { vm.acceptAllChanges() } label: {
                     Label("Accept All", systemImage: "checkmark.circle")
                         .font(.system(size: 11, weight: .semibold))
@@ -102,7 +57,6 @@ struct ArticleEditorView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
-                // Reject all
                 Button { vm.rejectAllChanges(for: article) } label: {
                     Label("Reject All", systemImage: "xmark.circle")
                         .font(.system(size: 11, weight: .semibold))
@@ -112,14 +66,6 @@ struct ArticleEditorView: View {
                 .controlSize(.small)
             }
 
-            Divider().frame(height: 16)
-
-            // Block type inserter
-            blockInserterMenu
-
-            Divider().frame(height: 16)
-
-            // AI edit button
             Button {
                 vm.requestAIEdits(for: article, defaultModel: appState.defaultModel)
             } label: {
@@ -222,13 +168,4 @@ struct ArticleEditorView: View {
         }
     }
 
-    // MARK: - Status colour
-
-    private var statusColor: Color {
-        switch article.publishStatus {
-        case .draft:      return .secondary
-        case .inProgress: return .orange
-        case .done:       return .green
-        }
-    }
 }

@@ -16,6 +16,7 @@ struct ArticlesDashboardView: View {
     @State private var filterStatus: PublishStatus? = nil
     @State private var searchText: String = ""
     @State private var isCreatingSeries = false
+    @State private var isShowingNewArticle = false
 
     private var filteredAndSearched: [Article] {
         var result = articles.filter { $0.seriesName == nil }
@@ -53,11 +54,17 @@ struct ArticlesDashboardView: View {
     // MARK: - Dashboard
 
     private var dashboardContent: some View {
-        HStack(spacing: 0) {
-            CollectionMetricsRail(articles: articles)
-            Divider()
-            articleListRegion
-        }
+        articleListRegion
+            .overlay {
+                if isShowingNewArticle {
+                    NewArticleCard(
+                        onCreate: createArticle,
+                        onCancel: { isShowingNewArticle = false }
+                    )
+                    .transition(.scale(scale: 0.95).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isShowingNewArticle)
     }
 
     // MARK: - Article List Region
@@ -67,13 +74,13 @@ struct ArticlesDashboardView: View {
             ArticleListHeader(
                 filterStatus: $filterStatus,
                 searchText: $searchText,
-                onNewArticle: createArticle
+                onNewArticle: { isShowingNewArticle = true }
             )
             if filteredAndSearched.isEmpty {
                 emptyState
             } else {
                 ScrollView {
-                    LazyVStack(spacing: WVSpace.sm) {
+                    LazyVStack(spacing: 0) {
                         ForEach(filteredAndSearched) { article in
                             ArticleListItem(article: article) {
                                 selectedArticle = article
@@ -87,6 +94,7 @@ struct ArticlesDashboardView: View {
                 }
             }
         }
+        .frame(maxWidth: 680)
         .frame(maxWidth: .infinity)
     }
 
@@ -113,21 +121,23 @@ struct ArticlesDashboardView: View {
 
     // MARK: - Create
 
-    private func createArticle() {
-        let untitledCount = articles.filter { $0.title.hasPrefix("Untitled Article") }.count + 1
-        let title = untitledCount == 1 ? "Untitled Article" : "Untitled Article \(untitledCount)"
+    private func createArticle(title: String, subtitle: String, tone: ArticleTone, targetLength: ArticleLength) {
+        let finalTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Untitled Article"
+            : title.trimmingCharacters(in: .whitespacesAndNewlines)
         let article = Article(
-            title: title,
-            subtitle: "",
+            title: finalTitle,
+            subtitle: subtitle.trimmingCharacters(in: .whitespacesAndNewlines),
             topic: "",
-            tone: .conversational,
-            targetLength: .medium
+            tone: tone,
+            targetLength: targetLength
         )
-        let titleBlock = ArticleBlock(type: .heading(level: 1), content: title, position: 0)
+        let titleBlock = ArticleBlock(type: .heading(level: 1), content: finalTitle, position: 0)
         let bodyBlock  = ArticleBlock(type: .paragraph, content: "", position: 1000)
         article.blocks = [titleBlock, bodyBlock]
-        article.drafts = [ArticleDraft(title: "Draft 1", content: title)]
+        article.drafts = [ArticleDraft(title: "Draft 1", content: finalTitle)]
         modelContext.insert(article)
+        isShowingNewArticle = false
         selectedArticle = article
     }
 }
