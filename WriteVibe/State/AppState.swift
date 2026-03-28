@@ -78,7 +78,11 @@ final class AppState {
     func bindModelContextIfNeeded(_ context: ModelContext) {
         if modelContext !== context {
             modelContext = context
-            DataMigrationService.migrateArticleAudience(context: context)
+            do {
+                try DataMigrationService.runStartupMigrations(context: context)
+            } catch {
+                reportIssue("Data migration failed: \(error.localizedDescription)")
+            }
         }
         reconcileConversationIDs()
     }

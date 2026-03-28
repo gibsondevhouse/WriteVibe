@@ -12,14 +12,19 @@ struct ArticlesDashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Article.updatedAt, order: .reverse) private var articles: [Article]
 
-    @State private var selectedArticle: Article? = nil
+    @State private var selectedArticleID: PersistentIdentifier? = nil
     @State private var filterStatus: PublishStatus? = nil
     @State private var searchText: String = ""
     @State private var isCreatingSeries = false
     @State private var isShowingNewArticle = false
 
+    private var selectedArticle: Article? {
+        guard let id = selectedArticleID else { return nil }
+        return modelContext.model(for: id) as? Article
+    }
+
     private var filteredAndSearched: [Article] {
-        var result = articles.filter { $0.seriesName == nil }
+        var result = Array(articles)
         if let status = filterStatus {
             result = result.filter { $0.publishStatus == status }
         }
@@ -37,7 +42,7 @@ struct ArticlesDashboardView: View {
         Group {
             if let article = selectedArticle {
                 ArticleWorkspaceView(article: article) {
-                    selectedArticle = nil
+                    selectedArticleID = nil
                 }
             } else {
                 dashboardContent
@@ -46,7 +51,7 @@ struct ArticlesDashboardView: View {
         .sheet(isPresented: $isCreatingSeries) {
             NewSeriesSheet(isPresented: $isCreatingSeries) { article in
                 modelContext.insert(article)
-                selectedArticle = article
+                selectedArticleID = article.persistentModelID
             }
         }
     }
@@ -83,7 +88,7 @@ struct ArticlesDashboardView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredAndSearched) { article in
                             ArticleListItem(article: article) {
-                                selectedArticle = article
+                                selectedArticleID = article.persistentModelID
                             } onDelete: {
                                 modelContext.delete(article)
                             }
@@ -138,6 +143,6 @@ struct ArticlesDashboardView: View {
         article.drafts = [ArticleDraft(title: "Draft 1", content: finalTitle)]
         modelContext.insert(article)
         isShowingNewArticle = false
-        selectedArticle = article
+        selectedArticleID = article.persistentModelID
     }
 }

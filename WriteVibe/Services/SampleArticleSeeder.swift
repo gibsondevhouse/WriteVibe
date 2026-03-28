@@ -11,9 +11,9 @@ import SwiftData
 @MainActor
 enum SampleArticleSeeder {
 
-    static func seedIfNeeded(context: ModelContext) {
+    static func seedIfNeeded(context: ModelContext) throws {
         let descriptor = FetchDescriptor<Article>()
-        let existingCount = (try? context.fetchCount(descriptor)) ?? 0
+        let existingCount = try context.fetchCount(descriptor)
         guard existingCount == 0 else { return }
 
         let now = Date()
@@ -23,7 +23,7 @@ enum SampleArticleSeeder {
         seedStorytelling(context: context, now: now)
         seedReadability(context: context, now: now)
 
-        try? context.save()
+        try context.save()
     }
 
     // MARK: - Article 1

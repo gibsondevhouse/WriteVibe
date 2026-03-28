@@ -10,12 +10,13 @@ import SwiftData
 @MainActor
 enum DataMigrationService {
     /// Extracts audience metadata previously encoded in `quickNotes` into the
-    /// dedicated `Article.audience` field.
-    static func migrateArticleAudience(context: ModelContext) {
+    /// dedicated `Article.audience` field, then seeds sample articles if the
+    /// store is empty.
+    static func runStartupMigrations(context: ModelContext) throws {
         let sentinel = "§AUDIENCE§"
         let endSentinel = "§END§"
         let descriptor = FetchDescriptor<Article>()
-        guard let articles = try? context.fetch(descriptor) else { return }
+        let articles = try context.fetch(descriptor)
 
         var changed = false
         for article in articles where article.quickNotes.hasPrefix(sentinel) {
@@ -25,8 +26,8 @@ enum DataMigrationService {
             article.quickNotes = String(article.quickNotes[endRange.upperBound...])
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { try context.save() }
 
-        SampleArticleSeeder.seedIfNeeded(context: context)
+        try SampleArticleSeeder.seedIfNeeded(context: context)
     }
 }

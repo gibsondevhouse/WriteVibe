@@ -75,6 +75,7 @@ final class Article: Identifiable {
     var topic: String
     var audience: String
     var quickNotes: String
+    var sourceLinks: String
     var outline: String
     var summary: String
     var purpose: String
@@ -103,6 +104,7 @@ final class Article: Identifiable {
         self.topic         = topic
         self.audience      = ""
         self.quickNotes    = ""
+        self.sourceLinks   = ""
         self.outline       = ""
         self.summary       = ""
         self.purpose        = ""

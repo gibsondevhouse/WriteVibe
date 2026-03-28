@@ -8,6 +8,7 @@ import SwiftData
 
 @main
 struct WriteVibeApp: App {
+    let modelContainer: ModelContainer
     @State private var services: ServiceContainer
     @State private var appState: AppState
 
@@ -16,6 +17,23 @@ struct WriteVibeApp: App {
         let container = ServiceContainer()
         _services = State(initialValue: container)
         _appState = State(initialValue: AppState(services: container))
+
+        let schema = Schema(versionedSchema: WriteVibeSchemaV1.self)
+        let config = ModelConfiguration(
+            "WriteVibe",
+            schema: schema,
+            url: URL.applicationSupportDirectory.appending(path: "WriteVibe.store"),
+            allowsSave: true
+        )
+        do {
+            modelContainer = try ModelContainer(
+                for: schema,
+                migrationPlan: WriteVibeMigrationPlan.self,
+                configurations: config
+            )
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error)")
+        }
     }
 
     var body: some Scene {
@@ -27,12 +45,6 @@ struct WriteVibeApp: App {
         .windowToolbarStyle(.unified(showsTitle: true))
         .defaultSize(width: 1120, height: 740)
         .windowResizability(.contentMinSize)
-        .modelContainer(for: [
-            Conversation.self,
-            Message.self,
-            Article.self,
-            ArticleBlock.self,
-            ArticleDraft.self
-        ])
+        .modelContainer(modelContainer)
     }
 }
