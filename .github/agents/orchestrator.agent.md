@@ -1,26 +1,6 @@
 ---
 description: 'WriteVibe orchestrator — coordinates agents, plans multi-step tasks, delegates to swift/backend/frontend/qa/architecture/doc-auditor specialists.'
-tools:
-  - read/readFile
-  - read/problems
-  - read/terminalLastCommand
-  - edit/editFiles
-  - edit/createFile
-  - execute/runInTerminal
-  - execute/getTerminalOutput
-  - search/codebase
-  - search/textSearch
-  - search/fileSearch
-  - search/listDirectory
-  - search/changes
-  - agent/runSubagent
-  - agent
-  - vscode/getProjectSetupInfo
-  - vscode/askQuestions
-  - vscode/memory
-  - web/fetch
-  - web/githubRepo
-  - todo
+tools: [agent, vscode/extensions, vscode/askQuestions, vscode/getProjectSetupInfo, vscode/installExtension, vscode/memory, vscode/newWorkspace, vscode/resolveMemoryFileUri, vscode/runCommand, vscode/vscodeAPI, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/runNotebookCell, execute/testFailure, read/terminalSelection, read/terminalLastCommand, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, agent/runSubagent, browser/openBrowserPage, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo, todo]
 agents:
   - swift
   - backend
@@ -93,12 +73,13 @@ WriteVibe/
 │   └── AI/        → AIStreamingProvider implementations
 ├── Features/      → Feature-specific UI
 │   ├── Articles/  → Block editor, dashboard, workspace
+│   │   └── Components/ → Extracted subviews
 │   ├── Chat/      → Copilot panel, input bar, rendering
+│   │   └── Components/ → Extracted subviews
 │   ├── Sidebar/   → Navigation sidebar
-│   ├── Settings/  → Settings + model browser
-│   └── Welcome/   → Onboarding
+│   └── Settings/  → Settings + model browser
 ├── Shared/        → DesignSystem
-├── Extensions/    → Swift extensions
+├── Extensions/    → Swift extensions (Array+Safe, String+Trimmed)
 └── Resources/     → SystemPrompt
 ```
 
@@ -141,29 +122,31 @@ After all tasks complete:
 
 ---
 
-## Known Oversized Files (Active Targets)
+## File Size Status (All Under 250 LOC)
 
-| File | LOC | Priority |
+| File | LOC | Status |
 |---|---|---|
-| `ArticleWorkspaceView.swift` | 491 | 🔴 Critical |
-| `ArticlesDashboardView.swift` | 424 | 🔴 Critical |
-| `AppState.swift` | ~295 | ⚠️ Over |
-| `SidebarView.swift` | 272 | ⚠️ Over |
+| `ArticleWorkspaceView.swift` | 206 | ✅ |
+| `ArticlesDashboardView.swift` | 148 | ✅ |
+| `AppState.swift` | 180 | ✅ |
+| `SidebarView.swift` | 203 | ✅ |
+| `OllamaService.swift` | 222 | ✅ |
+| `DiffEngine.swift` | 219 | ✅ |
 
-When these files are involved in a task, consider whether the task is an opportunity to split them.
+All files are under the 250 LOC limit. Monitor these largest files during future changes.
 
 ---
 
 ## Phased Development Roadmap
 
-### Phase 1: AppState Refactoring
-Extract AICoordinatorService, ConversationManagementService, TokenManagementService
+### Phase 1: AppState Refactoring ✅ DONE
+Extracted ConversationGenerationManager, DataMigrationService. AppState now 180 LOC.
 
-### Phase 2: Article UI Refactoring
-Split ArticleWorkspaceView and ArticlesDashboardView below 250 LOC
+### Phase 2: Article UI + Chat UI Refactoring ✅ DONE
+All oversized files split into Components/ subdirectories. All under 250 LOC.
 
-### Phase 3: StreamingService Abstraction
-Create MessagePersistenceProvider protocol for decoupled persistence
+### Phase 3: StreamingService Abstraction ✅ DONE
+Extracted PromptAugmentationEngine and WebSearchContextProvider into Services/Streaming/.
 
 ### Phase 4: Article Edits Workflow
 Extract ArticleEditCoordinatorService from ArticleEditorViewModel

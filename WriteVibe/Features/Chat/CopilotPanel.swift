@@ -142,7 +142,7 @@ struct CopilotPanel: View {
 
     private func sendMessage() {
         appState.bindModelContextIfNeeded(modelContext)
-        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = inputText.trimmed
         guard !trimmed.isEmpty else { return }
         let id: UUID?
         if let existingId = appState.copilotConversationId,

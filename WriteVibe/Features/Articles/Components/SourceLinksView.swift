@@ -58,7 +58,7 @@ struct SourceLinksView: View {
                     .foregroundStyle(newLinkText.isEmpty ? Color.secondary.opacity(0.3) : Color.accentColor)
             }
             .buttonStyle(.plain)
-            .disabled(newLinkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(newLinkText.trimmed.isEmpty)
         }
     }
 
@@ -122,7 +122,7 @@ struct SourceLinksView: View {
     }
 
     private func addLink() {
-        let trimmed = newLinkText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = newLinkText.trimmed
         guard !trimmed.isEmpty else { return }
         let separator = article.sourceLinks.isEmpty ? "" : "\n"
         article.sourceLinks += separator + trimmed

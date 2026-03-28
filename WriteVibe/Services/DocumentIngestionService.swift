@@ -65,7 +65,7 @@ enum DocumentIngestionService {
         
         // Simple HTML stripping
         let stripped = stripHTML(content)
-        let trimmed = stripped.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = stripped.trimmed
         
         if trimmed.count > 8000 {
             let truncated = String(trimmed.prefix(8000))

@@ -39,7 +39,7 @@ final class ConversationService {
 
     func rename(_ id: UUID, to newTitle: String, context: ModelContext) {
         guard let conv = fetch(id, context: context) else { return }
-        conv.title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        conv.title = newTitle.trimmed
         conv.updatedAt = Date()
     }
 

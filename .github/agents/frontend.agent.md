@@ -60,26 +60,42 @@ You own everything under `WriteVibe/Features/`, `WriteVibe/Shared/`, and `WriteV
 ```
 Features/
 ├── Articles/
-│   ├── ArticlesDashboardView.swift    (424 LOC ⚠️ OVERSIZED — split target)
-│   ├── ArticleWorkspaceView.swift     (491 LOC 🔴 CRITICAL — split target)
+│   ├── ArticlesDashboardView.swift    (148 LOC ✅)
+│   ├── ArticleWorkspaceView.swift     (206 LOC ✅)
 │   ├── ArticleEditorView.swift        (~110 LOC ✅)
-│   ├── ArticleEditorViewModel.swift   (complex change tracking)
+│   ├── ArticleEditorViewModel.swift   (192 LOC ✅)
 │   ├── ArticleComponents.swift
-│   └── BlockRowView.swift
+│   ├── BlockRowView.swift
+│   └── Components/                    ← Extracted subviews
+│       ├── ArticleContextTab.swift
+│       ├── ArticleListHeader.swift
+│       ├── ArticleListItem.swift
+│       ├── ArticleSourcesTab.swift
+│       ├── NewArticleCard.swift
+│       ├── NewSeriesSheet.swift
+│       └── SourceLinksView.swift
 ├── Chat/
 │   ├── CopilotPanel.swift             (217 LOC ✅)
 │   ├── ChatScrollContainer.swift
-│   ├── InputBar.swift
-│   ├── MarkdownMessageText.swift
-│   └── ThinkingIndicator.swift
+│   ├── InputBar.swift                 (114 LOC ✅)
+│   ├── MarkdownMessageText.swift      (94 LOC ✅)
+│   ├── ThinkingIndicator.swift
+│   └── Components/                    ← Extracted subviews
+│       ├── ChatInputField.swift
+│       ├── ChatSendButton.swift
+│       ├── TokenUsageBar.swift
+│       ├── CapabilityChipsBar.swift
+│       ├── CapabilityChip.swift
+│       ├── AttachMenu.swift
+│       ├── MarkdownCodeBlock.swift
+│       ├── MarkdownBlockquote.swift
+│       └── MarkdownTable.swift
 ├── Sidebar/
-│   ├── SidebarView.swift              (272 LOC ⚠️ slightly over)
+│   ├── SidebarView.swift              (203 LOC ✅)
 │   └── CollapsibleSectionHeader.swift
-├── Settings/
-│   ├── SettingsView.swift
-│   └── OllamaModelBrowserView.swift
-└── Welcome/
-    └── (onboarding views)
+└── Settings/
+    ├── SettingsView.swift
+    └── OllamaModelBrowserView.swift
 ```
 
 ---
@@ -123,12 +139,16 @@ NavigationSplitView {
 - Use `ContentUnavailableView` for empty states
 - Use `.task { }` for async data loading (auto-cancels on disappear)
 
-### Oversized Files — Active Split Targets
-| File | Current LOC | Target | Split Strategy |
-|---|---|---|---|
-| `ArticleWorkspaceView` | 491 | <250 | Extract: HeaderView, DNAPanelView, FoundationCanvasView |
-| `ArticlesDashboardView` | 424 | <250 | Extract: DashboardViewModel, filter/group logic |
-| `SidebarView` | 272 | <250 | Extract: search + grouping logic |
+### File Size Status — All Under 250 LOC
+All view files have been refactored and are under the 250 LOC limit. Monitor these largest files during future changes:
+
+| File | Current LOC | Status |
+|---|---|---|
+| `CopilotPanel` | 217 | ✅ |
+| `ArticleWorkspaceView` | 206 | ✅ |
+| `SidebarView` | 203 | ✅ |
+| `ArticleEditorViewModel` | 192 | ✅ |
+| `ArticlesDashboardView` | 148 | ✅ |
 
 ---
 

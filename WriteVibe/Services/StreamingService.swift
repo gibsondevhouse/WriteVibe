@@ -98,7 +98,7 @@ final class StreamingService {
         if selectedModelIsSearchNative {
             augmented += "\n\nSearch: Use your built-in web retrieval. Ground factual claims in retrieved sources and include citations/links when possible. If retrieval fails, say that clearly instead of inventing details."
         } else if let query = conversation.messages.reversed().first(where: {
-            $0.role == .user && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            $0.role == .user && !$0.content.trimmed.isEmpty
         })?.content {
             do {
                 if let searchResults = try await webSearchProvider.fetchContext(query: query, searchModel: searchLayerModel) {

@@ -124,10 +124,13 @@ WriteVibeApp
        │    └─ ArticleEditorView → ArticleEditorViewModel
        └─ SettingsView / OllamaModelBrowserView
 
-AppState (coordinator, 295 lines)
+AppState (coordinator, ~185 lines)
   └─ ServiceContainer
+       ├─ ConversationGenerationManager (extracted from AppState)
        ├─ ConversationService (CRUD, cache, migration)
-       ├─ StreamingService (unified AI streaming, token batching)
+       ├─ StreamingService (~45 LOC, delegates to Streaming/ subcomponents)
+       │    ├─ PromptAugmentationEngine (chip validation, prompt injection protection)
+       │    └─ WebSearchContextProvider (search context fetching + sanitization)
        ├─ OllamaService: AIStreamingProvider
        ├─ AnthropicService: AIStreamingProvider
        └─ OpenRouterService: AIStreamingProvider
@@ -135,7 +138,8 @@ AppState (coordinator, 295 lines)
 Standalone services (static/enum):
   ├─ ExportService (clipboard, markdown save)
   ├─ ArticleAIService (structured article edits)
-  ├─ AppleIntelligenceService (title generation, macOS 26+)
+  ├─ AppleIntelligenceService (title generation + analysis, macOS 26+)
+  ├─ DataMigrationService (extracted from AppState)
   ├─ DocumentIngestionService (file import)
   ├─ KeychainService (API key storage)
   ├─ DiffEngine (article diff/patch)

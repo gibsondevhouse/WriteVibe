@@ -59,7 +59,7 @@ WriteVibe is a **macOS 26+** AI writing assistant built with:
 ### Critical Files
 | File | Purpose |
 |---|---|
-| `State/AppState.swift` | Central state coordinator (~295 LOC) |
+| `State/AppState.swift` | Central state coordinator (180 LOC) |
 | `Services/ServiceContainer.swift` | DI container for all services |
 | `Services/StreamingService.swift` | Token batching, prompt augmentation, search injection |
 | `Services/ConversationService.swift` | Conversation CRUD + in-memory cache |
@@ -78,15 +78,17 @@ WriteVibe/
 ├── State/         → AppState.swift
 ├── Models/        → SwiftData @Model types + enums
 ├── Services/      → Business logic + AI backends
-│   └── AI/        → Provider implementations
+│   ├── AI/        → Provider implementations
+│   └── Streaming/ → PromptAugmentationEngine, WebSearchContextProvider
 ├── Features/      → Feature-specific UI
 │   ├── Articles/  → Block editor, dashboard, workspace
+│   │   └── Components/ → Extracted subviews
 │   ├── Chat/      → Copilot panel, input bar, markdown rendering
+│   │   └── Components/ → Extracted subviews
 │   ├── Sidebar/   → Navigation sidebar
-│   ├── Settings/  → Settings + Ollama model browser
-│   └── Welcome/   → Onboarding
+│   └── Settings/  → Settings + Ollama model browser
 ├── Shared/        → DesignSystem, reusable components
-├── Extensions/    → Swift extensions (Array+Safe)
+├── Extensions/    → Swift extensions (Array+Safe, String+Trimmed)
 └── Resources/     → SystemPrompt.swift
 ```
 

@@ -68,6 +68,7 @@ WriteVibeTests/
 └── Services/
     ├── ConversationServiceTests.swift
     ├── DocumentIngestionServiceTests.swift
+    ├── SecurityValidationTests.swift
     ├── ServiceContainerTests.swift
     └── StreamingServiceTests.swift
 

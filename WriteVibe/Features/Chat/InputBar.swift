@@ -22,7 +22,7 @@ struct ChatInputBar: View {
     @State private var urlInput = ""
 
     private var canSend: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isThinking && tokenUsage < 0.98
+        !text.trimmed.isEmpty && !isThinking && tokenUsage < 0.98
     }
 
     var body: some View {

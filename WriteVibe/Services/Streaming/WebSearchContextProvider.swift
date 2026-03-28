@@ -45,7 +45,7 @@ final class WebSearchContextProvider {
             if collectedString.count >= 8_000 { break }
         }
 
-        let trimmedResults = collectedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedResults = collectedString.trimmed
         guard !trimmedResults.isEmpty else { return nil }
 
         return parseSearchResults(trimmedResults)

@@ -118,7 +118,7 @@ final class AppState {
 
     @discardableResult
     func send(_ text: String, in conversationId: UUID) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = text.trimmed
         guard !trimmed.isEmpty, thinkingId != conversationId else { return false }
         guard let ctx = modelContext else { reportIssue("Model context is not attached"); return false }
 

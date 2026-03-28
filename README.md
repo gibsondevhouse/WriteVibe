@@ -43,15 +43,18 @@ WriteVibe uses a protocol-based AI abstraction layer (`AIStreamingProvider`) bac
 
 ```
 AppState (Observable)
-  └── StreamingService       — token batching, prompt augmentation, search injection
-        └── AIStreamingProvider (protocol)
-              ├── OllamaService          — localhost:11434
-              ├── OpenRouterService      — cloud gateway (14+ models)
-              ├── AnthropicService       — direct Anthropic SSE
-              └── AppleIntelligenceService — on-device FoundationModels
+  └── ConversationGenerationManager    — AI generation orchestration
+        └── StreamingService            — delegates to subcomponents:
+              ├── PromptAugmentationEngine  — chip validation, prompt injection protection
+              ├── WebSearchContextProvider  — Sonar search context + sanitization
+              └── AIStreamingProvider (protocol)
+                    ├── OllamaService              — localhost:11434
+                    ├── OpenRouterService           — cloud gateway (14+ models)
+                    ├── AnthropicService            — direct Anthropic SSE
+                    └── AppleIntelligenceService    — on-device FoundationModels
 ```
 
-Data is persisted via **SwiftData** (`Conversation`, `Message`, `Article`, `ArticleBlock`, `ArticleDraft`). API keys are stored in the system **Keychain**.
+Data is persisted via **SwiftData** (`Conversation`, `Message`, `Article`, `ArticleBlock`, `ArticleDraft`). API keys are stored in the system **Keychain**. Security: URL scheme validation, model name validation, prompt injection protection via capability allowlists, Keychain input validation.
 
 ## License
 

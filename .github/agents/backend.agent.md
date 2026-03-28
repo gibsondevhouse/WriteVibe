@@ -60,11 +60,14 @@ You own everything under `WriteVibe/Services/`, `WriteVibe/Models/`, and `WriteV
 
 ```
 AppState (thin coordinator)
-  → ServiceContainer (DI)
-    → StreamingService (orchestrates streaming)
-      → AIStreamingProvider (protocol)
-        → OllamaService / OpenRouterService / AnthropicService / AppleIntelligenceService
-    → ConversationService (persistence)
+  → ConversationGenerationManager (AI generation orchestration)
+    → ServiceContainer (DI)
+      → StreamingService (delegates to subcomponents)
+        ├── PromptAugmentationEngine (chip validation, prompt injection protection)
+        ├── WebSearchContextProvider (Sonar search context + sanitization)
+        └── AIStreamingProvider (protocol)
+              → OllamaService / OpenRouterService / AnthropicService / AppleIntelligenceService
+      → ConversationService (persistence)
 ```
 
 - **AppState** calls services — never calls DB or providers directly
@@ -78,18 +81,21 @@ AppState (thin coordinator)
 
 | File | LOC | Responsibility |
 |---|---|---|
-| `Services/ServiceContainer.swift` | ~46 | DI container — instantiates + wires all providers and services |
-| `Services/StreamingService.swift` | ~200 | Token batching (batch=6), prompt augmentation, search injection, placeholder message lifecycle |
-| `Services/ConversationService.swift` | ~95 | Conversation CRUD, in-memory cache, auto-title via Apple Intelligence |
+| `Services/ServiceContainer.swift` | 49 | DI container — instantiates + wires all providers and services |
+| `Services/StreamingService.swift` | 123 | Token batching (batch=6), delegates to PromptAugmentationEngine + WebSearchContextProvider |
+| `Services/ConversationService.swift` | 94 | Conversation CRUD, in-memory cache, auto-title via Apple Intelligence |
+| `Services/ConversationGenerationManager.swift` | 113 | AI generation orchestration, active task tracking (extracted from AppState) |
+| `Services/Streaming/PromptAugmentationEngine.swift` | 119 | Capability chip validation with allowlists, prompt injection protection |
+| `Services/Streaming/WebSearchContextProvider.swift` | 87 | Perplexity Sonar search context fetch + sanitization |
 | `Services/AI/AIStreamingProvider.swift` | ~20 | `protocol AIStreamingProvider: Sendable` — unified streaming contract |
-| `Services/AI/OpenRouterService.swift` | ~120 | Cloud multi-model: Claude, GPT-4o, Gemini, DeepSeek, Perplexity |
-| `Services/AI/OllamaService.swift` | ~200 | Local model management + streaming from localhost:11434 |
-| `Services/AI/AnthropicService.swift` | ~100 | Direct Anthropic SSE streaming |
-| `Services/ExportService.swift` | - | Markdown/text export |
-| `Services/KeychainService.swift` | - | macOS Keychain read/write for API keys |
-| `Services/DiffEngine.swift` | - | Article diff computation |
-| `Services/DocumentIngestionService.swift` | - | File picker + document ingestion (max 8000 chars) |
-| `Services/MarkdownParser.swift` | - | Token-based markdown rendering — avoid changing |
+| `Services/AI/OpenRouterService.swift` | 95 | Cloud multi-model: Claude, GPT-4o, Gemini, DeepSeek, Perplexity |
+| `Services/AI/OllamaService.swift` | 222 | Local model management + streaming from localhost:11434 |
+| `Services/AI/AnthropicService.swift` | 99 | Direct Anthropic SSE streaming |
+| `Services/ExportService.swift` | 62 | Markdown/text export |
+| `Services/KeychainService.swift` | 74 | macOS Keychain read/write for API keys (with input validation) |
+| `Services/DiffEngine.swift` | 219 | Article diff computation |
+| `Services/DocumentIngestionService.swift` | 117 | File picker + URL fetch + HTML stripping (max 8000 chars) |
+| `Services/MarkdownParser.swift` | 144 | Token-based markdown rendering — avoid changing |
 
 ---
 

@@ -127,12 +127,12 @@ struct ArticlesDashboardView: View {
     // MARK: - Create
 
     private func createArticle(title: String, subtitle: String, tone: ArticleTone, targetLength: ArticleLength) {
-        let finalTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let finalTitle = title.trimmed.isEmpty
             ? "Untitled Article"
-            : title.trimmingCharacters(in: .whitespacesAndNewlines)
+            : title.trimmed
         let article = Article(
             title: finalTitle,
-            subtitle: subtitle.trimmingCharacters(in: .whitespacesAndNewlines),
+            subtitle: subtitle.trimmed,
             topic: "",
             tone: tone,
             targetLength: targetLength

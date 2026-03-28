@@ -164,13 +164,13 @@ struct ArticleWorkspaceView: View {
                     return
                 }
 
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmed = text.trimmed
                 guard !trimmed.isEmpty else {
                     uploadStatusMessage = "The selected document was empty."
                     return
                 }
 
-                let prefix = article.quickNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let prefix = article.quickNotes.trimmed.isEmpty
                     ? ""
                     : "\n\n---\n\n"
                 article.quickNotes += prefix + trimmed
@@ -187,7 +187,7 @@ struct ArticleWorkspaceView: View {
             .sorted { $0.position < $1.position }
             .map { $0.content }
             .joined(separator: "\n\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmed
 
         guard !content.isEmpty else {
             uploadStatusMessage = "Write something in the editor first, then save a draft snapshot."

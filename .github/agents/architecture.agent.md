@@ -141,37 +141,31 @@ WriteVibe/
 | Copilot availability | CopilotPanel → articles destination | Low | Parameterize conversation source |
 | Title generation | ConversationService → AppleIntelligenceService | Low | Extract TitleGenerationService |
 
-### Oversized Files
+### File Size Status (All Under 250 LOC)
 
-| File | LOC | Status | Split Strategy |
-|---|---|---|---|
-| `ArticleWorkspaceView.swift` | 491 | 🔴 CRITICAL | → HeaderView, DNAPanelView, FoundationCanvasView |
-| `ArticlesDashboardView.swift` | 424 | 🔴 CRITICAL | → DashboardViewModel + extracted subviews |
-| `AppState.swift` | ~295 | ⚠️ OVER | → AICoordinator, ConversationMgmt, TokenMgmt services |
-| `SidebarView.swift` | 272 | ⚠️ OVER | → Search/grouping logic extraction |
+| File | LOC | Status |
+|---|---|---|
+| `ArticleWorkspaceView.swift` | 206 | ✅ |
+| `ArticlesDashboardView.swift` | 148 | ✅ |
+| `AppState.swift` | 180 | ✅ |
+| `SidebarView.swift` | 203 | ✅ |
+| `OllamaService.swift` | 222 | ✅ |
+| `DiffEngine.swift` | 219 | ✅ |
+
+All files are under the 250 LOC limit. Monitor these largest files during future changes.
 
 ---
 
 ## Phased Refactoring Roadmap
 
-### Phase 1: AppState Refactoring (Priority: High)
-**Goal:** Reduce AppState from ~295 → ~150 LOC
-- Extract `AICoordinatorService` (provider routing, task tracking)
-- Extract `ConversationManagementService` (CRUD, list merging)
-- Extract `TokenManagementService` (estimation, context window)
+### Phase 1: AppState Refactoring ✅ DONE
+**Result:** Extracted `ConversationGenerationManager`, `DataMigrationService`. AppState now 180 LOC.
 
-### Phase 2: Article UI Refactoring (Priority: High)
-**Goal:** All article views under 250 LOC
-- Extract `ArticleWorkspaceHeaderView`
-- Extract `ArticleDNAPanelView`
-- Extract `ArticleFoundationCanvasView`
-- Extract `ArticleDashboardViewModel`
+### Phase 2: Article UI + Chat UI Refactoring ✅ DONE
+**Result:** All oversized files split into `Components/` subdirectories. All under 250 LOC.
 
-### Phase 3: StreamingService Abstraction (Priority: Medium)
-**Goal:** Decouple persistence from streaming
-- Create `MessagePersistenceProvider` protocol
-- Implement `ConversationMessagePersistence`
-- Enable future `ArticleDraftPersistence`
+### Phase 3: StreamingService Abstraction ✅ DONE
+**Result:** Extracted `PromptAugmentationEngine` and `WebSearchContextProvider` into `Services/Streaming/`.
 
 ### Phase 4: Article Edits Workflow (Priority: Medium)
 - Create `ArticleEditCoordinatorService`
