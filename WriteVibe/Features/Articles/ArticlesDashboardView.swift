@@ -51,6 +51,7 @@ struct ArticlesDashboardView: View {
         .sheet(isPresented: $isCreatingSeries) {
             NewSeriesSheet(isPresented: $isCreatingSeries) { article in
                 modelContext.insert(article)
+                try? modelContext.save()
                 selectedArticleID = article.persistentModelID
             }
         }
@@ -91,6 +92,7 @@ struct ArticlesDashboardView: View {
                                 selectedArticleID = article.persistentModelID
                             } onDelete: {
                                 modelContext.delete(article)
+                                try? modelContext.save()
                             }
                         }
                     }
@@ -142,6 +144,7 @@ struct ArticlesDashboardView: View {
         article.blocks = [titleBlock, bodyBlock]
         article.drafts = [ArticleDraft(title: "Draft 1", content: finalTitle)]
         modelContext.insert(article)
+        try? modelContext.save()
         isShowingNewArticle = false
         selectedArticleID = article.persistentModelID
     }

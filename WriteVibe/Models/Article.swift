@@ -130,4 +130,10 @@ final class Article: Identifiable {
     var sortedBlocks: [ArticleBlock] {
         blocks.sorted { $0.position < $1.position }
     }
+
+    /// Body blocks only — excludes the leading H1 title block used by TitleField
+    var bodyBlocks: [ArticleBlock] {
+        sortedBlocks.drop { $0.blockType == .heading(level: 1) && $0.position == 0 }
+            .map { $0 }
+    }
 }

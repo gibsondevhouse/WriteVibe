@@ -12,61 +12,174 @@ struct ArticleEditorView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @State private var vm = ArticleEditorViewModel()
+    @State private var editorState = EditorState()
 
     var body: some View {
         VStack(spacing: 0) {
-            editorToolbar
-            Divider()
-            if vm.hasPendingChanges, let summary = vm.editSummary {
-                reviewBanner(summary)
+            if vm.hasPendingChanges {
+                aiEditBar
                 Divider()
             }
             if let errorMsg = vm.aiErrorMessage {
                 errorBanner(errorMsg)
                 Divider()
             }
-            editorCanvas
+
+            if vm.hasPendingChanges {
+                blockReviewCanvas
+            } else {
+                mediumEditorCanvas
+            }
         }
     }
 
-    // MARK: - Toolbar
-    private var editorToolbar: some View {
+    // MARK: - Medium Editor Canvas (write mode)
+
+    private var mediumEditorCanvas: some View {
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Spacer()
+                        aiEditButton
+                    }
+
+                    TitleField(text: $article.title)
+
+                    SubtitleField(text: $article.subtitle)
+                        .padding(.top, 8)
+
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.06))
+                        .frame(height: 1)
+                        .padding(.vertical, 20)
+
+                    EditorTextView(editorState: editorState, initialBlocks: article.bodyBlocks)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 200)
+                        .overlay(alignment: .topLeading) {
+                            if editorState.showInsertionButton {
+                                BlockInsertionMenu(editorState: editorState)
+                                    .offset(x: -32, y: editorState.insertionButtonYOffset - 1)
+                                    .transition(.opacity)
+                            }
+                        }
+                        .animation(.easeOut(duration: 0.12), value: editorState.showInsertionButton)
+                }
+                .padding(.horizontal, 48)
+                .padding(.vertical, 40)
+                .frame(maxWidth: 740)
+                .frame(maxWidth: .infinity)
+            }
+
+            if editorState.hasSelection {
+                FloatingFormatToolbar(editorState: editorState)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: editorState.hasSelection)
+        .onDisappear {
+            editorState.syncToArticle(article)
+        }
+    }
+
+    private var aiEditButton: some View {
+        Button {
+            editorState.syncToArticle(article)
+            vm.requestAIEdits(for: article, defaultModel: appState.defaultModel)
+        } label: {
+            if vm.isRequestingEdits {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .controlSize(.small)
+                    .frame(width: 60)
+            } else {
+                Label("AI Edit", systemImage: "sparkles")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.small)
+        .disabled(vm.isRequestingEdits || article.sortedBlocks.isEmpty)
+        .help("Ask AI to propose edits to this article")
+    }
+
+    // MARK: - Block Review Canvas (AI edit review mode)
+
+    private var blockReviewCanvas: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                ForEach(article.sortedBlocks) { block in
+                    BlockRowView(
+                        block: block,
+                        spans: vm.showEdits ? (vm.blockChanges[block.id] ?? []) : [],
+                        showEdits: vm.showEdits,
+                        onAccept: { span in vm.acceptSpan(span, in: block, article: article) },
+                        onReject: { span in vm.rejectSpan(span, in: block, article: article) },
+                        onReturnAtEnd: {
+                            vm.addBlock(type: .paragraph, to: article, after: block)
+                            try? modelContext.save()
+                        },
+                        onDeleteEmpty: {
+                            vm.deleteBlockIfEmpty(block, from: article)
+                            try? modelContext.save()
+                        }
+                    )
+                    .padding(.horizontal, 2)
+                }
+            }
+            .padding(48)
+            .frame(maxWidth: 740)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    // MARK: - AI Edit Bar
+
+    private var aiEditBar: some View {
         HStack(spacing: 12) {
-            blockInserterMenu
+            if let summary = vm.editSummary {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.accentColor)
+                Text(summary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
 
             Spacer()
 
-            if vm.hasPendingChanges {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { vm.showEdits.toggle() }
-                } label: {
-                    Label(
-                        vm.showEdits ? "Hide Edits" : "Show Edits",
-                        systemImage: vm.showEdits ? "eye.slash" : "eye"
-                    )
-                    .font(.system(size: 11, weight: .medium))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-
-                Button { vm.acceptAllChanges() } label: {
-                    Label("Accept All", systemImage: "checkmark.circle")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.green)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-
-                Button { vm.rejectAllChanges(for: article) } label: {
-                    Label("Reject All", systemImage: "xmark.circle")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.red)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { vm.showEdits.toggle() }
+            } label: {
+                Label(
+                    vm.showEdits ? "Hide Edits" : "Show Edits",
+                    systemImage: vm.showEdits ? "eye.slash" : "eye"
+                )
+                .font(.system(size: 11, weight: .medium))
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+
+            Button { vm.acceptAllChanges() } label: {
+                Label("Accept All", systemImage: "checkmark.circle")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.green)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+
+            Button { vm.rejectAllChanges(for: article) } label: {
+                Label("Reject All", systemImage: "xmark.circle")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
 
             Button {
+                editorState.syncToArticle(article)
                 vm.requestAIEdits(for: article, defaultModel: appState.defaultModel)
             } label: {
                 if vm.isRequestingEdits {
@@ -82,28 +195,12 @@ struct ArticleEditorView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
             .disabled(vm.isRequestingEdits || article.sortedBlocks.isEmpty)
-            .help("Ask AI to propose edits to this article")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
     }
 
-    // MARK: - Review banner
-
-    private func reviewBanner(_ summary: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 11))
-                .foregroundStyle(Color.accentColor)
-            Text(summary)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
-        .background(Color.accentColor.opacity(0.06))
-    }
+    // MARK: - Error Banner
 
     private func errorBanner(_ message: String) -> some View {
         HStack(spacing: 8) {
@@ -122,50 +219,4 @@ struct ArticleEditorView: View {
         .padding(.vertical, 8)
         .background(Color.orange.opacity(0.07))
     }
-
-    // MARK: - Block inserter menu
-
-    private var blockInserterMenu: some View {
-        Menu {
-            Button("Paragraph")      { vm.addBlock(type: .paragraph, to: article) }
-            Divider()
-            Button("Heading 1")      { vm.addBlock(type: .heading(level: 1), to: article) }
-            Button("Heading 2")      { vm.addBlock(type: .heading(level: 2), to: article) }
-            Button("Heading 3")      { vm.addBlock(type: .heading(level: 3), to: article) }
-            Button("Heading 4")      { vm.addBlock(type: .heading(level: 4), to: article) }
-            Divider()
-            Button("Block Quote")    { vm.addBlock(type: .blockquote, to: article) }
-            Button("Code Block")     { vm.addBlock(type: .code(language: nil), to: article) }
-        } label: {
-            Label("Add Block", systemImage: "plus.rectangle.on.rectangle")
-                .font(.system(size: 11, weight: .medium))
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-    }
-
-    // MARK: - Canvas
-
-    private var editorCanvas: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 8) {
-                ForEach(article.sortedBlocks) { block in
-                    BlockRowView(
-                        block: block,
-                        spans: vm.showEdits ? (vm.blockChanges[block.id] ?? []) : [],
-                        showEdits: vm.showEdits,
-                        onAccept: { span in vm.acceptSpan(span, in: block, article: article) },
-                        onReject: { span in vm.rejectSpan(span, in: block, article: article) },
-                        onReturnAtEnd: { vm.addBlock(type: .paragraph, to: article, after: block) },
-                        onDeleteEmpty: { vm.deleteBlockIfEmpty(block, from: article) }
-                    )
-                    .padding(.horizontal, 2)
-                }
-            }
-            .padding(48)
-            .frame(maxWidth: 740)
-            .frame(maxWidth: .infinity)
-        }
-    }
-
 }

@@ -14,11 +14,14 @@ nonisolated enum BlockType: Codable, Equatable {
     case blockquote
     case code(language: String?)
     case image(caption: String?)
+    case bulletList
+    case numberedList
+    case divider
 
     var isTextEditable: Bool {
         switch self {
-        case .image: return false
-        default:     return true
+        case .image, .divider: return false
+        default:               return true
         }
     }
 
@@ -29,6 +32,9 @@ nonisolated enum BlockType: Codable, Equatable {
         case .blockquote:     return "Quote…"
         case .code:           return "// code"
         case .image:          return ""
+        case .bulletList:     return "List item…"
+        case .numberedList:   return "List item…"
+        case .divider:        return ""
         }
     }
 
@@ -39,6 +45,9 @@ nonisolated enum BlockType: Codable, Equatable {
         case .blockquote:     return "quote.opening"
         case .code:           return "chevron.left.forwardslash.chevron.right"
         case .image:          return "photo"
+        case .bulletList:     return "list.bullet"
+        case .numberedList:   return "list.number"
+        case .divider:        return "minus"
         }
     }
 }
@@ -104,6 +113,12 @@ final class ArticleBlock: Identifiable {
             return ("code", language)
         case .image(let caption):
             return ("image", caption)
+        case .bulletList:
+            return ("bulletList", nil)
+        case .numberedList:
+            return ("numberedList", nil)
+        case .divider:
+            return ("divider", nil)
         }
     }
 
@@ -122,6 +137,12 @@ final class ArticleBlock: Identifiable {
             return .code(language: metadata)
         case "image":
             return .image(caption: metadata)
+        case "bulletList":
+            return .bulletList
+        case "numberedList":
+            return .numberedList
+        case "divider":
+            return .divider
         default:
             return .paragraph
         }

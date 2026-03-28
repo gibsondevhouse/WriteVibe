@@ -78,6 +78,9 @@ enum ArticleAIService {
             case .blockquote:     typeLabel = "blockquote"
             case .code:           typeLabel = "code"
             case .image:          typeLabel = "image"
+            case .bulletList:     typeLabel = "bulletList"
+            case .numberedList:   typeLabel = "numberedList"
+            case .divider:        typeLabel = "divider"
             }
             return ["id": block.id.uuidString, "type": typeLabel, "content": block.content]
         }
