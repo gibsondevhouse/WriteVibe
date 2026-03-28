@@ -139,26 +139,15 @@ These don't require new AI capabilities — they're product features a writing t
 
 ---
 
-### 2.5 Context window usage indicator
+### 2.5 ~~Context window usage indicator~~ ✅ Done (v1.2)
 
-**Current state:** The user has no visibility into how close they are to the 4096-token limit. The error only fires when it's already too late.
-
-**Fix:** Show a subtle token-budget progress bar or colour change in the input bar as the estimated token count (rough heuristic: `totalCharacters / 4`) approaches the limit. Warn at 80%, disable send at 95%.
-
-**Effort:** Low. No new API calls — just character counting on the message array.
+> Token-budget progress bar in `InputBar` with colour-coded warnings. Warn at 80%, disable send at 95%.
 
 ---
 
-### 2.6 Export to markdown / rich text / clipboard
+### 2.6 ~~Export to markdown / clipboard~~ ✅ Done (v1.2)
 
-**Current state:** The Export footer button is a stub.
-
-**Fix:** Export the last assistant message (or full conversation) as:
-- Plain markdown to clipboard (one tap)
-- `.md` file via `NSSavePanel`
-- RTF/DOCX via `NSAttributedString` conversion
-
-**Effort:** Low to medium depending on format support.
+> Copy last reply to clipboard (one tap) and save full conversation as `.md` via `NSSavePanel`. RTF/DOCX not yet implemented.
 
 ---
 
@@ -256,7 +245,7 @@ Remaining providers — GPT-4o, Mistral Large, Gemini 1.5 Pro — still return a
 | 3 | Auto-title via guided generation | 1 | S | 🟡 Polish | ✅ v1.0 |
 | 4 | Context window usage indicator | 2 | S | 🟡 Reliability | ✅ v1.2 |
 | 5 | Export to clipboard / markdown file | 2 | M | 🟠 Core utility | ✅ v1.2 |
-| 6 | `prewarm(promptPrefix:)` on suggestion tap | 1 | S | 🟡 Performance | ✅ v1.1 |
+| 6 | `prewarm(promptPrefix:)` on suggestion tap | 1 | S | 🟡 Performance | ⚠️ Method defined, not wired |
 | 7 | Anthropic (Claude) backend | 4 | M | 🟠 Expansion | ✅ v1.2 |
 | 8 | Document ingestion (txt / md / rtf) | 2 | S | 🟠 Workflow | ✅ v1.2 |
 | 9 | Ollama local model backend | 4 | L | 🟠 Expansion | ✅ v1.3 |

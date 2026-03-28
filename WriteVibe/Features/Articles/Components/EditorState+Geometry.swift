@@ -10,6 +10,48 @@ import AppKit
 
 extension EditorState {
 
+    // MARK: - Caret Y Offset
+
+    /// Returns the Y position of the current insertion point in local NSTextView coordinates.
+    /// Uses layout geometry directly — avoids screen-space conversion issues.
+    func caretYOffset(in textView: NSTextView) -> CGFloat {
+        let origin = textView.textContainerOrigin
+        let charIndex = textView.selectedRange().location
+        let length = textView.textStorage?.length ?? 0
+
+        // TextKit 2
+        if let tlm = textView.textLayoutManager,
+           let cs = tlm.textContentManager as? NSTextContentStorage {
+            if charIndex >= length {
+                // Cursor past end — use the last fragment's maxY (new-paragraph line)
+                tlm.ensureLayout(for: tlm.documentRange)
+                if let frag = tlm.textLayoutFragment(for: cs.documentRange.endLocation) {
+                    return frag.layoutFragmentFrame.maxY + origin.y
+                }
+                // Empty doc — use the extra line fragment
+                return origin.y
+            }
+            if let loc = cs.location(cs.documentRange.location, offsetBy: charIndex),
+               let frag = tlm.textLayoutFragment(for: loc) {
+                return frag.layoutFragmentFrame.origin.y + origin.y
+            }
+        }
+
+        // TextKit 1 fallback
+        if let lm = textView.layoutManager, let container = textView.textContainer {
+            lm.ensureLayout(for: container)
+            if charIndex >= length {
+                let rect = lm.extraLineFragmentRect
+                if rect != .zero { return rect.origin.y + origin.y }
+                return lm.usedRect(for: container).maxY + origin.y
+            }
+            let glyph = lm.glyphIndexForCharacter(at: charIndex)
+            return lm.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil).origin.y + origin.y
+        }
+
+        return origin.y
+    }
+
     // MARK: - Insertion Button
 
     func updateInsertionButtonState(range: NSRange, storage: NSTextStorage, textView: NSTextView) {
@@ -18,7 +60,7 @@ extension EditorState {
             let lastChar = (storage.string as NSString).character(at: storage.length - 1)
             showInsertionButton = (lastChar == 0x0A)
             if showInsertionButton {
-                insertionButtonYOffset = paragraphYOffset(for: range.location, in: textView)
+                insertionButtonYOffset = caretYOffset(in: textView)
             }
             return
         }
@@ -27,7 +69,7 @@ extension EditorState {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         showInsertionButton = paraText.isEmpty
         if showInsertionButton {
-            insertionButtonYOffset = paragraphYOffset(for: range.location, in: textView)
+            insertionButtonYOffset = caretYOffset(in: textView)
         }
     }
 

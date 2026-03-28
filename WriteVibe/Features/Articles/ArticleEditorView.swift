@@ -52,15 +52,15 @@ struct ArticleEditorView: View {
                     Rectangle()
                         .fill(Color.primary.opacity(0.06))
                         .frame(height: 1)
-                        .padding(.vertical, 20)
+                        .padding(.top, 14)
+                        .padding(.bottom, 2)
 
                     EditorTextView(editorState: editorState, initialBlocks: article.bodyBlocks)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(minHeight: 200)
+                        .frame(minHeight: 200, alignment: .topLeading)
                         .overlay(alignment: .topLeading) {
                             if editorState.showInsertionButton {
                                 BlockInsertionMenu(editorState: editorState)
-                                    .offset(x: -32, y: editorState.insertionButtonYOffset - 1)
+                                    .offset(x: -32, y: editorState.insertionButtonYOffset)
                                     .transition(.opacity)
                             }
                         }

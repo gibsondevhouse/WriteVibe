@@ -77,23 +77,22 @@ enum DocumentIngestionService {
     private static func stripHTML(_ html: String) -> String {
         var text = html
 
-        // Remove script and style blocks (content + tags)
-        let blockPatterns = [
-            "<script[^>]*>[\\s\\S]*?</script>",
-            "<style[^>]*>[\\s\\S]*?</style>"
-        ]
-        for pattern in blockPatterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
-                text = regex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
-            }
-        }
-
-        // Remove HTML comments
+        // 1. Remove HTML comments
         if let commentRegex = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: []) {
             text = commentRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
         }
 
-        // Remove all remaining tags (including self-closing)
+        // 2. Remove script blocks (content + tags)
+        if let scriptRegex = try? NSRegularExpression(pattern: "<script[^>]*>[\\s\\S]*?</script>", options: .caseInsensitive) {
+            text = scriptRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
+        }
+
+        // 3. Remove style blocks (content + tags)
+        if let styleRegex = try? NSRegularExpression(pattern: "<style[^>]*>[\\s\\S]*?</style>", options: .caseInsensitive) {
+            text = styleRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
+        }
+
+        // 4. Remove all remaining tags (including self-closing)
         if let tagRegex = try? NSRegularExpression(pattern: "<[^>]+>", options: .caseInsensitive) {
             text = tagRegex.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: text.utf16.count), withTemplate: " ")
         }

@@ -162,7 +162,6 @@ enum DocumentSyncEngine {
             let tabStop = NSTextTab(textAlignment: .left, location: 24)
             style.tabStops = [tabStop]
         case .paragraph:
-            style.paragraphSpacingBefore = 4
             style.paragraphSpacing = 14
             style.lineSpacing = 3
         case .divider:

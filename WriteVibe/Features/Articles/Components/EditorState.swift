@@ -153,7 +153,7 @@ final class EditorState {
             isBold = false; isItalic = false; isLink = false
             currentBlockType = .paragraph
             showInsertionButton = true
-            insertionButtonYOffset = 0
+            insertionButtonYOffset = caretYOffset(in: textView)
             return
         }
 

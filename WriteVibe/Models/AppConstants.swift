@@ -20,7 +20,7 @@ enum AppConstants {
     static let ollamaBaseURL = URL(string: "http://localhost:11434")!
 
     /// Anthropic API version header.
-    static let anthropicAPIVersion = "2023-06-01"
+    static let anthropicAPIVersion = "2024-10-22"
 
     // MARK: - Token usage thresholds (fraction of context window)
 
