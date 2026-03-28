@@ -55,7 +55,6 @@ struct OllamaPullProgress {
 
 // MARK: - OllamaService
 
-@MainActor
 struct OllamaService: AIStreamingProvider {
     static let baseURL = AppConstants.ollamaBaseURL
 
@@ -158,13 +157,13 @@ struct OllamaService: AIStreamingProvider {
 
     // MARK: - Chat Streaming (AIStreamingProvider)
 
-    nonisolated func stream(
+    func stream(
         model: String,
         messages: [[String: String]],
         systemPrompt: String
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            Task { @MainActor in
+            Task {
                 do {
                     try Self.validateModelName(model)
                     let url = Self.baseURL.appendingPathComponent("v1/chat/completions")

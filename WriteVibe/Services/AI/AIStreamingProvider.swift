@@ -20,7 +20,6 @@ protocol AIStreamingProvider: Sendable {
     ///   - messages: Conversation history as `[["role": "user", "content": "…"]]`.
     ///   - systemPrompt: System instruction prepended to the message array.
     /// - Returns: An `AsyncThrowingStream` that yields individual token strings.
-    @MainActor
     func stream(
         model: String,
         messages: [[String: String]],

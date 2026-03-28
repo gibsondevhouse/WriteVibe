@@ -7,17 +7,16 @@ import Foundation
 
 // MARK: - OpenRouterService
 
-@MainActor
 struct OpenRouterService: AIStreamingProvider {
     static let chatEndpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
 
-    nonisolated func stream(
+    func stream(
         model: String,
         messages: [[String: String]],
         systemPrompt: String
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            Task { @MainActor in
+            Task {
                 do {
                     guard let apiKey = KeychainService.load(key: "openrouter_api_key"), !apiKey.isEmpty else {
                         throw WriteVibeError.missingAPIKey(provider: "OpenRouter")

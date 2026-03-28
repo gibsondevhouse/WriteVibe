@@ -44,15 +44,35 @@ struct BlockRowView: View {
     private var plainEditor: some View {
         let isEditable = block.blockType.isTextEditable
         if isEditable {
-            TextField(
-                block.blockType.defaultPlaceholder,
-                text: $block.content,
-                axis: .vertical
-            )
-            .font(blockFont)
-            .textFieldStyle(.plain)
-            .focused($isFocused)
-            .onSubmit { onReturnAtEnd() }
+            TextEditor(text: $block.content)
+                .font(blockFont)
+                .focused($isFocused)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(minHeight: 24)
+                // Shift+Return = new block; plain Return = newline (default)
+                .onKeyPress(.return, phases: .down) { keyPress in
+                    if keyPress.modifiers.contains(.shift) {
+                        onReturnAtEnd()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .onKeyPress(.delete) {
+                    if block.content.isEmpty {
+                        onDeleteEmpty()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .overlay(alignment: .topLeading) {
+                    if block.content.isEmpty {
+                        Text(block.blockType.defaultPlaceholder)
+                            .font(blockFont)
+                            .foregroundStyle(.tertiary)
+                            .allowsHitTesting(false)
+                    }
+                }
         } else {
             // Actionable image block
             Button {
@@ -186,92 +206,6 @@ struct BlockRowView: View {
         case .blockquote: return .system(size: 16).italic()
         case .code:       return .system(size: 13, design: .monospaced)
         default:          return .system(size: 15)
-        }
-    }
-}
-
-// MARK: - SpanReviewRow
-
-private struct SpanReviewRow: View {
-    let span: ChangeSpan
-    let blockContent: String
-    let onAccept: () -> Void
-    let onReject: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            // Icon + description
-            Image(systemName: spanIcon)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(spanColor)
-                .frame(width: 14)
-
-            Text(spanDescription)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-
-            Spacer()
-
-            // Accept
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) { onAccept() }
-            } label: {
-                Label("Accept", systemImage: "checkmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.green)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.green.opacity(0.12)))
-
-            // Reject
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) { onReject() }
-            } label: {
-                Label("Reject", systemImage: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.red.opacity(0.10)))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(.quaternary.opacity(0.6))
-        )
-    }
-
-    private var spanIcon: String {
-        switch span.changeType {
-        case .insert:  return "plus"
-        case .delete:  return "minus"
-        case .replace: return "arrow.left.arrow.right"
-        }
-    }
-
-    private var spanColor: Color {
-        switch span.changeType {
-        case .insert:  return .green
-        case .delete:  return .red
-        case .replace: return .orange
-        }
-    }
-
-    private var spanDescription: String {
-        switch span.changeType {
-        case .insert:
-            return "Add \(span.proposedText ?? "")"
-        case .delete:
-            return "Remove \(span.originalText ?? "")"
-        case .replace:
-            return "\(span.originalText ?? "") → \(span.proposedText ?? "")"
         }
     }
 }

@@ -7,8 +7,7 @@ import Foundation
 
 /// Builds augmented system prompts from capability chip selections and search context.
 /// Owns all allowlists and prompt sanitization logic.
-@MainActor
-final class PromptAugmentationEngine {
+final class PromptAugmentationEngine: Sendable {
 
     // MARK: - Capability Chip Allowlists
 

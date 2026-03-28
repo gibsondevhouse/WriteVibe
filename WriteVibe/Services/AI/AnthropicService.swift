@@ -5,17 +5,16 @@
 
 import Foundation
 
-@MainActor
 struct AnthropicService: AIStreamingProvider {
     static let apiBase = URL(string: "https://api.anthropic.com/v1/messages")!
 
-    nonisolated func stream(
+    func stream(
         model: String,
         messages: [[String: String]],
         systemPrompt: String
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            Task { @MainActor in
+            Task {
                 do {
                     guard let apiKey = KeychainService.load(key: "anthropic_api_key") else {
                         throw WriteVibeError.missingAPIKey(provider: "Anthropic")
