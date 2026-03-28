@@ -136,7 +136,7 @@ struct ArticleWorkspaceView: View {
     private var tabContent: some View {
         switch selectedTab {
         case .writing:
-            ArticleEditorView(article: article)
+            WritingTabView(article: article)
         case .context:
             ArticleContextTab(article: article)
         case .sources:

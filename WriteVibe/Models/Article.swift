@@ -77,6 +77,10 @@ final class Article: Identifiable {
     var quickNotes: String
     var outline: String
     var summary: String
+    var purpose: String
+    var style: String
+    var keyTakeaway: String
+    var publishingIntent: String
     var tone: ArticleTone
     var targetLength: ArticleLength
     var publishStatus: PublishStatus
@@ -101,6 +105,10 @@ final class Article: Identifiable {
         self.quickNotes    = ""
         self.outline       = ""
         self.summary       = ""
+        self.purpose        = ""
+        self.style          = ""
+        self.keyTakeaway    = ""
+        self.publishingIntent = ""
         self.tone          = tone
         self.targetLength  = targetLength
         self.publishStatus = .draft
