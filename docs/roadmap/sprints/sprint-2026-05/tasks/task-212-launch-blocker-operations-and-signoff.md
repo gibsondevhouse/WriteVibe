@@ -117,3 +117,56 @@ Run blocker register operations, waiver policy, and weekly readiness snapshots f
 
 - Ladder approved by `@cto` on 2026-04-02 and adopted as WS-205 carry-forward quality control.
 - Missed weekly target requires same-day triage and a corrective action item added to blocker register.
+
+## Blocker Triage Snapshot #4 (2026-04-02, CTO Final Gate Validation Directive)
+
+### Context
+
+CTO requested final gate validation before closing the implementation wave. All delivery tasks (TASK-202, TASK-204, TASK-205, TASK-207, TASK-209) reported Complete by Backend Lead and Frontend Lead. `@qa-lead` executed full gate validation immediately.
+
+### Register Delta Since Snapshot #3
+
+- No blocker state changes. All B-202/B-203/B-204/B-205 remain Closed. B-201 remains Monitoring.
+- Implementation wave declared complete by all delivery leads.
+
+### Blocker Register State (Snapshot #4)
+
+| Blocker | Severity | Owner | Current State | Next Checkpoint |
+| --- | --- | --- | --- | --- |
+| B-204 (test-host instability) | High | `@backend-lead` | Closed | Closed — verified via gate pack reconfirmation run on 2026-04-02 |
+| B-203 (contract boundary lock) | High | `@architect` | Closed | Closed |
+| B-205 (coverage carry-forward ladder) | Medium | `@cto` | Closed | Weekly ladder enforcement checkpoints remain active; Week 1 check due 2026-04-05 EOD |
+| B-202 (workflow freeze risk) | Medium | `@qa-lead` | Closed | Closed |
+| B-201 (external provider outage risk) | Medium | `@cto` | Monitoring | Ongoing weekly provider health review |
+
+### Gate Validation Evidence (2026-04-02)
+
+| Evidence | Result | Detail |
+| --- | --- | --- |
+| Critical-path gate pack | PASS | 40/40, 0 failures — StreamingServiceContractTests 6/6, StreamingServiceTests 9/9, ProviderRecoveryTests 7/7, ArticleEditOrchestratorTests 13/13, ChatRewriteDiffSupportTests 5/5 |
+| Full suite | PASS | 76/76, 0 failures, 0 skipped — timestamp 2026-04-02 17:02:47 -0400 |
+| Compiler warnings | CLEAN | No new warnings in delivery wave |
+| P0/P1 defects | NONE | No defects in sprint scope |
+| Handoff records | PRESENT | Committed to git for all delivery tasks |
+
+### Implementation Wave Completion Statement
+
+- TASK-202: Complete — adapter-only mutation path confirmed; StreamingServiceTests/StreamingServiceContractTests all pass.
+- TASK-204: Complete — provider failure taxonomy documented (OpenRouter 7, Anthropic 7, Ollama 9, cross-provider 5 failure classes).
+- TASK-205: Complete — Ollama silent failure path removed; AppStateProviderRecoveryTests passed; gate pack passed.
+- TASK-207: Complete — orchestrator boundary confirmed; ArticleEditOrchestratorTests 13/13 PASS; no direct SwiftData mutations in view layer.
+- TASK-209: Complete — recovery clarity confirmed across all 4 UI surfaces; all failure classes have recovery copy.
+
+### Coverage Ladder Week 1 Preliminary Note
+
+- Week 1 target: ≥31.00% overall / ≥21.00% app by 2026-04-05 EOD.
+- Current state: 76 tests passing — identical count to the 2026-04-02 baseline (29.29% overall / 20.37% app). No net-new test methods added in this implementation wave.
+- Risk: Without a coverage-enabled build run, the Week 1 threshold is unconfirmed. Coverage uplift tasks must begin immediately.
+- Required action before 2026-04-05 EOD: run full suite with Xcode coverage flags; attach report to WS-205 readiness snapshot. If gap persists, add corrective action item to blocker register per governance policy.
+
+### Readiness Trend After Snapshot #4
+
+- Trend: **Conditional Go → Ready for Delivery Sign-Off** (implementation wave complete; coverage uplift remains active obligation).
+- Positive signals: gate pack clean, full suite clean, all exit criteria satisfied, no open high/medium blockers.
+- Active obligation: Coverage Week 1 ladder checkpoint (2026-04-05 EOD) remains mandatory.
+- `@qa-lead` recommendation to `@cto`: Approve implementation wave delivery. Retain WS-205 coverage uplift as non-optional carry-forward with 2026-04-05 enforcement checkpoint.
