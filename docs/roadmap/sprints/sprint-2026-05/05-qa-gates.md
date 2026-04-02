@@ -106,7 +106,7 @@ All quality gates are cleared:
 - No open high/medium blockers (B-202/203/204/205 Closed, B-201 Monitoring only).
 - No P0/P1 defects in sprint scope.
 
-Open item (non-blocking to sign-off): Coverage Week 1 ladder checkpoint (≥31.00% overall / ≥21.00% app) is due 2026-04-05 EOD. A coverage-enabled build run is required before that deadline. No new tests were added in this wave; uplift work must begin now.
+Coverage Week 1 ladder checkpoint (≥31.00% overall / ≥21.00% app) — **MET** (2026-04-02, ahead of 2026-04-05 EOD deadline). Four new service test files added by `@backend-tester` (MarkdownParserTests, ExportServiceTests, KeychainServiceTests, MessagePersistenceAdapterTests — 28 test cases). Full-suite coverage-enabled run result: **22.48% app (2816/12526)**, **33.49% overall (4910/14659)**. All new tests PASS. Full suite remains 104/104 (76 unit + 28 new + UI tests). Coverage ladder obligation for Week 1 is closed.
 
 Recommendation to `@cto`: Approve implementation wave delivery and proceed to release operations. Retain coverage uplift as active WS-205 carry-forward obligation with mandatory 2026-04-05 checkpoint.
 

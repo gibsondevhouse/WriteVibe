@@ -11,8 +11,8 @@ Run blocker register operations, waiver policy, and weekly readiness snapshots f
 
 ## Acceptance Criteria
 
-- [ ] Blocker register is current with severity, owner, and verification evidence.
-- [ ] High/medium blockers are closed or explicitly waived with rationale.
+- [x] Blocker register is current with severity, owner, and verification evidence.
+- [x] High/medium blockers are closed or explicitly waived with rationale.
 - [ ] Closeout recommendation is co-reviewed by `@qa-lead`.
 
 ## Dependencies
@@ -163,6 +163,27 @@ CTO requested final gate validation before closing the implementation wave. All 
 - Current state: 76 tests passing — identical count to the 2026-04-02 baseline (29.29% overall / 20.37% app). No net-new test methods added in this implementation wave.
 - Risk: Without a coverage-enabled build run, the Week 1 threshold is unconfirmed. Coverage uplift tasks must begin immediately.
 - Required action before 2026-04-05 EOD: run full suite with Xcode coverage flags; attach report to WS-205 readiness snapshot. If gap persists, add corrective action item to blocker register per governance policy.
+
+### Coverage Ladder — Week 1 Checkpoint (2026-04-02, Ahead of 2026-04-05 Deadline)
+
+Status: MET
+
+| Metric | Target | Actual | Result |
+| --- | --- | --- | --- |
+| Overall coverage | ≥31.00% | 33.49% (4910/14659) | ✅ Pass (+2.49%) |
+| App target coverage | ≥21.00% | 22.48% (2816/12526) | ✅ Pass (+1.48%) |
+| Full suite result | All pass | 104/104 PASS, 0 failures | ✅ Pass |
+
+**Uplift actions completed (2026-04-02):**
+
+| Test File | Cases | Key Coverage Gained |
+| --- | --- | --- |
+| `MarkdownParserTests.swift` | 7 | `MarkdownParser.swift`: 0% → 100% (158 lines) |
+| `ExportServiceTests.swift` | 7 | `ExportService.swift`: 0% → 100% (35 lines) |
+| `KeychainServiceTests.swift` | 6 | `KeychainService.swift`: 0% → 96.55% (56/58 lines) |
+| `MessagePersistenceAdapterTests.swift` | 8 | `MessagePersistenceAdapter.swift`: 73.44% → 96.88% (62/64 lines) |
+
+Week 1 checkpoint is closed. Coverage ladder Week 2 check due 2026-04-12 EOD (target: ≥33.00% overall / ≥22.50% app).
 
 ### Readiness Trend After Snapshot #4
 
