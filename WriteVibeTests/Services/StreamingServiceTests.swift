@@ -159,6 +159,53 @@ struct StreamingServiceTests {
         #expect(assistantMessage.tokenCount == 1)
     }
 
+    @Test func testFeatureFlagOffUsesInMemoryAdapterFallback() async throws {
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
+        let provider = MockAIProvider(tokens: ["A", "B", "C"])
+        let streamingService = StreamingService(
+            conversationService: conversationService,
+            searchProvider: OpenRouterService(),
+            usePersistenceAdapter: false
+        )
+
+        try await streamingService.streamReply(
+            provider: provider,
+            modelName: "test-model",
+            conversationId: fixture.conversationID,
+            context: context
+        )
+
+        let updatedConversation = try #require(conversationService.fetch(fixture.conversationID, context: context))
+        #expect(updatedConversation.messages.count == 1)
+        #expect(updatedConversation.messages.last?.role == .user)
+    }
+
+    @Test func testFeatureFlagOnUsesSwiftDataAdapter() async throws {
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
+        let provider = MockAIProvider(tokens: ["A", "B", "C"])
+        let streamingService = StreamingService(
+            conversationService: conversationService,
+            searchProvider: OpenRouterService(),
+            usePersistenceAdapter: true
+        )
+
+        try await streamingService.streamReply(
+            provider: provider,
+            modelName: "test-model",
+            conversationId: fixture.conversationID,
+            context: context
+        )
+
+        let updatedConversation = try #require(conversationService.fetch(fixture.conversationID, context: context))
+        #expect(updatedConversation.messages.count == 2)
+        #expect(updatedConversation.messages.last?.role == .assistant)
+        #expect(updatedConversation.messages.last?.content == "ABC")
+    }
+
     @Test func testAdapterLifecycleOnSuccess() async throws {
         let fixture = try makeContextAndConversation()
         let context = fixture.context

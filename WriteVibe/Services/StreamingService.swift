@@ -20,15 +20,23 @@ final class StreamingService {
         conversationService: ConversationService,
         searchProvider: OpenRouterService,
         messagePersistenceAdapter: MessagePersistenceAdapter? = nil,
+        usePersistenceAdapter: Bool? = nil,
         webSearchProvider: (any SearchContextProviding)? = nil,
         hasSearchAPIKey: (@Sendable () -> Bool)? = nil
     ) {
+        let usePersistenceAdapter = usePersistenceAdapter ?? AppConstants.useStreamingPersistenceAdapter
         let hasSearchAPIKey = hasSearchAPIKey ?? {
             KeychainService.load(key: "openrouter_api_key") != nil
         }
 
         self.conversationService = conversationService
-        self.messagePersistenceAdapter = messagePersistenceAdapter ?? SwiftDataMessagePersistenceAdapter(conversationService: conversationService)
+        if let messagePersistenceAdapter {
+            self.messagePersistenceAdapter = messagePersistenceAdapter
+        } else if usePersistenceAdapter {
+            self.messagePersistenceAdapter = SwiftDataMessagePersistenceAdapter(conversationService: conversationService)
+        } else {
+            self.messagePersistenceAdapter = InMemoryPersistenceAdapter()
+        }
         self.augmentationEngine = PromptAugmentationEngine()
         self.webSearchProvider = webSearchProvider ?? WebSearchContextProvider(searchProvider: searchProvider)
         self.hasSearchAPIKey = hasSearchAPIKey

@@ -25,10 +25,10 @@ enum AppConstants {
     // MARK: - Feature Flags
 
     /// Enable persistence adapter for StreamingService message lifecycle.
-    /// Default: false (disabled for rollback safety during TASK-102 rollout).
-    /// When false: StreamingService uses InMemoryPersistenceAdapter.
+    /// Default: true (adapter-backed lifecycle is production path after TASK-102).
+    /// When false: StreamingService uses InMemoryPersistenceAdapter as rollback fallback.
     /// When true: StreamingService uses SwiftDataMessagePersistenceAdapter.
-    static let useStreamingPersistenceAdapter = false
+    static let useStreamingPersistenceAdapter = true
 
     // MARK: - Token usage thresholds (fraction of context window)
 

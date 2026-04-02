@@ -72,7 +72,7 @@
 
 // FEATURE FLAG (TASK-102 responsibility):
 // - Flag name: useStreamingPersistenceAdapter
-// - Default: false (disabled for rollback safety)
+// - Default: true (adapter-backed lifecycle is production path)
 // - When false: StreamingService uses InMemoryPersistenceAdapter
 // - When true: StreamingService uses SwiftDataMessagePersistenceAdapter
 // - Allows rollback if persistence layer has regression

@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | TASK-108 | WS-105 | Add contract tests for streaming interruption and placeholder lifecycle | `@backend-tester` | Complete | Critical | TASK-102 |
 | TASK-103 | WS-102 | Create ArticleEditOrchestrator boundary and default implementation | `@frontend-lead` | Complete | High | TASK-104 |
-| TASK-107 | WS-104 | Establish document sync benchmark corpus and conversion baseline | `@frontend-lead` | In Progress | Medium | --- |
+| TASK-107 | WS-104 | Establish document sync benchmark corpus and conversion baseline | `@frontend-lead` | Complete | Medium | --- |
 
 ### Phase 2: Protocol & Adapter Gateway (Days 3-6 | by 2026-04-06)
 
@@ -22,7 +22,7 @@
 
 | Task ID | Workstream | Task | Owner | Status | Priority | Prerequisites |
 | --- | --- | --- | --- | --- | --- | --- |
-| TASK-102 | WS-101 | Rewire StreamingService to persistence adapter behind flag | `@backend-developer` | In Progress | High | TASK-101 ✅, TASK-108 ✅ |
+| TASK-102 | WS-101 | Rewire StreamingService to persistence adapter behind flag | `@backend-developer` | Complete | High | TASK-101 ✅, TASK-108 ✅ |
 | TASK-105 | WS-103 | Patch Anthropic API version handling and error mapping | `@backend-developer` | Complete | Medium | TASK-101 ✅ |
 | TASK-106 | WS-103 | Fix Ollama cancel and Ollama-only search failure handling | `@backend-lead` | Complete | High | TASK-101 ✅ |
 
@@ -36,12 +36,30 @@
 | TASK-111 | WS-106 | Resolve open sprint decisions and unblock WS-103/WS-104 | `@cto` | Complete | High |
 | TASK-112 | WS-106 | Issue CTO final decision lock and execution authorization | `@cto` | Complete | High |
 
+## TASK-107 Evidence (2026-04-02)
+
+- Baseline validation command:
+  - `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/DocumentSyncBaselineTests`
+- Outcome:
+  - `** TEST SUCCEEDED **`
+  - `xcrun xcresulttool get test-results summary --path /Users/gibdevlite/Library/Developer/Xcode/DerivedData/WriteVibe-ebnlpmdwijaicbeduwogawjutxjs/Logs/Test/Test-WriteVibe-2026.04.02_15-09-19--0400.xcresult`
+  - Result summary: 3 passed, 0 failed, 0 skipped.
+
 ## Backend Burn-Down Evidence (2026-04-02)
 
 - B-006 focused rerun (post-fix) passed: `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' -only-testing:WriteVibeTests/StreamingServiceContractTests/testPlaceholderInterruptionPath_CreateCancelRetry test`.
 - TASK-105/106 reliability guard rerun passed: `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/ProviderRecoveryTests/testAnthropicErrorMapperExtractsProviderMessageFromSSEBody -only-testing:WriteVibeTests/ProviderRecoveryTests/testAnthropicErrorMapperUsesStatusFallbackWhenBodyMissing -only-testing:WriteVibeTests/ProviderRecoveryTests/testAnthropicFallbackAuthenticationFailurePointsToOpenRouterRecovery -only-testing:WriteVibeTests/StreamingServiceTests/testAdapterLifecycleOnCancellation -only-testing:WriteVibeTests/StreamingServiceTests/testOllamaSearchMissingKeyAddsSoftWarningAndContinues -only-testing:WriteVibeTests/StreamingServiceTests/testOllamaSearchProviderFailureAddsSoftWarningAndContinues -only-testing:WriteVibeTests/AppStateProviderRecoveryTests/testLocalSearchUnavailableRecoveryGuidanceRemainsActionable`.
 - Full-suite rerun passed: `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test`.
 - Backend blocker outcome: B-005 and B-006 moved to Closed in risk/blocker register after root-cause and assertion-fix validation.
+
+## TASK-102 Evidence (2026-04-02)
+
+- Adapter lifecycle + interruption contract rerun passed:
+  - `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/StreamingServiceTests -only-testing:WriteVibeTests/StreamingServiceContractTests`
+- XCResult summary command:
+  - `xcrun xcresulttool get test-results summary --path /Users/gibdevlite/Library/Developer/Xcode/DerivedData/WriteVibe-ebnlpmdwijaicbeduwogawjutxjs/Logs/Test/Test-WriteVibe-2026.04.02_15-15-22--0400.xcresult`
+- Outcome:
+  - `Passed, 15/15 tests, 0 failed, 0 skipped.`
 
 ## Status Values
 
