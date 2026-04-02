@@ -13,7 +13,7 @@
 | TASK-209 | WS-203 | Replace generic warning strings with explicit user recovery states | `@frontend-lead` | Complete | High |
 | TASK-210 | WS-204 | Define and enforce top-5 GA-critical workflow CI gate | `@qa-lead` | Complete | High |
 | TASK-211 | WS-204 | Stabilize flaky critical-path tests and quarantine policy | `@qa-lead` | Complete | Medium |
-| TASK-212 | WS-205 | Operate launch blocker register, waiver log, and weekly readiness review | `@cto` | In Progress | High |
+| TASK-212 | WS-205 | Operate launch blocker register, waiver log, and weekly readiness review | `@cto` | Complete | High |
 
 ## Status Values
 
@@ -31,6 +31,7 @@
 - TASK-212: twice-weekly blocker triage plus weekly readiness snapshot, co-reviewed by `@qa-lead`.
 - WS-205 coverage ladder is active (published 2026-04-02); B-205 is closed and now tracked through weekly coverage checkpoints.
 - Coverage Week 1 checkpoint (due 2026-04-05 EOD) is complete and passing ahead of schedule: 22.48% app / 33.49% overall (2026-04-02 full-suite coverage run).
+- Sprint closeout decision (2026-04-02): TASK-212 complete with co-reviewed CTO/QA recommendation; delivery scope is fully closed.
 
 ## Implementation Wave Close (2026-04-02)
 
@@ -38,15 +39,11 @@
 - WS-201/WS-202/WS-203 workstream status updated to Complete.
 - Final gate pack: 40/40 PASS. Full suite: 76/76 PASS.
 - QA sign-off: Ready for Delivery Sign-Off (`@qa-lead`, 2026-04-02).
-- Outstanding obligation: coverage Week 1 ladder check (≥31.00% overall / ≥21.00% app) due 2026-04-05 EOD — WS-205 cadence item only, non-blocking to wave sign-off.
+- Coverage Week 1 ladder check is closed as pass (22.48% app / 33.49% overall).
 
-## Immediate Implementation Queue (Ready Now)
+## Sprint Closeout (2026-04-02)
 
-| Queue Order | Task | Owner | Readiness Basis | Next Action |
-| --- | --- | --- | --- | --- |
-| 1 | TASK-202 | `@backend-developer` | TASK-201/203 complete, B-203 closed, B-204 closed | Finish adapter-only mutation closure and publish parity evidence update |
-| 2 | TASK-204 | `@backend-lead` | WS-202 active with no blocking dependency from WS-201 | Complete provider taxonomy/mapping matrix and link to QA recovery checks |
-| 3 | TASK-205 | `@backend-developer` | B-204 closed; task already in Review | Close remaining review comments and move to Complete with QA note |
-| 4 | TASK-207 | `@frontend-developer` | Focused automation green, orchestrator boundary in place | Finish parity confirmation and promote from Review to Complete |
-| 5 | TASK-209 | `@frontend-lead` | Build passing and copy scope isolated | Complete product+QA wording review and close task |
-| 6 | TASK-212 | `@cto` | Week 1 coverage checkpoint met; blocker register current | Publish Week 2 readiness snapshot and enforce 2026-04-12 coverage checkpoint |
+- All sprint tasks TASK-201 through TASK-212 are Complete.
+- Workstreams WS-201 through WS-205 are Complete.
+- Delivery closeout approved by `@cto` with `@qa-lead` co-review.
+- Remaining provider availability monitoring (B-201) continues as release operations governance, not open sprint implementation scope.

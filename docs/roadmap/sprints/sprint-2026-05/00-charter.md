@@ -36,3 +36,14 @@ Drive WriteVibe to v1 launch readiness by closing reliability gaps, eliminating 
   - Top-5 GA-critical workflow gate (TASK-210) is active and passing.
   - Early blocker set B-202/B-203/B-204/B-205 is closed with evidence-backed governance controls.
   - Remaining scope is implementation execution, not planning readiness.
+
+## Sprint Closeout Decision
+
+- Status: Closed
+- Decision Date: 2026-04-02
+- Decision Owner: `@cto` (co-reviewed by `@qa-lead`)
+- Basis:
+  - All sprint tasks TASK-201 through TASK-212 are Complete.
+  - Workstreams WS-201 through WS-205 are Complete.
+  - Gate evidence is green (critical path and full suite), and coverage Week 1 checkpoint passed.
+  - Remaining B-201 provider risk is monitored as release operations, not open sprint implementation scope.

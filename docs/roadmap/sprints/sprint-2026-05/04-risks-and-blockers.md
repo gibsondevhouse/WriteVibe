@@ -43,6 +43,7 @@
 - 2026-04-02: Implementation readiness gate passed for sprint-2026-05; planning-phase blockers are closed and remaining open items are execution-phase delivery/quality outcomes.
 - 2026-04-02: CTO implementation wave closed. TASK-202/204/205/207/209 all Complete. WS-201/202/203 Complete. Final gate pack 40/40 PASS, full suite 76/76 PASS. QA Lead issued Ready for Delivery Sign-Off. Coverage Week 1 ladder check (≥31.00% overall / ≥21.00% app) is non-blocking to wave sign-off but non-waivable; due 2026-04-05 EOD under WS-205 governance.
 - 2026-04-02: Coverage Week 1 ladder checkpoint was completed ahead of deadline and passed: app 22.48% (target ≥21.00%), overall 33.49% (target ≥31.00%). WS-205 remains active for Week 2 checkpoint enforcement (2026-04-12 EOD).
+- 2026-04-02: Sprint-2026-05 formally closed by `@cto` with `@qa-lead` co-review. TASK-212 completed; all sprint tasks and workstreams are complete. B-201 remains Monitoring as an external-dependency operational watch, not an open sprint blocker.
 
 ## Escalation SLA
 

@@ -36,7 +36,7 @@
 
 ## QA Decision
 
-- Status: Ready for Delivery Sign-Off
+- Status: Sprint Closed (Delivery Scope Complete)
 - Owner: `@qa-lead`
 - Notes:
   - QA entry gate passed for sprint planning artifacts on 2026-04-02.
@@ -108,11 +108,11 @@ All quality gates are cleared:
 
 Coverage Week 1 ladder checkpoint (≥31.00% overall / ≥21.00% app) — **MET** (2026-04-02, ahead of 2026-04-05 EOD deadline). Four new service test files added by `@backend-tester` (MarkdownParserTests, ExportServiceTests, KeychainServiceTests, MessagePersistenceAdapterTests — 28 test cases). Full-suite coverage-enabled run result: **22.48% app (2816/12526)**, **33.49% overall (4910/14659)**. All new tests PASS. Full suite remains 104/104 (76 unit + 28 new + UI tests). Coverage ladder obligation for Week 1 is closed.
 
-Recommendation to `@cto`: Approve implementation wave delivery and proceed to release operations. Retain coverage uplift as active WS-205 carry-forward obligation with mandatory 2026-04-05 checkpoint.
+Recommendation to `@cto`: Approve sprint-2026-05 closeout. Delivery scope is complete; continue B-201 provider monitoring under release operations governance.
 
 ## Implementation Readiness Decision
 
 - Decision: Ready for implementation execution.
 - Decision Date: 2026-04-02
 - Rationale: Entry gate passed, workflow freeze/gate enforcement active, and planning-phase blockers B-202/B-203/B-204/B-205 are closed.
-- Constraint: Sprint exit remains gated by remaining in-scope implementation tasks and coverage-ladder outcomes under WS-205.
+- Constraint: Historical entry decision only. Sprint implementation scope was later completed and formally closed on 2026-04-02.
