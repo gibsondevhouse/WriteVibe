@@ -1,0 +1,53 @@
+# QA Gates
+
+## Entry Checklist
+
+- [x] Workstreams have explicit owners and scoped acceptance criteria.
+- [x] Task board maps critical path execution to owners and priorities.
+- [x] Risk register and blocker escalation owners are defined.
+- [x] Architecture boundaries are documented for streaming, provider routing, and edit orchestration.
+
+## In-Sprint Checks
+
+- [ ] Top-5 GA-critical workflows frozen by 2026-04-04 EOD and published.
+- [ ] Daily impacted tests pass before task status moves to Review.
+- [ ] Mid-sprint full suite run completed and logged by `@qa-lead`.
+- [ ] Contract drift checks completed for stream lifecycle, provider fallback, and edit orchestration.
+- [ ] Coverage uplift checkpoints recorded weekly under WS-204/WS-205 carry-forward mandate.
+
+## Exit Checklist
+
+- [ ] WS-201 reliability parity passes success/cancel/error/retry scenarios.
+- [ ] WS-202 provider failures map to user-visible actionable recovery states.
+- [ ] WS-203 edit confidence UX checks pass (orchestrator parity + diff behavior + error clarity).
+- [ ] WS-204 critical-path automation passes and is non-flaky.
+- [ ] WS-205 blocker register is current and all high/medium blockers are closed or waived.
+- [ ] No unresolved P0/P1 defects in sprint scope.
+- [ ] Handoff records exist for all owner transitions.
+
+## Critical Test Matrix
+
+| Area | Must-Pass Scenarios | Owner |
+| --- | --- | --- |
+| Streaming and persistence | Placeholder create/update/finalize, cancel/retry consistency, idempotent persistence writes | `@backend-tester` |
+| Provider reliability and recovery | Anthropic/OpenRouter/Ollama fallback and user recovery state mapping | `@backend-tester` |
+| Article edit confidence | Replace/insert/delete validation, round-trip integrity, diff behavior for rewrite actions | `@frontend-tester` |
+| Release operations | Blocker SLA adherence, waiver logging, sign-off evidence completeness | `@qa-lead` |
+
+## QA Decision
+
+- Status: In Progress
+- Owner: `@qa-lead`
+- Notes:
+  - QA entry gate passed for sprint planning artifacts on 2026-04-02.
+  - TASK-210 started on 2026-04-02; workflow freeze work is active under WS-204.
+  - Daily impacted test pass tracking is now required for tasks in Review state.
+  - TASK-202 remains In Progress: adapter-owned persistence path is implemented, but parity evidence is not yet sufficient because targeted streaming tests are unstable under multi-test execution.
+  - TASK-205 remains in Review and QA-blocked by B-204: `AppStateProviderRecoveryTests` still fail under xcodebuild class-level/multi-test execution, while a single isolated failing-case re-run passed.
+  - TASK-206 is Complete: build passed and focused provider suites (`ServiceContainerTests`, `ProviderRecoveryTests`) passed, with no active automation blocker on the task.
+  - TASK-207 remains in Review with focused automation green (`ArticleEditOrchestratorTests`); remaining closure work is parity confirmation via integration/UI-path regression evidence.
+  - TASK-208 is Complete: focused automation is green (`ChatRewriteDiffSupportTests`) and no active automated QA blocker is open for this task.
+  - TASK-209 remains in Review with build passing; closure still requires manual product+QA copy/clarity review and is also partially QA-blocked by the same `AppStateProviderRecoveryTests` instability captured in B-204.
+  - B-204 scope is now narrower than WS-wide execution: it blocks review closure only where `AppStateProviderRecoveryTests`/`StreamingServiceTests` evidence is required, and does not block focused TASK-206/TASK-207/TASK-208 validation.
+  - WS-204 execution lock: TASK-210 approval deadline 2026-04-04 EOD; TASK-211 stability proof deadline 2026-04-09 EOD.
+  - WS-205 execution lock: twice-weekly blocker triage and weekly readiness snapshots are mandatory with QA co-review.
