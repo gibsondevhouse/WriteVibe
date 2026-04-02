@@ -2,9 +2,9 @@
 
 | Task ID | Workstream | Task | Owner | Status | Priority |
 | --- | --- | --- | --- | --- | --- |
-| TASK-201 | WS-201 | Lock protocol boundaries for streaming/persistence and edit orchestration | `@architect` | In Progress | High |
+| TASK-201 | WS-201 | Lock protocol boundaries for streaming/persistence and edit orchestration | `@architect` | Complete | High |
 | TASK-202 | WS-201 | Complete adapter-only streaming persistence mutation path | `@backend-developer` | In Progress | High |
-| TASK-203 | WS-201 | Validate cancellation/retry/finalize parity via contract tests | `@backend-tester` | Planned | High |
+| TASK-203 | WS-201 | Validate cancellation/retry/finalize parity via contract tests | `@backend-tester` | Complete | High |
 | TASK-204 | WS-202 | Build provider failure taxonomy and typed mapping matrix | `@backend-lead` | In Progress | High |
 | TASK-205 | WS-202 | Eliminate Ollama-only silent search failure and map recovery UX | `@backend-developer` | Review | High |
 | TASK-206 | WS-202 | Update stale Anthropic API version/config defaults and error states | `@backend-developer` | Complete | Medium |

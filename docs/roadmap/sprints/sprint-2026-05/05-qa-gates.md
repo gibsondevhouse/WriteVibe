@@ -46,6 +46,7 @@
   - TASK-210 top-5 GA-critical workflow package was frozen and approved on 2026-04-02 after the same-day WS-201 ownership correction, and the active gate command produced a passing first enforcement run on 2026-04-02 (`TEST SUCCEEDED`).
   - Daily impacted test pass tracking is now required for tasks in Review state.
   - TASK-202 remains In Progress: adapter-owned persistence path is implemented, but parity evidence is not yet sufficient because targeted streaming tests are unstable under multi-test execution.
+  - TASK-201 is Complete: protocol boundary lock signoffs from `@backend-lead` and `@frontend-lead` are recorded, and blocker B-203 is closed.
   - TASK-205 remains in Review and constrained by B-204 monitoring: two fresh combined reruns of `StreamingServiceTests` + `AppStateProviderRecoveryTests` passed on 2026-04-02, but CI-level confirmation is still required before removing the reliability caution.
   - TASK-206 is Complete: build passed and focused provider suites (`ServiceContainerTests`, `ProviderRecoveryTests`) passed, with no active automation blocker on the task.
   - TASK-207 remains in Review with focused automation green (`ArticleEditOrchestratorTests`); remaining closure work is parity confirmation via integration/UI-path regression evidence.
