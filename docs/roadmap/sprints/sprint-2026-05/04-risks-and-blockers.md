@@ -31,6 +31,8 @@
 - 2026-04-02: TASK-206 landed with focused provider smoke validation passing; direct Claude fallback now resolves Anthropic-native model IDs and actionable Anthropic/OpenRouter recovery guidance.
 - 2026-04-02: QA consolidation narrowed B-204 impact scope: focused TASK-206/TASK-207/TASK-208 suites pass, while TASK-205/TASK-209 closure remains constrained where `AppStateProviderRecoveryTests`/`StreamingServiceTests` evidence is required.
 - 2026-04-02: CTO set WS-204/WS-205 execution lock: TASK-210 approval due 2026-04-04 EOD, TASK-211 stability evidence due 2026-04-09 EOD, and weekly coverage uplift tracking is mandatory.
+- 2026-04-02: TASK-211 first-pass flaky-test inventory was published in the task card with initial ownership assignments for `StreamingServiceTests`, `AppStateProviderRecoveryTests`, and their combined critical-path invocation; next checkpoint is 2026-04-05 EOD for reproduce-or-quarantine recommendation.
+- 2026-04-02: WS-205 blocker triage snapshot #1 completed by `@cto`; no waivers issued, readiness trend set to Conditional Go, and B-203/B-204/B-205 remain active with dated checkpoints.
 
 ## Escalation SLA
 
