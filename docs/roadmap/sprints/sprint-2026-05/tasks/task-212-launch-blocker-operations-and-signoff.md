@@ -67,6 +67,37 @@ Run blocker register operations, waiver policy, and weekly readiness snapshots f
 - Positive signals: TASK-210 active gate is now complete, B-202 closed, and B-204 no longer in hard-open state.
 - Remaining blockers: B-203 (contract boundary lock) and B-205 (coverage ladder publication), plus CI-level confirmation checkpoint for B-204 by 2026-04-05 EOD.
 
+## Blocker Triage Snapshot #3 (2026-04-02, CTO Continuation Directive)
+
+### Register Delta Since Snapshot #2
+
+- B-204 moved from Monitoring to Closed after immediate CI-level confirmation requested by `@cto`.
+- Verification evidence captured on 2026-04-02:
+  - Combined `StreamingServiceTests` + `AppStateProviderRecoveryTests` rerun #1: `result: Passed`, `totalTestCount: 10`, `failedTests: 0`.
+  - Combined `StreamingServiceTests` + `AppStateProviderRecoveryTests` rerun #2: `result: Passed`, `totalTestCount: 10`, `failedTests: 0`.
+  - TASK-210 critical-path gate pack: `result: Passed`, `totalTestCount: 40`, `failedTests: 0`.
+  - Optional full suite: `result: Passed`, `totalTestCount: 76`, `failedTests: 0`.
+  - Build gate: `BUILD SUCCEEDED`.
+- B-203 remains Closed.
+- B-205 remains Closed.
+- B-201 remains Monitoring (external dependency risk, unchanged).
+
+### Updated Register State
+
+| Blocker | Severity | Owner | Current State | Next Checkpoint |
+| --- | --- | --- | --- | --- |
+| B-204 (test-host instability) | High | `@backend-lead` | Closed | No further blocker checkpoint required; monitor via normal critical-path gate runs |
+| B-203 (contract boundary lock) | High | `@architect` | Closed | Closed |
+| B-205 (coverage carry-forward ladder) | Medium | `@cto` | Closed | Weekly ladder enforcement checkpoints remain active |
+| B-202 (workflow freeze risk) | Medium | `@qa-lead` | Closed | Closed |
+| B-201 (external provider outage risk) | Medium | `@cto` | Monitoring | Ongoing weekly provider health review |
+
+### Readiness Trend After Snapshot #3
+
+- Trend: Conditional Go (improved reliability confidence; exit still not eligible).
+- Positive signals: no open high-severity blockers remain in WS-201/WS-204, CI-like confirmation for B-204 is complete, and full suite passed in the same execution window.
+- Residual risk: coverage remains below long-term readiness thresholds (full-suite app coverage observed at 20.37%), so WS-205 coverage uplift ladder remains the active quality-risk control.
+
 ## Coverage Uplift Ladder (Approved 2026-04-02)
 
 ### Baseline

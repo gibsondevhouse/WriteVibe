@@ -12,7 +12,7 @@
 | TASK-208 | WS-203 | Add chat diff view for rewrite actions using existing DiffEngine | `@frontend-developer` | Complete | Medium |
 | TASK-209 | WS-203 | Replace generic warning strings with explicit user recovery states | `@frontend-lead` | Review | High |
 | TASK-210 | WS-204 | Define and enforce top-5 GA-critical workflow CI gate | `@qa-lead` | Complete | High |
-| TASK-211 | WS-204 | Stabilize flaky critical-path tests and quarantine policy | `@qa-lead` | In Progress | Medium |
+| TASK-211 | WS-204 | Stabilize flaky critical-path tests and quarantine policy | `@qa-lead` | Complete | Medium |
 | TASK-212 | WS-205 | Operate launch blocker register, waiver log, and weekly readiness review | `@cto` | In Progress | High |
 
 ## Status Values
@@ -27,6 +27,6 @@
 
 - TASK-210: top-5 GA workflow freeze completed on 2026-04-02 with multi-lead approval evidence.
 - TASK-210 package is approved, frozen, and active; first enforcement run passed on 2026-04-02 (`TEST SUCCEEDED`).
-- TASK-211: flaky stabilization/quarantine evidence due 2026-04-09 with three consecutive green critical-path runs.
+- TASK-211: flaky stabilization checkpoint completed early on 2026-04-02 with CI-level confirmation evidence and B-204 closure.
 - TASK-212: twice-weekly blocker triage plus weekly readiness snapshot, co-reviewed by `@qa-lead`.
 - WS-205 coverage ladder is active (published 2026-04-02); B-205 is closed and now tracked through weekly coverage checkpoints.

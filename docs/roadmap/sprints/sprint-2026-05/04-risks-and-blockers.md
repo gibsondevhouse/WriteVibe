@@ -17,7 +17,7 @@
 | B-201 | External provider outage or API changes prevent deterministic validation | WS-202 | `@cto` | Monitoring |
 | B-202 | Critical-path workflow list is not frozen by end of week 1 | WS-204 | `@qa-lead` | Closed |
 | B-203 | Contract boundary lock (TASK-201) not yet complete for downstream parity validation | WS-201 | `@architect` | Closed |
-| B-204 | xcodebuild test-host instability in `StreamingServiceTests`/`AppStateProviderRecoveryTests` under class-level or multi-test execution blocks reliability parity evidence for affected review tasks | WS-201 | `@backend-lead` | Monitoring |
+| B-204 | xcodebuild test-host instability in `StreamingServiceTests`/`AppStateProviderRecoveryTests` under class-level or multi-test execution blocks reliability parity evidence for affected review tasks | WS-201 | `@backend-lead` | Closed |
 | B-205 | Coverage uplift carry-forward from sprint-2026-04 lacks approved weekly target ladder and could slip past mid-sprint gate | WS-204, WS-205 | `@cto` | Closed |
 
 ## Decision Log
@@ -38,6 +38,8 @@
 - 2026-04-02: TASK-211 reproduce-or-quarantine checkpoint reran combined `StreamingServiceTests` + `AppStateProviderRecoveryTests` twice with `TEST SUCCEEDED` both times; B-204 downgraded to Monitoring pending CI-level confirmation by 2026-04-05 EOD.
 - 2026-04-02: WS-205 published and approved weekly coverage uplift ladder (baseline 29.29% overall / 20.37% app); B-205 closed and moved to scheduled checkpoint enforcement.
 - 2026-04-02: TASK-201 protocol boundary lock recorded backend and frontend lead sign-off; B-203 closed and WS-201 dependency shifted to B-204 monitoring checkpoint only.
+- 2026-04-02: CTO-directed immediate CI-level confirmation for B-204 completed ahead of the prior 2026-04-05 checkpoint: combined `StreamingServiceTests` + `AppStateProviderRecoveryTests` passed in two fresh reruns (10/10 each), TASK-210 critical-path gate pack passed (40/40), optional full suite passed (`result: Passed`, `totalTestCount: 76`), and `xcodebuild build` returned `BUILD SUCCEEDED`; B-204 closed on objective evidence.
+- 2026-04-02: Residual risk remains on coverage readiness (full-suite app target coverage stayed at 20.37% vs long-term threshold goals), but this does not reopen B-204 test-host stability status.
 
 ## Escalation SLA
 
