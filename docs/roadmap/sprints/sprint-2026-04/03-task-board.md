@@ -15,16 +15,16 @@
 | Task ID | Workstream | Task | Owner | Status | Priority | Prerequisites | Blocking |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | TASK-101 | WS-101 | Introduce MessagePersistence protocol and default adapter | `@backend-lead` | Complete | High | TASK-108 ✅ | TASK-102 |
-| TASK-104 | WS-102 | Move apply/validation flow from view model to orchestrator | `@frontend-developer` | In Progress | High | TASK-103 ✅ | TASK-109 |
-| TASK-109 | WS-105 | Add article edit round-trip and operation validation tests | `@frontend-tester` | In Progress | High | TASK-104 (In Progress) | --- |
+| TASK-104 | WS-102 | Move apply/validation flow from view model to orchestrator | `@frontend-developer` | Complete | High | TASK-103 ✅ | TASK-109 |
+| TASK-109 | WS-105 | Add article edit round-trip and operation validation tests | `@frontend-tester` | Complete | High | TASK-104 ✅ | --- |
 
 ### Phase 3: Implementation & Stability (Days 6-9 | by 2026-04-09)
 
 | Task ID | Workstream | Task | Owner | Status | Priority | Prerequisites |
 | --- | --- | --- | --- | --- | --- | --- |
 | TASK-102 | WS-101 | Rewire StreamingService to persistence adapter behind flag | `@backend-developer` | In Progress | High | TASK-101 ✅, TASK-108 ✅ |
-| TASK-105 | WS-103 | Patch Anthropic API version handling and error mapping | `@backend-developer` | Review | Medium | TASK-101 ✅ |
-| TASK-106 | WS-103 | Fix Ollama cancel and Ollama-only search failure handling | `@backend-lead` | Review | High | TASK-101 ✅ |
+| TASK-105 | WS-103 | Patch Anthropic API version handling and error mapping | `@backend-developer` | Complete | Medium | TASK-101 ✅ |
+| TASK-106 | WS-103 | Fix Ollama cancel and Ollama-only search failure handling | `@backend-lead` | Complete | High | TASK-101 ✅ |
 
 ### Completed Work
 

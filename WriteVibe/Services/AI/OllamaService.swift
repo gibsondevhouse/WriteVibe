@@ -97,7 +97,7 @@ struct OllamaService: AIStreamingProvider {
 
     static func pullModel(modelName: String) -> AsyncThrowingStream<OllamaPullProgress, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            let producerTask = Task {
                 do {
                     try Self.validateModelName(modelName)
                     let url = Self.baseURL.appendingPathComponent("api/pull")
@@ -133,6 +133,10 @@ struct OllamaService: AIStreamingProvider {
                     continuation.finish(throwing: error)
                 }
             }
+
+            continuation.onTermination = { @Sendable _ in
+                producerTask.cancel()
+            }
         }
     }
 
@@ -163,7 +167,7 @@ struct OllamaService: AIStreamingProvider {
         systemPrompt: String
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            let producerTask = Task {
                 do {
                     try Self.validateModelName(model)
                     let url = Self.baseURL.appendingPathComponent("v1/chat/completions")
@@ -215,6 +219,10 @@ struct OllamaService: AIStreamingProvider {
                 } catch {
                     continuation.finish(throwing: error)
                 }
+            }
+
+            continuation.onTermination = { @Sendable _ in
+                producerTask.cancel()
             }
         }
     }

@@ -186,4 +186,210 @@ struct ArticleEditOrchestratorTests {
         #expect(!orchestrator.hasPendingChanges)
         #expect(orchestrator.blockChanges.isEmpty)
     }
+
+    @Test func requestAndApplyEdits_transitionsToFinalizedThenBackToPendingAfterAcceptAll() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Alpha beta", position: 0)
+        article.blocks = [block]
+
+        let range = try #require(block.content.range(of: "beta"))
+        let proposed = ProposedEdits(
+            operations: [.replace(blockID: block.id, range: range, newText: "gamma", reason: nil)],
+            summary: "Swap word"
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+
+        #expect(orchestrator.state.isPending)
+
+        _ = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(orchestrator.state.isFinalized)
+        #expect(orchestrator.hasPendingChanges)
+
+        orchestrator.acceptAllChanges()
+
+        #expect(orchestrator.state.isPending)
+        #expect(!orchestrator.hasPendingChanges)
+    }
+
+    @Test func requestAndApplyEdits_roundTripRejectAllThenReapplyRemainsStable() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "One two three", position: 0)
+        article.blocks = [block]
+
+        let firstRange = try #require(block.content.range(of: "two"))
+        let firstProposed = ProposedEdits(
+            operations: [.replace(blockID: block.id, range: firstRange, newText: "TWO", reason: "first")],
+            summary: "first pass"
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in firstProposed })
+
+        _ = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(block.content == "One TWO three")
+        #expect(orchestrator.hasPendingChanges)
+
+        orchestrator.rejectAllChanges(for: article)
+
+        #expect(block.content == "One two three")
+        #expect(orchestrator.state.isPending)
+
+        let secondRange = try #require(block.content.range(of: "three"))
+        let secondProposed = ProposedEdits(
+            operations: [.replace(blockID: block.id, range: secondRange, newText: "THREE", reason: "second")],
+            summary: "second pass"
+        )
+        let secondOrchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in secondProposed })
+
+        _ = try await secondOrchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(block.content == "One two THREE")
+        #expect(secondOrchestrator.state.isFinalized)
+    }
+
+    @Test func requestAndApplyEdits_rejectsReplaceWithOutOfBoundsRange() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Hello world", position: 0)
+        article.blocks = [block]
+
+        let foreign = "Detached index source"
+        let lower = foreign.index(foreign.startIndex, offsetBy: 12)
+        let upper = foreign.index(foreign.startIndex, offsetBy: 16)
+        let foreignRange = lower..<upper
+
+        let proposed = ProposedEdits(
+            operations: [.replace(blockID: block.id, range: foreignRange, newText: "X", reason: nil)],
+            summary: nil
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(result.appliedChanges.isEmpty)
+        #expect(result.rejectedOperations.count == 1)
+        let rejection = try #require(result.rejectedOperations.first)
+        #expect(rejection.reason.contains("range out of bounds"))
+        #expect(block.content == "Hello world")
+    }
+
+    @Test func requestAndApplyEdits_rejectsDeleteWithOutOfBoundsRange() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Hello world", position: 0)
+        article.blocks = [block]
+
+        let foreign = "Detached index source"
+        let lower = foreign.index(foreign.startIndex, offsetBy: 12)
+        let upper = foreign.index(foreign.startIndex, offsetBy: 16)
+        let foreignRange = lower..<upper
+
+        let proposed = ProposedEdits(
+            operations: [.delete(blockID: block.id, range: foreignRange, reason: nil)],
+            summary: nil
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(result.appliedChanges.isEmpty)
+        #expect(result.rejectedOperations.count == 1)
+        let rejection = try #require(result.rejectedOperations.first)
+        #expect(rejection.reason.contains("range out of bounds"))
+        #expect(block.content == "Hello world")
+    }
+
+    @Test func requestAndApplyEdits_rejectsInsertWithOutOfBoundsIndex() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Hello world", position: 0)
+        article.blocks = [block]
+
+        let foreign = "Detached index source"
+        let foreignIndex = foreign.index(foreign.startIndex, offsetBy: 14)
+
+        let proposed = ProposedEdits(
+            operations: [.insert(blockID: block.id, at: foreignIndex, text: "Hi ", reason: nil)],
+            summary: nil
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(result.appliedChanges.isEmpty)
+        #expect(result.rejectedOperations.count == 1)
+        let rejection = try #require(result.rejectedOperations.first)
+        #expect(rejection.reason.contains("insert position out of bounds"))
+        #expect(block.content == "Hello world")
+    }
+
+    @Test func requestAndApplyEdits_rejectsInsertBlockWithMissingAnchor() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Hello world", position: 0)
+        article.blocks = [block]
+
+        let proposed = ProposedEdits(
+            operations: [.insertBlock(afterBlockID: UUID(), type: .paragraph, content: "New block", reason: nil)],
+            summary: nil
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(result.appliedChanges.isEmpty)
+        #expect(result.rejectedOperations.count == 1)
+        #expect(result.rejectedOperations[0].reason.contains("anchor block not found"))
+        #expect(article.blocks.count == 1)
+    }
+
+    @Test func requestAndApplyEdits_rejectsDeleteBlockForNonEmptyContent() async throws {
+        let article = Article(title: "Test")
+        let block1 = ArticleBlock(type: .paragraph, content: "non-empty", position: 0)
+        let block2 = ArticleBlock(type: .paragraph, content: "", position: 1000)
+        article.blocks = [block1, block2]
+
+        let proposed = ProposedEdits(
+            operations: [.deleteBlock(blockID: block1.id, reason: nil)],
+            summary: nil
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: [:]
+        )
+
+        #expect(result.appliedChanges.isEmpty)
+        #expect(result.rejectedOperations.count == 1)
+        #expect(result.rejectedOperations[0].reason.contains("empty non-last block"))
+        #expect(article.blocks.count == 2)
+    }
 }

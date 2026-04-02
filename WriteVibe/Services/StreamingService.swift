@@ -40,6 +40,7 @@ final class StreamingService {
         modelName: String,
         conversationId: UUID,
         context: ModelContext,
+        isLocalModelOverride: Bool? = nil,
         isSearchEnabled: Bool = false,
         tone: String = "Balanced",
         length: String = "Normal",
@@ -51,7 +52,7 @@ final class StreamingService {
         let contextMessages = conv.messages
             .filter { !$0.content.isEmpty }
             .map { ["role": $0.role == .user ? "user" : "assistant", "content": $0.content] }
-        let isLocalModel = provider is OllamaService
+        let isLocalModel = isLocalModelOverride ?? (provider is OllamaService)
 
         var augmentedPrompt = augmentationEngine.augmentWithCapabilities(
             basePrompt: writeVibeSystemPrompt,
@@ -136,26 +137,32 @@ final class StreamingService {
             $0.role == .user && !$0.content.trimmed.isEmpty
         })?.content {
             if isLocalModel && !hasSearchAPIKey() {
-                throw WriteVibeError.localSearchUnavailable(reason: "no OpenRouter API key is configured")
-            }
-
-            do {
-                if let searchResults = try await webSearchProvider.fetchContext(query: query, searchModel: searchLayerModel) {
-                    augmented = augmentationEngine.appendSearchResults(searchResults, to: augmented, searchModel: searchLayerModel)
-                } else if isLocalModel {
-                    throw WriteVibeError.localSearchUnavailable(reason: "the search layer returned no usable findings")
-                } else {
-                    augmented += "\n\nSearch: The web search layer returned no usable findings. Do not claim verified web results."
+                augmented += localSearchFallbackWarning(reason: "no OpenRouter API key is configured")
+            } else {
+                do {
+                    if let searchResults = try await webSearchProvider.fetchContext(query: query, searchModel: searchLayerModel) {
+                        augmented = augmentationEngine.appendSearchResults(searchResults, to: augmented, searchModel: searchLayerModel)
+                    } else if isLocalModel {
+                        augmented += localSearchFallbackWarning(reason: "the search layer returned no usable findings")
+                    } else {
+                        augmented += "\n\nSearch: The web search layer returned no usable findings. Do not claim verified web results."
+                    }
+                } catch {
+                    if isLocalModel {
+                        let localError = mapLocalSearchFailure(error)
+                        if case .localSearchUnavailable(let reason) = localError {
+                            augmented += localSearchFallbackWarning(reason: reason)
+                        } else {
+                            augmented += localSearchFallbackWarning(reason: "the web search layer is unavailable")
+                        }
+                    } else {
+                        augmented += "\n\nSearch: The web search layer is unavailable right now (\(error.localizedDescription)). Do not claim web verification."
+                    }
                 }
-            } catch {
-                if isLocalModel {
-                    throw mapLocalSearchFailure(error)
-                }
-                augmented += "\n\nSearch: The web search layer is unavailable right now (\(error.localizedDescription)). Do not claim web verification."
             }
         } else {
             if isLocalModel {
-                throw WriteVibeError.localSearchUnavailable(reason: "no user query was available for web retrieval")
+                augmented += localSearchFallbackWarning(reason: "no user query was available for web retrieval")
             }
             augmented += "\n\nSearch: No user query was available for web retrieval. Do not claim web verification."
         }
@@ -184,5 +191,9 @@ final class StreamingService {
         }
 
         return .localSearchUnavailable(reason: error.localizedDescription)
+    }
+
+    private func localSearchFallbackWarning(reason: String) -> String {
+        "\n\nSearch: Web search is unavailable for this Ollama request because \(reason). Continue without external web retrieval and do not claim web verification."
     }
 }

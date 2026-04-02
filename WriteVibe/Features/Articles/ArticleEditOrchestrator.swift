@@ -231,8 +231,16 @@ final class DefaultArticleEditOrchestrator: ArticleEditOrchestrating {
                     continue
                 }
 
-                let original = String(block.content[range])
-                block.content.replaceSubrange(range, with: newText)
+                guard let safeRange = validatedRange(range, in: block.content) else {
+                    rejected.append(RejectedEditOperation(
+                        reason: "Validation failure: range out of bounds.",
+                        operation: op
+                    ))
+                    continue
+                }
+
+                let original = String(block.content[safeRange])
+                block.content.replaceSubrange(safeRange, with: newText)
                 
                 if let newRange = block.content.range(of: newText) {
                     let span = ChangeSpan(
@@ -258,9 +266,16 @@ final class DefaultArticleEditOrchestrator: ArticleEditOrchestrating {
                     continue
                 }
 
-                let safeAt = at <= block.content.endIndex ? at : block.content.endIndex
-                block.content.insert(contentsOf: text, at: safeAt)
-                let end = block.content.index(safeAt, offsetBy: text.count, limitedBy: block.content.endIndex) ?? block.content.endIndex
+                guard let insertionPoint = validatedIndex(at, in: block.content) else {
+                    rejected.append(RejectedEditOperation(
+                        reason: "Validation failure: insert position out of bounds.",
+                        operation: op
+                    ))
+                    continue
+                }
+
+                block.content.insert(contentsOf: text, at: insertionPoint)
+                let end = block.content.index(insertionPoint, offsetBy: text.count, limitedBy: block.content.endIndex) ?? block.content.endIndex
                 
                 let span = ChangeSpan(
                     id: UUID(),
@@ -268,7 +283,7 @@ final class DefaultArticleEditOrchestrator: ArticleEditOrchestrating {
                     author: .ai,
                     timestamp: Date(),
                     reason: reason,
-                    proposedRange: safeAt..<end,
+                    proposedRange: insertionPoint..<end,
                     originalText: nil,
                     proposedText: text
                 )
@@ -284,8 +299,16 @@ final class DefaultArticleEditOrchestrator: ArticleEditOrchestrating {
                     continue
                 }
 
-                let original = String(block.content[range])
-                let anchor = range.lowerBound
+                guard let safeRange = validatedRange(range, in: block.content) else {
+                    rejected.append(RejectedEditOperation(
+                        reason: "Validation failure: range out of bounds.",
+                        operation: op
+                    ))
+                    continue
+                }
+
+                let original = String(block.content[safeRange])
+                let anchor = safeRange.lowerBound
                 let emptyRange = anchor..<anchor
                 
                 let span = ChangeSpan(
@@ -299,7 +322,7 @@ final class DefaultArticleEditOrchestrator: ArticleEditOrchestrating {
                     proposedText: nil
                 )
                 changes[blockID, default: []].append(span)
-                block.content.removeSubrange(range)
+                block.content.removeSubrange(safeRange)
                 article.updatedAt = Date()
 
             case let .insertBlock(afterBlockID, type, content, _):
@@ -342,5 +365,26 @@ final class DefaultArticleEditOrchestrator: ArticleEditOrchestrating {
         }
 
         return (changes, rejected)
+    }
+
+    private func validatedIndex(_ index: String.Index, in content: String) -> String.Index? {
+        guard let utf8Index = index.samePosition(in: content.utf8) else {
+            return nil
+        }
+        return String.Index(utf8Index, within: content)
+    }
+
+    private func validatedRange(_ range: Range<String.Index>, in content: String) -> Range<String.Index>? {
+        guard
+            let lowerUTF8 = range.lowerBound.samePosition(in: content.utf8),
+            let upperUTF8 = range.upperBound.samePosition(in: content.utf8),
+            let lower = String.Index(lowerUTF8, within: content),
+            let upper = String.Index(upperUTF8, within: content),
+            lower <= upper
+        else {
+            return nil
+        }
+
+        return lower..<upper
     }
 }

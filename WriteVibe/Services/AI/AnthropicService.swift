@@ -63,11 +63,7 @@ struct AnthropicService: AIStreamingProvider {
                             errorBody += line
                             if errorBody.count > 4096 { break }
                         }
-                        throw WriteVibeError.apiError(
-                            provider: "Anthropic",
-                            statusCode: httpResponse.statusCode,
-                            message: Self.parseErrorMessage(from: errorBody)
-                        )
+                        throw Self.mapAPIError(statusCode: httpResponse.statusCode, body: errorBody)
                     }
 
                     for try await line in result.lines {
@@ -100,14 +96,75 @@ struct AnthropicService: AIStreamingProvider {
         }
     }
 
-    private static func parseErrorMessage(from body: String) -> String? {
-        guard let data = body.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let error = json["error"] as? [String: Any],
-              let message = error["message"] as? String
-        else {
-            return body.isEmpty ? nil : String(body.prefix(200))
+    static func mapAPIError(statusCode: Int, body: String) -> WriteVibeError {
+        let parsedMessage = parseErrorMessage(from: body)
+
+        let fallbackMessage: String?
+        switch statusCode {
+        case 400:
+            fallbackMessage = "Anthropic rejected the request payload."
+        case 401, 403:
+            fallbackMessage = "Anthropic authentication failed for this request."
+        case 404:
+            fallbackMessage = "Anthropic could not find the requested model or endpoint."
+        case 429:
+            fallbackMessage = "Anthropic rate limited this request."
+        case 500...599:
+            fallbackMessage = "Anthropic is temporarily unavailable."
+        default:
+            fallbackMessage = nil
         }
-        return message
+
+        return .apiError(
+            provider: "Anthropic",
+            statusCode: statusCode,
+            message: parsedMessage ?? fallbackMessage
+        )
+    }
+
+    private static func parseErrorMessage(from body: String) -> String? {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let message = parseErrorMessageFromJSONString(trimmed) {
+            return message
+        }
+
+        for rawLine in trimmed.split(separator: "\n") {
+            let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
+            let payload: String
+            if line.hasPrefix("data: ") {
+                payload = String(line.dropFirst(6))
+            } else {
+                payload = line
+            }
+
+            if let message = parseErrorMessageFromJSONString(payload) {
+                return message
+            }
+        }
+
+        return String(trimmed.prefix(200))
+    }
+
+    private static func parseErrorMessageFromJSONString(_ jsonString: String) -> String? {
+        guard let data = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        if let error = json["error"] as? [String: Any],
+           let message = error["message"] as? String,
+           !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return message
+        }
+
+        if let message = json["message"] as? String,
+           !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return message
+        }
+
+        return nil
     }
 }

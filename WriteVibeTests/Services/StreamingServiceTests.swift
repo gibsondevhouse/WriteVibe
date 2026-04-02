@@ -243,9 +243,25 @@ struct StreamingServiceTests {
         #expect(capturedPrompt.contains("JSON"))
     }
 
-    @Test func testOllamaSearchFailureThrowsRecoveryGuidanceBeforePlaceholderCreation() async throws {
+    @Test func testOllamaSearchMissingKeyAddsSoftWarningAndContinues() async throws {
         let (context, conversationService, conversation) = try makeContextAndConversation()
         let adapter = RecordingPersistenceAdapter()
+        var capturedPrompt = ""
+        struct PromptCapturingProvider: AIStreamingProvider {
+            let onPromptCaptured: (String) -> Void
+            let tokens: [String]
+            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
+                onPromptCaptured(systemPrompt)
+                return AsyncThrowingStream { continuation in
+                    for token in tokens {
+                        continuation.yield(token)
+                    }
+                    continuation.finish()
+                }
+            }
+        }
+
+        let provider = PromptCapturingProvider(onPromptCaptured: { capturedPrompt = $0 }, tokens: ["fallback"]) 
         let streamingService = StreamingService(
             conversationService: conversationService,
             searchProvider: OpenRouterService(),
@@ -253,38 +269,58 @@ struct StreamingServiceTests {
             hasSearchAPIKey: { false }
         )
 
-        await #expect(throws: WriteVibeError.self) {
-            try await streamingService.streamReply(
-                provider: OllamaService(),
-                modelName: "test-model",
-                conversationId: conversation.id,
-                context: context,
-                isSearchEnabled: true
-            )
-        }
+        try await streamingService.streamReply(
+            provider: provider,
+            modelName: "test-model",
+            conversationId: conversation.id,
+            context: context,
+            isLocalModelOverride: true,
+            isSearchEnabled: true
+        )
 
-        #expect(adapter.beganRuns.isEmpty)
-        #expect(adapter.appendedChunks.isEmpty)
-        #expect(adapter.finalizedOutcomes.isEmpty)
+        #expect(capturedPrompt.contains("Web search is unavailable for this Ollama request"))
+        #expect(capturedPrompt.contains("no OpenRouter API key is configured"))
+        #expect(adapter.beganRuns.count == 1)
+        #expect(adapter.appendedChunks == ["fallback"])
+        #expect(adapter.finalizedOutcomes == [.succeeded])
     }
 
-    @Test func testOllamaSearchProviderFailureThrowsTypedRecoveryGuidance() async throws {
+    @Test func testOllamaSearchProviderFailureAddsSoftWarningAndContinues() async throws {
         let (context, conversationService, conversation) = try makeContextAndConversation()
+        let adapter = RecordingPersistenceAdapter()
+        var capturedPrompt = ""
+        struct PromptCapturingProvider: AIStreamingProvider {
+            let onPromptCaptured: (String) -> Void
+            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
+                onPromptCaptured(systemPrompt)
+                return AsyncThrowingStream {
+                    $0.yield("ok")
+                    $0.finish()
+                }
+            }
+        }
+
         let streamingService = StreamingService(
             conversationService: conversationService,
             searchProvider: OpenRouterService(),
-            webSearchProvider: MockSearchContextProvider(result: .failure(MockStreamError.providerFailure)),
+            messagePersistenceAdapter: adapter,
+            webSearchProvider: MockSearchContextProvider(
+                result: .failure(WriteVibeError.apiError(provider: "OpenRouter", statusCode: 503, message: nil))
+            ),
             hasSearchAPIKey: { true }
         )
 
-        await #expect(throws: WriteVibeError.self) {
-            try await streamingService.streamReply(
-                provider: OllamaService(),
-                modelName: "test-model",
-                conversationId: conversation.id,
-                context: context,
-                isSearchEnabled: true
-            )
-        }
+        try await streamingService.streamReply(
+            provider: PromptCapturingProvider(onPromptCaptured: { capturedPrompt = $0 }),
+            modelName: "test-model",
+            conversationId: conversation.id,
+            context: context,
+            isLocalModelOverride: true,
+            isSearchEnabled: true
+        )
+
+        #expect(capturedPrompt.contains("Web search is unavailable for this Ollama request"))
+        #expect(capturedPrompt.contains("OpenRouter search failed with HTTP 503"))
+        #expect(adapter.finalizedOutcomes == [.succeeded])
     }
 }

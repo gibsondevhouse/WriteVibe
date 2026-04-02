@@ -41,6 +41,32 @@ struct ProviderRecoveryTests {
         #expect(request.value(forHTTPHeaderField: "x-api-key") == "test-key")
     }
 
+    @Test func testAnthropicErrorMapperExtractsProviderMessageFromSSEBody() {
+        let mapped = AnthropicService.mapAPIError(
+            statusCode: 401,
+            body: "data: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"}}"
+        )
+
+        guard case .apiError(let provider, let statusCode, let message) = mapped else {
+            Issue.record("Expected mapped Anthropic API error.")
+            return
+        }
+        #expect(provider == "Anthropic")
+        #expect(statusCode == 401)
+        #expect(message == "invalid x-api-key")
+    }
+
+    @Test func testAnthropicErrorMapperUsesStatusFallbackWhenBodyMissing() {
+        let mapped = AnthropicService.mapAPIError(statusCode: 429, body: "")
+
+        guard case .apiError(_, let statusCode, let message) = mapped else {
+            Issue.record("Expected mapped Anthropic API error.")
+            return
+        }
+        #expect(statusCode == 429)
+        #expect(message == "Anthropic rate limited this request.")
+    }
+
     @Test func testOpenRouterAuthenticationFailureIncludesSettingsGuidance() {
         let issue = WriteVibeError.apiError(
             provider: "OpenRouter",
