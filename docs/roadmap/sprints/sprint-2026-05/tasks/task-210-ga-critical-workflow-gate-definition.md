@@ -12,7 +12,7 @@ Define top-5 GA-critical workflows and enforce CI gate requirements for those fl
 ## Acceptance Criteria
 
 - [x] Workflow list approved by `@product-manager`, `@architect`, and `@qa-lead`.
-- [ ] CI gate rule is documented and active.
+- [x] CI gate rule is documented and active.
 
 ## Dependencies
 
@@ -49,3 +49,16 @@ Target approval date: 2026-04-04 EOD
 - Approved workflow list link in sprint handoff trail.
 - CI configuration/automation evidence and passing run snapshot.
 - QA signoff note confirming merge-block behavior for critical workflow failures.
+
+## Active Gate Rule (Effective 2026-04-02)
+
+- Merge gate policy: the frozen top-5 workflow test pack must pass before promoting related tasks from Review to Complete.
+- Enforcement command:
+  `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/StreamingServiceContractTests -only-testing:WriteVibeTests/StreamingServiceTests -only-testing:WriteVibeTests/ProviderRecoveryTests -only-testing:WriteVibeTests/ArticleEditOrchestratorTests -only-testing:WriteVibeTests/ChatRewriteDiffSupportTests`
+- Failure behavior: any failing suite in this pack blocks workflow-gated task closure and requires owner triage before re-run.
+
+## First Enforcement Evidence
+
+- 2026-04-02: first critical workflow gate run executed using the active command.
+- Result: `** TEST SUCCEEDED **`.
+- Scope covered: streamed reply persistence lifecycle, cancel/retry/finalize parity, provider fallback/recovery mapping, rewrite diff rendering, and article apply integrity behaviors.

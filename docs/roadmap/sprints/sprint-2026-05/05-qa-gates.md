@@ -43,7 +43,7 @@
   - TASK-211 first-pass flaky inventory was published on 2026-04-02; this is a monitoring checkpoint only and does not claim the affected suites are stabilized.
   - TASK-211 next checkpoint is 2026-04-05 EOD for reproduce-or-quarantine recommendations on `StreamingServiceTests`, `AppStateProviderRecoveryTests`, and their combined critical-path invocation.
   - TASK-210 started on 2026-04-02; workflow freeze work is active under WS-204.
-  - TASK-210 top-5 GA-critical workflow package was frozen and approved on 2026-04-02 after the same-day WS-201 ownership correction. CI gate activation evidence remains the only open closeout dependency.
+  - TASK-210 top-5 GA-critical workflow package was frozen and approved on 2026-04-02 after the same-day WS-201 ownership correction, and the active gate command produced a passing first enforcement run on 2026-04-02 (`TEST SUCCEEDED`).
   - Daily impacted test pass tracking is now required for tasks in Review state.
   - TASK-202 remains In Progress: adapter-owned persistence path is implemented, but parity evidence is not yet sufficient because targeted streaming tests are unstable under multi-test execution.
   - TASK-205 remains in Review and QA-blocked by B-204: `AppStateProviderRecoveryTests` still fail under xcodebuild class-level/multi-test execution, while a single isolated failing-case re-run passed.

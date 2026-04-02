@@ -34,6 +34,7 @@
 - 2026-04-02: TASK-211 first-pass flaky-test inventory was published in the task card with initial ownership assignments for `StreamingServiceTests`, `AppStateProviderRecoveryTests`, and their combined critical-path invocation; next checkpoint is 2026-04-05 EOD for reproduce-or-quarantine recommendation.
 - 2026-04-02: WS-205 blocker triage snapshot #1 completed by `@cto`; no waivers issued, readiness trend set to Conditional Go, and B-203/B-204/B-205 remain active with dated checkpoints.
 - 2026-04-02: TASK-210 top-5 GA-critical workflow package was approved by `@product-manager`, `@architect`, and `@qa-lead` after WS-201 ownership correction; B-202 closed, with CI gate activation evidence remaining as the final TASK-210 dependency.
+- 2026-04-02: TASK-210 CI gate rule was activated and first enforcement run for the frozen critical-path suite passed (`TEST SUCCEEDED`); TASK-210 moved to Complete.
 
 ## Escalation SLA
 
