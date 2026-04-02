@@ -30,3 +30,14 @@
 - TASK-211: flaky stabilization checkpoint completed early on 2026-04-02 with CI-level confirmation evidence and B-204 closure.
 - TASK-212: twice-weekly blocker triage plus weekly readiness snapshot, co-reviewed by `@qa-lead`.
 - WS-205 coverage ladder is active (published 2026-04-02); B-205 is closed and now tracked through weekly coverage checkpoints.
+
+## Immediate Implementation Queue (Ready Now)
+
+| Queue Order | Task | Owner | Readiness Basis | Next Action |
+| --- | --- | --- | --- | --- |
+| 1 | TASK-202 | `@backend-developer` | TASK-201/203 complete, B-203 closed, B-204 closed | Finish adapter-only mutation closure and publish parity evidence update |
+| 2 | TASK-204 | `@backend-lead` | WS-202 active with no blocking dependency from WS-201 | Complete provider taxonomy/mapping matrix and link to QA recovery checks |
+| 3 | TASK-205 | `@backend-developer` | B-204 closed; task already in Review | Close remaining review comments and move to Complete with QA note |
+| 4 | TASK-207 | `@frontend-developer` | Focused automation green, orchestrator boundary in place | Finish parity confirmation and promote from Review to Complete |
+| 5 | TASK-209 | `@frontend-lead` | Build passing and copy scope isolated | Complete product+QA wording review and close task |
+| 6 | TASK-212 | `@cto` | Blocker operations cadence active | Publish next readiness snapshot and weekly coverage checkpoint evidence |

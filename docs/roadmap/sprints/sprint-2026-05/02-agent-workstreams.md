@@ -21,3 +21,4 @@
 - All status changes must map to task board updates and QA evidence.
 - 2026-04-02 kickoff: Wave 1 execution started on TASK-201, TASK-202, TASK-204, TASK-207, TASK-210, and TASK-212.
 - 2026-04-02 update: TASK-210 and TASK-211 are complete; WS-204 moved to Complete with CI-level confirmation evidence and B-204 closure.
+- 2026-04-02 decision: active sprint preparation is complete and implementation execution is authorized for remaining queue tasks (TASK-202/204/205/207/209/212).
