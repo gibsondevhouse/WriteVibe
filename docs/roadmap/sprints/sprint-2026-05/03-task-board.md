@@ -29,3 +29,4 @@
 - TASK-210 package is approved, frozen, and active; first enforcement run passed on 2026-04-02 (`TEST SUCCEEDED`).
 - TASK-211: flaky stabilization/quarantine evidence due 2026-04-09 with three consecutive green critical-path runs.
 - TASK-212: twice-weekly blocker triage plus weekly readiness snapshot, co-reviewed by `@qa-lead`.
+- WS-205 coverage ladder is active (published 2026-04-02); B-205 is closed and now tracked through weekly coverage checkpoints.

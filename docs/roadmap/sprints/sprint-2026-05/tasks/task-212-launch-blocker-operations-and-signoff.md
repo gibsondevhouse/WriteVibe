@@ -66,3 +66,23 @@ Run blocker register operations, waiver policy, and weekly readiness snapshots f
 - Trend: Conditional Go (improved confidence, exit still not eligible).
 - Positive signals: TASK-210 active gate is now complete, B-202 closed, and B-204 no longer in hard-open state.
 - Remaining blockers: B-203 (contract boundary lock) and B-205 (coverage ladder publication), plus CI-level confirmation checkpoint for B-204 by 2026-04-05 EOD.
+
+## Coverage Uplift Ladder (Approved 2026-04-02)
+
+### Baseline
+
+- Baseline full-suite coverage snapshot (2026-04-02): 29.29% overall, 20.37% app target.
+
+### Weekly Target Ladder
+
+| Checkpoint Week | Target Overall Coverage | Target App Coverage | Owner | Evidence Required |
+| --- | --- | --- | --- | --- |
+| Week 1 close (2026-04-05) | >= 31.00% | >= 21.00% | `@qa-lead` | Full-suite coverage report attached to WS-205 readiness snapshot |
+| Week 2 close (2026-04-12) | >= 33.00% | >= 22.50% | `@qa-lead` + `@backend-lead` | Coverage delta report plus top uncovered critical-path files list |
+| Week 3 close (2026-04-19) | >= 35.00% | >= 24.00% | `@qa-lead` + `@frontend-lead` | Coverage delta report and resolved-gaps log |
+| Week 4 close (2026-04-26) | >= 37.00% | >= 25.50% | `@qa-lead` + `@cto` | Exit-readiness coverage summary with pass/fail against ladder |
+
+### Governance Notes
+
+- Ladder approved by `@cto` on 2026-04-02 and adopted as WS-205 carry-forward quality control.
+- Missed weekly target requires same-day triage and a corrective action item added to blocker register.

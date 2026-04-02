@@ -13,7 +13,7 @@
 - [ ] Daily impacted tests pass before task status moves to Review.
 - [ ] Mid-sprint full suite run completed and logged by `@qa-lead`.
 - [ ] Contract drift checks completed for stream lifecycle, provider fallback, and edit orchestration.
-- [ ] Coverage uplift checkpoints recorded weekly under WS-204/WS-205 carry-forward mandate.
+- [x] Coverage uplift ladder published with weekly checkpoints under WS-204/WS-205 carry-forward mandate.
 
 ## Exit Checklist
 
@@ -55,3 +55,4 @@
   - WS-204 execution lock: TASK-210 approval deadline 2026-04-04 EOD; TASK-211 stability proof deadline 2026-04-09 EOD.
   - WS-205 execution lock: twice-weekly blocker triage and weekly readiness snapshots are mandatory with QA co-review.
   - WS-205 blocker triage snapshot #1 was published on 2026-04-02 with Conditional Go trend; no waivers issued and B-203/B-204/B-205 remain active.
+  - WS-205 coverage uplift ladder was published and approved on 2026-04-02 (baseline 29.29% overall / 20.37% app); weekly checkpoint enforcement is now active.
