@@ -4,7 +4,7 @@
 | --- | --- | --- | --- | --- | --- |
 | WS-101 | sprint-2026-04 | Streaming and persistence decoupling | @backend-lead | In Progress | TASK-108 complete; TASK-102 rewiring in progress behind feature flag |
 | WS-102 | sprint-2026-04 | Article edit orchestration stabilization | @frontend-lead | Complete | TASK-103/104/109 complete with orchestrator parity validation evidence |
-| WS-105 | sprint-2026-04 | Critical-path test realignment | @qa-lead | In Progress | Mid-sprint gate executed; blocked by B-005/B-006 full-suite and interruption-path failures |
+| WS-105 | sprint-2026-04 | Critical-path test realignment | @qa-lead | In Progress | Mid-sprint gate rerun passed for full/focused suites; blocked only by B-007 coverage threshold decision |
 | WS-106 | sprint-2026-04 | Risk and blocker operationalization | @cto | Complete | Phase complete 2026-04-02; WS-106 closure signoff posted |
 | WS-103 | sprint-2026-04 | Provider reliability patch pack | @backend-lead | Complete | TASK-105/106 complete with focused provider recovery validation evidence |
 | WS-104 | sprint-2026-04 | Document sync performance hardening | @frontend-lead | In Progress | Baseline scaffold landed; fixture completeness and metrics lock still pending |

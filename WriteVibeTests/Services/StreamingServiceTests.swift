@@ -12,6 +12,13 @@ import SwiftData
 @MainActor
 struct StreamingServiceTests {
 
+    private struct ConversationFixture {
+        let container: ModelContainer
+        let context: ModelContext
+        let conversationService: ConversationService
+        let conversationID: UUID
+    }
+
     enum MockStreamError: Error {
         case providerFailure
     }
@@ -115,29 +122,36 @@ struct StreamingServiceTests {
         }
     }
 
-    private func makeContextAndConversation(model: AIModel = .ollama) throws -> (ModelContext, ConversationService, Conversation) {
+    private func makeContextAndConversation(model: AIModel = .ollama) throws -> ConversationFixture {
         let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
         let conversationService = ConversationService()
         let conversation = conversationService.create(model: model, modelIdentifier: "test-model", context: context)
         conversationService.appendMessage(Message(role: .user, content: "Hello"), to: conversation.id, context: context)
-        return (context, conversationService, conversation)
+        return ConversationFixture(
+            container: container,
+            context: context,
+            conversationService: conversationService,
+            conversationID: conversation.id
+        )
     }
 
     @Test func testDefaultAdapterPersistsAssistantMessageOnSuccess() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation()
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
         let provider = MockAIProvider(tokens: ["A", "B", "C", "D", "E"])
         let streamingService = StreamingService(conversationService: conversationService, searchProvider: OpenRouterService())
 
         try await streamingService.streamReply(
             provider: provider,
             modelName: "test-model",
-            conversationId: conversation.id,
+            conversationId: fixture.conversationID,
             context: context
         )
 
-        let updatedConversation = try #require(conversationService.fetch(conversation.id, context: context))
+        let updatedConversation = try #require(conversationService.fetch(fixture.conversationID, context: context))
         #expect(updatedConversation.messages.count == 2)
         let assistantMessage = try #require(updatedConversation.messages.last)
         #expect(assistantMessage.role == .assistant)
@@ -146,7 +160,9 @@ struct StreamingServiceTests {
     }
 
     @Test func testAdapterLifecycleOnSuccess() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation()
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
         let provider = MockAIProvider(tokens: ["A", "B", "C", "D", "E", "F", "G"])
         let adapter = RecordingPersistenceAdapter()
         let streamingService = StreamingService(
@@ -158,7 +174,7 @@ struct StreamingServiceTests {
         try await streamingService.streamReply(
             provider: provider,
             modelName: "test-model",
-            conversationId: conversation.id,
+            conversationId: fixture.conversationID,
             context: context
         )
 
@@ -168,7 +184,9 @@ struct StreamingServiceTests {
     }
 
     @Test func testAdapterLifecycleOnCancellation() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation()
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
         let provider = CancellationAIProvider(tokensBeforeError: ["partial"])
         let adapter = RecordingPersistenceAdapter()
         let streamingService = StreamingService(
@@ -181,7 +199,7 @@ struct StreamingServiceTests {
             try await streamingService.streamReply(
                 provider: provider,
                 modelName: "test-model",
-                conversationId: conversation.id,
+                conversationId: fixture.conversationID,
                 context: context
             )
         }
@@ -191,7 +209,9 @@ struct StreamingServiceTests {
     }
 
     @Test func testAdapterLifecycleOnProviderFailure() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation()
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
         let provider = ThrowingAIProvider(tokensBeforeError: ["partial"])
         let adapter = RecordingPersistenceAdapter()
         let streamingService = StreamingService(
@@ -204,7 +224,7 @@ struct StreamingServiceTests {
             try await streamingService.streamReply(
                 provider: provider,
                 modelName: "test-model",
-                conversationId: conversation.id,
+                conversationId: fixture.conversationID,
                 context: context
             )
         }
@@ -214,7 +234,9 @@ struct StreamingServiceTests {
     }
 
     @Test func testChipPromptAugmentation() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation(model: .gpt4o)
+        let fixture = try makeContextAndConversation(model: .gpt4o)
+        let context = fixture.context
+        let conversationService = fixture.conversationService
 
         var capturedPrompt = ""
         struct PromptCapturingProvider: AIStreamingProvider {
@@ -231,7 +253,7 @@ struct StreamingServiceTests {
         try await streamingService.streamReply(
             provider: provider,
             modelName: "gpt-4o",
-            conversationId: conversation.id,
+            conversationId: fixture.conversationID,
             context: context,
             tone: "Professional",
             length: "Short",
@@ -244,7 +266,9 @@ struct StreamingServiceTests {
     }
 
     @Test func testOllamaSearchMissingKeyAddsSoftWarningAndContinues() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation()
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
         let adapter = RecordingPersistenceAdapter()
         var capturedPrompt = ""
         struct PromptCapturingProvider: AIStreamingProvider {
@@ -272,7 +296,7 @@ struct StreamingServiceTests {
         try await streamingService.streamReply(
             provider: provider,
             modelName: "test-model",
-            conversationId: conversation.id,
+            conversationId: fixture.conversationID,
             context: context,
             isLocalModelOverride: true,
             isSearchEnabled: true
@@ -286,7 +310,9 @@ struct StreamingServiceTests {
     }
 
     @Test func testOllamaSearchProviderFailureAddsSoftWarningAndContinues() async throws {
-        let (context, conversationService, conversation) = try makeContextAndConversation()
+        let fixture = try makeContextAndConversation()
+        let context = fixture.context
+        let conversationService = fixture.conversationService
         let adapter = RecordingPersistenceAdapter()
         var capturedPrompt = ""
         struct PromptCapturingProvider: AIStreamingProvider {
@@ -313,7 +339,7 @@ struct StreamingServiceTests {
         try await streamingService.streamReply(
             provider: PromptCapturingProvider(onPromptCaptured: { capturedPrompt = $0 }),
             modelName: "test-model",
-            conversationId: conversation.id,
+            conversationId: fixture.conversationID,
             context: context,
             isLocalModelOverride: true,
             isSearchEnabled: true

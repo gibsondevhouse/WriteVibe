@@ -36,6 +36,13 @@
 | TASK-111 | WS-106 | Resolve open sprint decisions and unblock WS-103/WS-104 | `@cto` | Complete | High |
 | TASK-112 | WS-106 | Issue CTO final decision lock and execution authorization | `@cto` | Complete | High |
 
+## Backend Burn-Down Evidence (2026-04-02)
+
+- B-006 focused rerun (post-fix) passed: `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' -only-testing:WriteVibeTests/StreamingServiceContractTests/testPlaceholderInterruptionPath_CreateCancelRetry test`.
+- TASK-105/106 reliability guard rerun passed: `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/ProviderRecoveryTests/testAnthropicErrorMapperExtractsProviderMessageFromSSEBody -only-testing:WriteVibeTests/ProviderRecoveryTests/testAnthropicErrorMapperUsesStatusFallbackWhenBodyMissing -only-testing:WriteVibeTests/ProviderRecoveryTests/testAnthropicFallbackAuthenticationFailurePointsToOpenRouterRecovery -only-testing:WriteVibeTests/StreamingServiceTests/testAdapterLifecycleOnCancellation -only-testing:WriteVibeTests/StreamingServiceTests/testOllamaSearchMissingKeyAddsSoftWarningAndContinues -only-testing:WriteVibeTests/StreamingServiceTests/testOllamaSearchProviderFailureAddsSoftWarningAndContinues -only-testing:WriteVibeTests/AppStateProviderRecoveryTests/testLocalSearchUnavailableRecoveryGuidanceRemainsActionable`.
+- Full-suite rerun passed: `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test`.
+- Backend blocker outcome: B-005 and B-006 moved to Closed in risk/blocker register after root-cause and assertion-fix validation.
+
 ## Status Values
 
 - Planned

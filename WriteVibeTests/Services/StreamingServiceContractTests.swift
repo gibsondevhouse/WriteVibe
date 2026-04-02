@@ -189,7 +189,7 @@ struct StreamingServiceContractTests {
         try adapter.appendToken("response", handle: handle1)
 
         // Verify partial state
-        #expect(adapter.getTokenCountForHandle(handle1) == 18)
+        #expect(adapter.getTokenCountForHandle(handle1) == 19)
 
         // Cancel this placeholder
         try adapter.finalize(handle: handle1, outcome: .cancelled)

@@ -11,7 +11,7 @@
 
 - [x] Daily impacted tests pass before task status moves to Review.
 - [x] Mid-sprint full suite run completed and logged by `@qa-lead`.
-- [ ] Mid-sprint full suite gate passes with no unresolved failures.
+- [x] Mid-sprint full suite gate passes with no unresolved test failures.
 - [x] Contract drift check completed for streaming, article orchestration, and provider fallback behavior.
 - [x] Blocker SLA audit completed and escalations posted.
 
@@ -44,28 +44,34 @@
   - TASK-110 completed: scored risk register and escalation SLA review validated on 2026-04-02.
   - WS-106 marked complete and QA closure signoff issued to CTO on 2026-04-02.
   - TASK-108 contract test suite landed and is passing on 2026-04-02.
-  - Mid-sprint checkpoint executed on 2026-04-02 with live evidence (full suite + focused compensating suites).
+  - Mid-sprint checkpoint executed on 2026-04-02 with live evidence (full suite + focused critical-path suites).
+  - Backend blocker burn-down revalidation completed at 14:56 ET on 2026-04-02: full suite passed, focused critical-path suites passed, coverage threshold remains open.
 
-## Mid-Sprint Checkpoint Evidence (2026-04-02)
+## Mid-Sprint Checkpoint and Re-run Evidence (2026-04-02)
 
-- Full-suite command:
+- Initial checkpoint (earlier 2026-04-02):
   - `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test`
-  - Result: Failed (exit code 65).
-  - Observed outcome: UI tests passed (4/4), unit phase reported 37 failures, many at 0.000s execution time, indicating a broad unit-test instability state during aggregate run.
-  - XCResult: `/Users/gibdevlite/Library/Developer/Xcode/DerivedData/WriteVibe-ebnlpmdwijaicbeduwogawjutxjs/Logs/Test/Test-WriteVibe-2026.04.02_14-22-36--0400.xcresult`
-- Coverage evidence from full-suite xcresult:
-  - `xcrun xccov view --report ...14-22-36--0400.xcresult`
-  - Result: `WriteVibe.app` 15.78% (1975/12519), below 80% threshold.
-- Compensating focused suites (nearest reliable equivalent while full-suite gate is red):
-  - `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/ArticleEditOrchestratorTests -only-testing:WriteVibeTests/ChatRewriteDiffSupportTests -only-testing:WriteVibeTests/StreamingServiceContractTests -only-testing:WriteVibeTests/ProviderRecoveryTests -only-testing:WriteVibeTests/AppStateProviderRecoveryTests`
-  - Result: Failed (exit code 65) due to one unique unresolved test: `StreamingServiceContractTests/testPlaceholderInterruptionPath_CreateCancelRetry` (duplicate failure lines present in output).
-  - Passing compensating areas: article orchestration workflow tests, chat rewrite diff tests, provider recovery tests, app-state provider recovery test.
-  - Focused-run coverage snapshot: `WriteVibe.app` 14.87% (1862/12519).
+  - Result: Failed (exit 65) with 37 unit failures and one repeatable streaming interruption failure in focused reruns.
+- Fresh full-suite rerun after backend burn-down (14:56 ET):
+  - `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test`
+  - Result: Passed.
+  - `xcrun xcresulttool get test-results summary --path .../Test-WriteVibe-2026.04.02_14-56-05--0400.xcresult`
+  - Result summary: 71/71 passed, 0 failed.
+  - XCResult: `/Users/gibdevlite/Library/Developer/Xcode/DerivedData/WriteVibe-ebnlpmdwijaicbeduwogawjutxjs/Logs/Test/Test-WriteVibe-2026.04.02_14-56-05--0400.xcresult`
+- Focused critical-path rerun (14:56 ET):
+  - `xcodebuild -project WriteVibe.xcodeproj -scheme WriteVibe -destination 'platform=macOS' test -only-testing:WriteVibeTests/StreamingServiceContractTests -only-testing:WriteVibeTests/StreamingServiceTests -only-testing:WriteVibeTests/ProviderRecoveryTests -only-testing:WriteVibeTests/ArticleEditOrchestratorTests -only-testing:WriteVibeTests/AppStateProviderRecoveryTests`
+  - Result: Passed.
+  - `xcrun xcresulttool get test-results summary --path .../Test-WriteVibe-2026.04.02_14-56-46--0400.xcresult`
+  - Result summary: 34/34 passed, 0 failed.
+  - XCResult: `/Users/gibdevlite/Library/Developer/Xcode/DerivedData/WriteVibe-ebnlpmdwijaicbeduwogawjutxjs/Logs/Test/Test-WriteVibe-2026.04.02_14-56-46--0400.xcresult`
+- Coverage evidence from fresh full-suite rerun:
+  - `xcrun xccov view --report --json .../Test-WriteVibe-2026.04.02_14-56-05--0400.xcresult | jq '{overallLineCoverage: .lineCoverage, coveredLines: .coveredLines, executableLines: .executableLines, targets: [.targets[] | {name, lineCoverage}]}'`
+  - Result: overall 26.76% (3744/13991), app target 18.32% (2293/12519), below 80% threshold.
 
 ## Acceptance Criteria Validation (sprint-2026-04-hotspot-roi-proposal)
 
 - [x] Article edit orchestration boundary exists and no observed regressions in orchestrator-focused suite.
-- [ ] Streaming interruption parity remains unresolved (contract interruption test failing).
+- [x] Streaming interruption parity validated in focused and full-suite reruns (`testPlaceholderInterruptionPath_CreateCancelRetry` passing).
 - [ ] Document sync baseline capture remains in progress (TASK-107 still in progress).
 - [x] Anthropic/Ollama reliability behavior validated in focused provider recovery suites.
 - [x] Known architecture hotspot decisions are documented (Ollama cancel/search behavior, Anthropic version handling scope, InputBar ownership clarified).
@@ -73,6 +79,5 @@
 
 ## Pending Items Before Exit Gate
 
-- Resolve `StreamingServiceContractTests/testPlaceholderInterruptionPath_CreateCancelRetry` and rerun full suite.
-- Restore full-suite stability so aggregate unit execution no longer cascades into broad 0.000s failures.
 - Raise effective tested coverage to sprint threshold or secure explicit leadership exception.
+- Complete TASK-107 document sync baseline capture and attach evidence to sprint artifacts.
