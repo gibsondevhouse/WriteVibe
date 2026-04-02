@@ -32,6 +32,7 @@ final class ConversationGenerationManager {
         format: String,
         isMemoryEnabled: Bool,
         onSearchFetchingChanged: @escaping (Bool) -> Void,
+        onIssue: @escaping (RuntimeIssue?) -> Void,
         onFinish: @escaping () -> Void
     ) {
         guard let conv = services.conversationService.fetch(conversationId, context: context) else {
@@ -48,44 +49,30 @@ final class ConversationGenerationManager {
                 self.activeTasks.removeValue(forKey: conversationId)
                 onFinish()
             }
-            do {
-                let modelName: String
-                let provider: AIStreamingProvider
 
+            do {
                 guard model != .appleIntelligence else {
-                    self.services.conversationService.appendMessage(
-                        Message(role: .assistant, content: "Apple Intelligence is not available here. Select a different model."),
-                        to: conversationId, context: context
-                    )
+                    let issue = RuntimeIssue.appleIntelligenceUnavailable()
+                    self.appendRecoveryMessage(issue, to: conversationId, context: context)
+                    onIssue(issue)
                     return
                 }
 
-                if model.isLocal {
-                    guard let name = modelIdentifier, !name.isEmpty else {
-                        self.services.conversationService.appendMessage(
-                            Message(role: .assistant, content: "No Ollama model selected. Choose a model from Settings."),
-                            to: conversationId, context: context
-                        )
-                        return
-                    }
-                    modelName = name
-                    provider = self.services.ollamaProvider
-                } else if let openRouterID = model.openRouterModelID {
-                    modelName = openRouterID
-                    provider = self.services.provider(for: model)
-                } else {
-                    self.services.conversationService.appendMessage(
-                        Message(role: .assistant, content: "This model is not yet configured."),
-                        to: conversationId, context: context
-                    )
+                guard let route = self.services.route(for: model, modelIdentifier: modelIdentifier) else {
+                    let issue = model.isLocal
+                        ? RuntimeIssue.ollamaModelSelectionRequired()
+                        : RuntimeIssue.modelConfigurationIncomplete()
+                    self.appendRecoveryMessage(issue, to: conversationId, context: context)
+                    onIssue(issue)
                     return
                 }
 
                 if isSearchEnabled { onSearchFetchingChanged(true) }
                 defer { if isSearchEnabled { onSearchFetchingChanged(false) } }
+
                 try await self.services.streamingService.streamReply(
-                    provider: provider,
-                    modelName: modelName,
+                    provider: route.provider,
+                    modelName: route.modelName,
                     conversationId: conversationId,
                     context: context,
                     isSearchEnabled: isSearchEnabled,
@@ -97,17 +84,31 @@ final class ConversationGenerationManager {
             } catch is CancellationError {
                 // User tapped stop
             } catch let error as WriteVibeError {
+                onIssue(error.runtimeIssue)
                 self.services.conversationService.appendMessage(
                     Message(role: .assistant, content: error.localizedDescription),
-                    to: conversationId, context: context
+                    to: conversationId,
+                    context: context
                 )
             } catch {
+                let issue = RuntimeIssue.unexpectedRequestFailure(error.localizedDescription)
+                onIssue(issue)
                 self.services.conversationService.appendMessage(
-                    Message(role: .assistant, content: "⚠️ \(error.localizedDescription)"),
-                    to: conversationId, context: context
+                    Message(role: .assistant, content: issue.guidanceText),
+                    to: conversationId,
+                    context: context
                 )
             }
         }
+
         activeTasks[conversationId] = task
+    }
+
+    private func appendRecoveryMessage(_ issue: RuntimeIssue, to conversationId: UUID, context: ModelContext) {
+        services.conversationService.appendMessage(
+            Message(role: .assistant, content: issue.guidanceText),
+            to: conversationId,
+            context: context
+        )
     }
 }

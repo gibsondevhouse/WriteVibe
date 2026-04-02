@@ -8,7 +8,7 @@ import Foundation
 enum AIModel: String, CaseIterable, Identifiable, Codable {
     case ollama             = "Ollama"
     case appleIntelligence  = "Apple Intelligence"
-    // Anthropic (via OpenRouter)
+    // Anthropic (OpenRouter by preference, direct Anthropic fallback when needed)
     case claudeHaiku       = "Claude Haiku"
     case claudeSonnet      = "Claude Sonnet"
     case claudeOpus        = "Claude Opus"
@@ -153,6 +153,16 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
         case .deepSeekV3:         return "deepseek/deepseek-chat"
         case .ollama:             return nil
         case .appleIntelligence:  return nil
+        }
+    }
+
+    /// Returns the direct Anthropic model identifier when a Claude model is routed to Anthropic.
+    var anthropicModelID: String? {
+        switch self {
+        case .claudeHaiku:        return "claude-haiku-4-5"
+        case .claudeSonnet:       return "claude-sonnet-4-6"
+        case .claudeOpus:         return "claude-opus-4-6"
+        default:                  return nil
         }
     }
 

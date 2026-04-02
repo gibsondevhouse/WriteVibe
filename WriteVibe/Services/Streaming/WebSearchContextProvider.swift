@@ -5,6 +5,11 @@
 
 import Foundation
 
+@MainActor
+protocol SearchContextProviding {
+    func fetchContext(query: String, searchModel: String) async throws -> [SearchResult]?
+}
+
 /// Fetches web search context via a search-capable AI provider and parses structured results.
 @MainActor
 final class WebSearchContextProvider {
@@ -85,3 +90,5 @@ final class WebSearchContextProvider {
         return searchResults.isEmpty ? nil : searchResults
     }
 }
+
+extension WebSearchContextProvider: SearchContextProviding {}

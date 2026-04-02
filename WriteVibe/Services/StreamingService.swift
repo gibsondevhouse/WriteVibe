@@ -11,13 +11,27 @@ import SwiftData
 final class StreamingService {
 
     private let conversationService: ConversationService
+    private let messagePersistenceAdapter: MessagePersistenceAdapter
     private let augmentationEngine: PromptAugmentationEngine
-    private let webSearchProvider: WebSearchContextProvider
+    private let webSearchProvider: any SearchContextProviding
+    private let hasSearchAPIKey: @Sendable () -> Bool
 
-    init(conversationService: ConversationService, searchProvider: OpenRouterService) {
+    init(
+        conversationService: ConversationService,
+        searchProvider: OpenRouterService,
+        messagePersistenceAdapter: MessagePersistenceAdapter? = nil,
+        webSearchProvider: (any SearchContextProviding)? = nil,
+        hasSearchAPIKey: (@Sendable () -> Bool)? = nil
+    ) {
+        let hasSearchAPIKey = hasSearchAPIKey ?? {
+            KeychainService.load(key: "openrouter_api_key") != nil
+        }
+
         self.conversationService = conversationService
+        self.messagePersistenceAdapter = messagePersistenceAdapter ?? SwiftDataMessagePersistenceAdapter(conversationService: conversationService)
         self.augmentationEngine = PromptAugmentationEngine()
-        self.webSearchProvider = WebSearchContextProvider(searchProvider: searchProvider)
+        self.webSearchProvider = webSearchProvider ?? WebSearchContextProvider(searchProvider: searchProvider)
+        self.hasSearchAPIKey = hasSearchAPIKey
     }
 
     /// Streams an AI reply into a placeholder message using the given provider and model name.
@@ -37,9 +51,7 @@ final class StreamingService {
         let contextMessages = conv.messages
             .filter { !$0.content.isEmpty }
             .map { ["role": $0.role == .user ? "user" : "assistant", "content": $0.content] }
-
-        let placeholder = Message(role: .assistant, content: "", modelUsed: modelName)
-        conversationService.appendMessage(placeholder, to: conversationId, context: context)
+        let isLocalModel = provider is OllamaService
 
         var augmentedPrompt = augmentationEngine.augmentWithCapabilities(
             basePrompt: writeVibeSystemPrompt,
@@ -50,12 +62,20 @@ final class StreamingService {
         )
 
         if isSearchEnabled {
-            augmentedPrompt = await buildSearchAugmentation(
+            augmentedPrompt = try await buildSearchAugmentation(
                 prompt: augmentedPrompt,
                 modelName: modelName,
-                conversation: conv
+                conversation: conv,
+                isLocalModel: isLocalModel
             )
         }
+
+        let runContext = GenerationRunContext(
+            conversationId: conversationId,
+            modelName: modelName,
+            context: context
+        )
+        let handle = try messagePersistenceAdapter.beginAssistantMessage(run: runContext)
 
         var tokenBuffer = ""
         var tokenCount  = 0
@@ -66,20 +86,34 @@ final class StreamingService {
             systemPrompt: augmentedPrompt
         )
 
-        for try await token in stream {
-            tokenBuffer += token
-            tokenCount  += 1
-            if tokenCount >= AppConstants.tokenBatchSize {
-                placeholder.content += tokenBuffer
-                tokenBuffer = ""
-                tokenCount  = 0
+        do {
+            for try await token in stream {
+                tokenBuffer += token
+                tokenCount  += 1
+                if tokenCount >= AppConstants.tokenBatchSize {
+                    try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
+                    tokenBuffer = ""
+                    tokenCount  = 0
+                }
             }
-        }
 
-        if !tokenBuffer.isEmpty { placeholder.content += tokenBuffer }
-        placeholder.tokenCount = placeholder.content.count / 4
-        if let c = conversationService.fetch(conversationId, context: context) { c.updatedAt = Date() }
-        try? context.save()
+            if !tokenBuffer.isEmpty {
+                try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
+            }
+            try messagePersistenceAdapter.finalize(handle: handle, outcome: .succeeded)
+        } catch is CancellationError {
+            if !tokenBuffer.isEmpty {
+                try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
+            }
+            try messagePersistenceAdapter.finalize(handle: handle, outcome: .cancelled)
+            throw CancellationError()
+        } catch {
+            if !tokenBuffer.isEmpty {
+                try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
+            }
+            try messagePersistenceAdapter.finalize(handle: handle, outcome: .failed(error))
+            throw error
+        }
     }
 
     // MARK: - Search Augmentation
@@ -87,8 +121,9 @@ final class StreamingService {
     private func buildSearchAugmentation(
         prompt: String,
         modelName: String,
-        conversation: Conversation
-    ) async -> String {
+        conversation: Conversation,
+        isLocalModel: Bool
+    ) async throws -> String {
         var augmented = prompt
         let selectedModelIsSearchNative = modelName.hasPrefix("perplexity/sonar")
         let searchLayerModel = selectedModelIsSearchNative
@@ -100,24 +135,54 @@ final class StreamingService {
         } else if let query = conversation.messages.reversed().first(where: {
             $0.role == .user && !$0.content.trimmed.isEmpty
         })?.content {
+            if isLocalModel && !hasSearchAPIKey() {
+                throw WriteVibeError.localSearchUnavailable(reason: "no OpenRouter API key is configured")
+            }
+
             do {
                 if let searchResults = try await webSearchProvider.fetchContext(query: query, searchModel: searchLayerModel) {
                     augmented = augmentationEngine.appendSearchResults(searchResults, to: augmented, searchModel: searchLayerModel)
+                } else if isLocalModel {
+                    throw WriteVibeError.localSearchUnavailable(reason: "the search layer returned no usable findings")
                 } else {
                     augmented += "\n\nSearch: The web search layer returned no usable findings. Do not claim verified web results."
                 }
             } catch {
+                if isLocalModel {
+                    throw mapLocalSearchFailure(error)
+                }
                 augmented += "\n\nSearch: The web search layer is unavailable right now (\(error.localizedDescription)). Do not claim web verification."
             }
         } else {
+            if isLocalModel {
+                throw WriteVibeError.localSearchUnavailable(reason: "no user query was available for web retrieval")
+            }
             augmented += "\n\nSearch: No user query was available for web retrieval. Do not claim web verification."
         }
 
-        let selectedModel = AIModel(rawValue: modelName) ?? .ollama
-        if selectedModel.isLocal {
+        if isLocalModel {
             augmented = augmentationEngine.appendLocalGrounding(to: augmented)
         }
 
         return augmented
+    }
+
+    private func mapLocalSearchFailure(_ error: Error) -> WriteVibeError {
+        if let error = error as? WriteVibeError {
+            switch error {
+            case .localSearchUnavailable:
+                return error
+            case .missingAPIKey:
+                return .localSearchUnavailable(reason: "no OpenRouter API key is configured")
+            case .apiError(let provider, let statusCode, _):
+                return .localSearchUnavailable(reason: "\(provider) search failed with HTTP \(statusCode)")
+            case .network(let underlying):
+                return .localSearchUnavailable(reason: "the web search layer could not be reached (\(underlying.localizedDescription))")
+            default:
+                return .localSearchUnavailable(reason: error.localizedDescription ?? "the web search layer is unavailable")
+            }
+        }
+
+        return .localSearchUnavailable(reason: error.localizedDescription)
     }
 }

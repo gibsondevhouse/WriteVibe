@@ -64,15 +64,40 @@ struct ContentView: View {
         }
         .overlay(alignment: .top) {
             if let issue = appState.runtimeIssue {
-                Text(issue)
-                    .font(.footnote)
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.top, 1)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(issue.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(issue.message)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.94))
+                        Text("Next step: \(issue.nextStep)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+
+                    Spacer(minLength: 12)
+
+                    Button("Dismiss") {
+                        appState.clearRuntimeIssue()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.red.opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .padding(.top, 10)
-                    .padding(.horizontal, 12)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.red.opacity(0.92))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
+                .padding(.top, 10)
+                .padding(.horizontal, 12)
             }
         }
     }

@@ -14,21 +14,66 @@ import Foundation
 @MainActor
 @Observable
 final class ServiceContainer {
+    struct ProviderRoute {
+        let provider: AIStreamingProvider
+        let modelName: String
+    }
+
     let ollamaProvider: OllamaService
     let openRouterProvider: OpenRouterService
     let anthropicProvider: AnthropicService
     let conversationService: ConversationService
     let streamingService: StreamingService
+    private let hasOpenRouterKey: @Sendable () -> Bool
 
-    init() {
-        self.ollamaProvider = OllamaService()
-        self.openRouterProvider = OpenRouterService()
-        self.anthropicProvider = AnthropicService()
-        self.conversationService = ConversationService()
+    init(
+        ollamaProvider: OllamaService? = nil,
+        openRouterProvider: OpenRouterService? = nil,
+        anthropicProvider: AnthropicService? = nil,
+        conversationService: ConversationService? = nil,
+        webSearchProvider: (any SearchContextProviding)? = nil,
+        hasSearchAPIKey: (@Sendable () -> Bool)? = nil
+    ) {
+        let ollamaProvider = ollamaProvider ?? OllamaService()
+        let openRouterProvider = openRouterProvider ?? OpenRouterService()
+        let anthropicProvider = anthropicProvider ?? AnthropicService()
+        let conversationService = conversationService ?? ConversationService()
+        let hasOpenRouterKey = hasSearchAPIKey ?? {
+            KeychainService.load(key: "openrouter_api_key") != nil
+        }
+
+        self.ollamaProvider = ollamaProvider
+        self.openRouterProvider = openRouterProvider
+        self.anthropicProvider = anthropicProvider
+        self.conversationService = conversationService
+        self.hasOpenRouterKey = hasOpenRouterKey
         self.streamingService = StreamingService(
             conversationService: conversationService,
-            searchProvider: openRouterProvider
+            searchProvider: openRouterProvider,
+            webSearchProvider: webSearchProvider,
+            hasSearchAPIKey: hasOpenRouterKey
         )
+    }
+
+    func route(for model: AIModel, modelIdentifier: String?) -> ProviderRoute? {
+        switch model {
+        case .ollama:
+            guard let modelIdentifier, !modelIdentifier.isEmpty else { return nil }
+            return ProviderRoute(provider: ollamaProvider, modelName: modelIdentifier)
+        case .appleIntelligence:
+            return nil
+        default:
+            if model.provider == .anthropic, !hasOpenRouterKey(), let anthropicModelID = model.anthropicModelID {
+                return ProviderRoute(provider: anthropicProvider, modelName: anthropicModelID)
+            }
+            if let openRouterModelID = model.openRouterModelID {
+                return ProviderRoute(provider: openRouterProvider, modelName: openRouterModelID)
+            }
+            if let anthropicModelID = model.anthropicModelID {
+                return ProviderRoute(provider: anthropicProvider, modelName: anthropicModelID)
+            }
+            return nil
+        }
     }
 
     /// Returns the appropriate `AIStreamingProvider` for the given model.
@@ -36,14 +81,10 @@ final class ServiceContainer {
         switch model {
         case .ollama:
             return ollamaProvider
-        default:
-            if model.openRouterModelID != nil {
-                return openRouterProvider
-            }
-            if model.provider == .anthropic {
-                return anthropicProvider
-            }
+        case .appleIntelligence:
             return openRouterProvider
+        default:
+            return route(for: model, modelIdentifier: "route-probe")?.provider ?? openRouterProvider
         }
     }
 }

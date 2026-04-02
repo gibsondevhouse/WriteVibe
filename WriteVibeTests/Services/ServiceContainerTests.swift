@@ -10,10 +10,10 @@ import Foundation
 @MainActor
 struct ServiceContainerTests {
 
-    @Test func testClaudeRoutingToOpenRouter() async throws {
-        let container = ServiceContainer()
+    @Test func testClaudeRoutingToOpenRouterWhenGatewayKeyIsPresent() async throws {
+        let container = ServiceContainer(hasSearchAPIKey: { true })
         
-        // Claude Sonnet should use OpenRouter because it has an openRouterModelID
+        // Claude Sonnet should prefer OpenRouter when the gateway is configured.
         let sonnetProvider = container.provider(for: .claudeSonnet)
         #expect(sonnetProvider is OpenRouterService)
         
@@ -24,6 +24,13 @@ struct ServiceContainerTests {
         // Ollama should use OllamaService
         let ollamaProvider = container.provider(for: .ollama)
         #expect(ollamaProvider is OllamaService)
+    }
+
+    @Test func testClaudeRoutingFallsBackToAnthropicWithoutGatewayKey() async throws {
+        let container = ServiceContainer(hasSearchAPIKey: { false })
+
+        let sonnetProvider = container.provider(for: .claudeSonnet)
+        #expect(sonnetProvider is AnthropicService)
     }
     
     @Test func testAppleIntelligenceNotRoutedForChat() async throws {

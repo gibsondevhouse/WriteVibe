@@ -8,6 +8,30 @@ import Foundation
 struct AnthropicService: AIStreamingProvider {
     static let apiBase = URL(string: "https://api.anthropic.com/v1/messages")!
 
+    static func makeRequest(
+        apiKey: String,
+        model: String,
+        messages: [[String: String]],
+        systemPrompt: String
+    ) throws -> URLRequest {
+        var request = URLRequest(url: apiBase)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue(AppConstants.anthropicAPIVersion, forHTTPHeaderField: "anthropic-version")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "model": model,
+            "max_tokens": AppConstants.maxOutputTokens,
+            "stream": true,
+            "system": systemPrompt,
+            "messages": messages
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return request
+    }
+
     func stream(
         model: String,
         messages: [[String: String]],
@@ -20,21 +44,12 @@ struct AnthropicService: AIStreamingProvider {
                         throw WriteVibeError.missingAPIKey(provider: "Anthropic")
                     }
 
-                    var request = URLRequest(url: Self.apiBase)
-                    request.httpMethod = "POST"
-                    request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-                    request.setValue(AppConstants.anthropicAPIVersion, forHTTPHeaderField: "anthropic-version")
-                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-                    let body: [String: Any] = [
-                        "model": model,
-                        "max_tokens": AppConstants.maxOutputTokens,
-                        "stream": true,
-                        "system": systemPrompt,
-                        "messages": messages
-                    ]
-
-                    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+                    let request = try Self.makeRequest(
+                        apiKey: apiKey,
+                        model: model,
+                        messages: messages,
+                        systemPrompt: systemPrompt
+                    )
 
                     let (result, response) = try await URLSession.shared.bytes(for: request)
 

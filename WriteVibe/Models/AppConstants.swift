@@ -19,8 +19,16 @@ enum AppConstants {
     /// Base URL for a locally running Ollama server.
     static let ollamaBaseURL = URL(string: "http://localhost:11434")!
 
-    /// Anthropic API version header.
-    static let anthropicAPIVersion = "2024-10-22"
+    /// Anthropic stable API version published in current versioning docs.
+    static let anthropicAPIVersion = "2023-06-01"
+
+    // MARK: - Feature Flags
+
+    /// Enable persistence adapter for StreamingService message lifecycle.
+    /// Default: false (disabled for rollback safety during TASK-102 rollout).
+    /// When false: StreamingService uses InMemoryPersistenceAdapter.
+    /// When true: StreamingService uses SwiftDataMessagePersistenceAdapter.
+    static let useStreamingPersistenceAdapter = false
 
     // MARK: - Token usage thresholds (fraction of context window)
 

@@ -14,7 +14,7 @@ import SwiftUI
 final class AppState {
     var thinkingId: UUID?                      = nil
     var availableOllamaModels: [OllamaModel]   = []
-    var runtimeIssue: String?                  = nil
+    var runtimeIssue: RuntimeIssue?            = nil
 
     // Capability chips / search state
     var isSearchEnabled: Bool = false
@@ -81,7 +81,7 @@ final class AppState {
             do {
                 try DataMigrationService.runStartupMigrations(context: context)
             } catch {
-                reportIssue("Data migration failed: \(error.localizedDescription)")
+                reportIssue(.dataMigrationFailed(error.localizedDescription))
             }
         }
         reconcileConversationIDs()
@@ -95,7 +95,7 @@ final class AppState {
     // MARK: Conversation management
 
     func fetchConversation(_ id: UUID) -> Conversation? {
-        guard let ctx = modelContext else { reportIssue("Model context is not attached"); return nil }
+        guard let ctx = modelContext else { reportIssue(.modelContextUnavailable()); return nil }
         return services.conversationService.fetch(id, context: ctx)
     }
 
@@ -108,7 +108,7 @@ final class AppState {
 
     @discardableResult
     func newCopilotConversation() -> UUID? {
-        guard let ctx = modelContext else { reportIssue("Model context is not attached"); return nil }
+        guard let ctx = modelContext else { reportIssue(.modelContextUnavailable()); return nil }
         let conv = services.conversationService.create(model: defaultModel, modelIdentifier: defaultModelIdentifier, context: ctx)
         copilotConversationId = conv.id
         return conv.id
@@ -120,13 +120,13 @@ final class AppState {
     func send(_ text: String, in conversationId: UUID) -> Bool {
         let trimmed = text.trimmed
         guard !trimmed.isEmpty, thinkingId != conversationId else { return false }
-        guard let ctx = modelContext else { reportIssue("Model context is not attached"); return false }
+        guard let ctx = modelContext else { reportIssue(.modelContextUnavailable()); return false }
 
         guard services.conversationService.appendMessage(Message(role: .user, content: trimmed), to: conversationId, context: ctx) else { return false }
 
+        clearRuntimeIssue()
         thinkingId = conversationId
         generateReply(to: conversationId)
-        clearRuntimeIssue()
         return true
     }
 
@@ -151,6 +151,7 @@ final class AppState {
             format: selectedFormat,
             isMemoryEnabled: isMemoryEnabled,
             onSearchFetchingChanged: { [weak self] fetching in self?.isSearchFetching = fetching },
+            onIssue: { [weak self] issue in self?.runtimeIssue = issue },
             onFinish: { [weak self] in
                 if self?.thinkingId == conversationId { self?.thinkingId = nil }
             }
@@ -176,5 +177,5 @@ final class AppState {
 
     func clearRuntimeIssue() { runtimeIssue = nil }
 
-    private func reportIssue(_ message: String) { runtimeIssue = message }
+    private func reportIssue(_ issue: RuntimeIssue) { runtimeIssue = issue }
 }

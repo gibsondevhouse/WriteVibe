@@ -30,11 +30,11 @@ struct TokenUsageBar: View {
             }
             .frame(height: 3)
             if tokenUsage >= 0.98 {
-                Text("Context full — please start a new chat")
+                Text("Context full. Start a new chat, then resend this request there.")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.red)
             } else if tokenUsage >= 0.95 {
-                Text("Context nearly full — start a new chat to continue")
+                Text("Context nearly full. Start a new chat before sending another long prompt.")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.red)
             }

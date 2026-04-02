@@ -20,8 +20,8 @@ struct ArticleEditorView: View {
                 aiEditBar
                 Divider()
             }
-            if let errorMsg = vm.aiErrorMessage {
-                errorBanner(errorMsg)
+            if let issue = vm.aiError {
+                errorBanner(issue)
                 Divider()
             }
 
@@ -202,16 +202,24 @@ struct ArticleEditorView: View {
 
     // MARK: - Error Banner
 
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
+    private func errorBanner(_ issue: RuntimeIssue) -> some View {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 11))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.orange)
-            Text(message)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(issue.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text(issue.message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Text("Next step: \(issue.nextStep)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
-            Button("Dismiss") { vm.aiErrorMessage = nil }
+            Button("Dismiss") { vm.aiError = nil }
                 .font(.system(size: 11))
                 .buttonStyle(.plain)
         }
