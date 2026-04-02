@@ -26,3 +26,8 @@ GEMINI.md
 CLAUDE.md
 AGENTS.md
 COPILOT.md
+
+# Transient local execution artifacts
+.qa-task*.log
+.task*.log
+*.disabled
