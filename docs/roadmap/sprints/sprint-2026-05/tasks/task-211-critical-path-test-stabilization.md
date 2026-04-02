@@ -36,6 +36,12 @@ This is an initial register for known unstable execution paths. It does not clai
 | `WriteVibeTests/AppStateProviderRecoveryTests` | Unstable under class-level or multi-test execution; isolated reruns have passed even when broader execution blocked review closure | Referenced in B-204 and current QA notes as the remaining blocker for tasks that require provider recovery evidence | `@backend-lead` | 2026-04-02 | 2026-04-05 EOD | Reproduce against frozen workflow pack and prepare stabilize vs quarantine recommendation |
 | Critical-path combined rerun containing `StreamingServiceTests` plus `AppStateProviderRecoveryTests` | Suite-combination instability risk remains open even when a fresh focused rerun passes; signal is intermittent rather than a confirmed permanent fail | Prior focused rerun passed on 2026-04-02, but sprint risk register still tracks B-204 as open because reproducibility is not yet reliable | `@qa-lead` | 2026-04-02 | 2026-04-05 EOD | Monitor invocation-level flake rate and document quarantine policy if combo execution remains unstable |
 
+## Reproduce-Or-Quarantine Checkpoint (2026-04-02)
+
+- Combined suite command rerun #1 (`StreamingServiceTests` + `AppStateProviderRecoveryTests`): `TEST SUCCEEDED`.
+- Combined suite command rerun #2 (`StreamingServiceTests` + `AppStateProviderRecoveryTests`): `TEST SUCCEEDED`.
+- Recommendation at this checkpoint: do not quarantine yet; continue monitoring through the 2026-04-05 EOD checkpoint and require CI-level confirmation before closing B-204.
+
 ## Ownership Notes
 
 - `@backend-lead` owns root-cause triage for the unstable backend suites tracked under B-204.

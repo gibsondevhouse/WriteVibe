@@ -52,3 +52,17 @@ Run blocker register operations, waiver policy, and weekly readiness snapshots f
 - Trend: Conditional Go (execution continues, exit not yet eligible).
 - Positive signals: TASK-210 draft package published; TASK-211 inventory published; focused reliability suites have known owners.
 - Blocking conditions: B-203 and B-204 still open at high severity; B-205 target ladder not yet published.
+
+## Blocker Triage Snapshot #2 (2026-04-02)
+
+### Register Delta Since Snapshot #1
+
+- B-202 closed (workflow freeze approved and documented).
+- B-204 downgraded from Open to Monitoring after two consecutive combined reruns of `StreamingServiceTests` + `AppStateProviderRecoveryTests` returned `TEST SUCCEEDED`.
+- B-203 and B-205 remain open with unchanged owners and dates.
+
+### Updated Readiness Trend
+
+- Trend: Conditional Go (improved confidence, exit still not eligible).
+- Positive signals: TASK-210 active gate is now complete, B-202 closed, and B-204 no longer in hard-open state.
+- Remaining blockers: B-203 (contract boundary lock) and B-205 (coverage ladder publication), plus CI-level confirmation checkpoint for B-204 by 2026-04-05 EOD.
