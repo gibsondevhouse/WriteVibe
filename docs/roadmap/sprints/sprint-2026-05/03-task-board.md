@@ -25,7 +25,7 @@
 
 ## WS-204/WS-205 Cadence (2026-04-02 Lock)
 
-- TASK-210: top-5 GA workflow freeze due 2026-04-04 with multi-lead approval evidence.
-- TASK-210 draft package published on 2026-04-02 in the task card; approvals remain pending from `@product-manager`, `@architect`, and `@qa-lead`.
+- TASK-210: top-5 GA workflow freeze completed on 2026-04-02 with multi-lead approval evidence.
+- TASK-210 package is approved and frozen; CI gate activation evidence is still pending before task closeout.
 - TASK-211: flaky stabilization/quarantine evidence due 2026-04-09 with three consecutive green critical-path runs.
 - TASK-212: twice-weekly blocker triage plus weekly readiness snapshot, co-reviewed by `@qa-lead`.

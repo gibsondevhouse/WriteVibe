@@ -15,7 +15,7 @@
 | Blocker ID | Description | Blocking Workstream | Escalation Owner | Status |
 | --- | --- | --- | --- | --- |
 | B-201 | External provider outage or API changes prevent deterministic validation | WS-202 | `@cto` | Monitoring |
-| B-202 | Critical-path workflow list is not frozen by end of week 1 | WS-204 | `@qa-lead` | In Progress |
+| B-202 | Critical-path workflow list is not frozen by end of week 1 | WS-204 | `@qa-lead` | Closed |
 | B-203 | Contract boundary lock (TASK-201) not yet complete for downstream parity validation | WS-201 | `@architect` | Open |
 | B-204 | xcodebuild test-host instability in `StreamingServiceTests`/`AppStateProviderRecoveryTests` under class-level or multi-test execution blocks reliability parity evidence for affected review tasks | WS-201 | `@backend-lead` | Open |
 | B-205 | Coverage uplift carry-forward from sprint-2026-04 lacks approved weekly target ladder and could slip past mid-sprint gate | WS-204, WS-205 | `@cto` | Open |
@@ -33,6 +33,7 @@
 - 2026-04-02: CTO set WS-204/WS-205 execution lock: TASK-210 approval due 2026-04-04 EOD, TASK-211 stability evidence due 2026-04-09 EOD, and weekly coverage uplift tracking is mandatory.
 - 2026-04-02: TASK-211 first-pass flaky-test inventory was published in the task card with initial ownership assignments for `StreamingServiceTests`, `AppStateProviderRecoveryTests`, and their combined critical-path invocation; next checkpoint is 2026-04-05 EOD for reproduce-or-quarantine recommendation.
 - 2026-04-02: WS-205 blocker triage snapshot #1 completed by `@cto`; no waivers issued, readiness trend set to Conditional Go, and B-203/B-204/B-205 remain active with dated checkpoints.
+- 2026-04-02: TASK-210 top-5 GA-critical workflow package was approved by `@product-manager`, `@architect`, and `@qa-lead` after WS-201 ownership correction; B-202 closed, with CI gate activation evidence remaining as the final TASK-210 dependency.
 
 ## Escalation SLA
 
