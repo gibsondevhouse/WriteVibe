@@ -16,7 +16,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | TASK-101 | WS-101 | Introduce MessagePersistence protocol and default adapter | `@backend-lead` | Complete | High | TASK-108 ✅ | TASK-102 |
 | TASK-104 | WS-102 | Move apply/validation flow from view model to orchestrator | `@frontend-developer` | In Progress | High | TASK-103 ✅ | TASK-109 |
-| TASK-109 | WS-105 | Add article edit round-trip and operation validation tests | `@frontend-tester` | In Progress | High | TASK-104 ✅ | --- |
+| TASK-109 | WS-105 | Add article edit round-trip and operation validation tests | `@frontend-tester` | In Progress | High | TASK-104 (In Progress) | --- |
 
 ### Phase 3: Implementation & Stability (Days 6-9 | by 2026-04-09)
 
