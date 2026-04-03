@@ -28,10 +28,13 @@
 | WS-502 | sprint-2026-08 | Sprint artifact synchronization controls and governance contract | @architect | Complete | TASK-502 complete; governance contract published with same-batch update sets for sprint-local docs and portfolio indexes |
 | WS-503 | sprint-2026-08 | QA command normalization and evidence-log standardization | @qa-lead | Complete | TASK-503/504 published in sprint QA gates; paired WS-504 dry-run approved the process pack for reuse |
 | WS-504 | sprint-2026-08 | Operational rollout, dry-run validation, and closeout discipline | @cto | Complete | TASK-505/506 complete; WS-504 dry-run approved and ready for reuse as the sprint closeout-discipline baseline |
-| WS-901 | sprint-2026-09 | Structured generation contracts and guardrails | @architect | In Progress | TASK-901/902 publish final structured contract and schema addendum for bounded Apple workflow tasks |
-| WS-902 | sprint-2026-09 | Backend structured task orchestration readiness | @backend-lead | Planned | TASK-903/904 define execution and deterministic mapping validation plans after WS-901 publication |
-| WS-903 | sprint-2026-09 | Frontend workflow and UX integration readiness | @frontend-lead | Planned | TASK-905/906 define integration, non-chat scope copy, and fallback UX checklist |
-| WS-904 | sprint-2026-09 | Quality gates and observability readiness | @qa-lead | Planned | TASK-907/908 define QA gate pack and transcript and feedback evidence checklist after decision closure |
+| WS-901 | sprint-2026-09 | Structured generation contracts and guardrails | @architect | Complete | TASK-901/902 complete with final contract, model addendum, and architectural decisions published |
+| WS-902 | sprint-2026-09 | Backend structured task orchestration readiness | @backend-lead | Complete | TASK-903/904 complete with execution plan, validation checklist, and developer/tester handoffs published |
+| WS-903 | sprint-2026-09 | Frontend workflow and UX integration readiness | @frontend-lead | Complete | TASK-905/906 complete with integration plan, copy/state checklist, and frontend implementation/test handoffs published |
+| WS-904 | sprint-2026-09 | Quality gates and observability readiness | @qa-lead | Complete | TASK-907/908 complete with gate pack, evidence checklist, and tester collaboration pack published |
+| WS-905 | sprint-2026-09 | Backend structured workflow implementation | @backend-lead | In Progress | TASK-909 active with TASK-910 queued for focused validation against the frozen Apple workflow contract |
+| WS-906 | sprint-2026-09 | Frontend structured workflow integration implementation | @frontend-lead | In Progress | TASK-911 active with TASK-912 queued for scope, selection, and fallback validation against the approved UX baseline |
+| WS-907 | sprint-2026-09 | QA implementation evidence and promotion control | @qa-lead | In Progress | TASK-913 active for focused evidence collection and promotion gating over implementation slices |
 
 ## Status Values
 
