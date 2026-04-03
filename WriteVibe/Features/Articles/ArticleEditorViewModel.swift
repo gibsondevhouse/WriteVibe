@@ -24,10 +24,7 @@ final class ArticleEditorViewModel {
     }
 
     var blockChanges: BlockChanges {
-        guard let orchestrator = editOrchestrator as? DefaultArticleEditOrchestrator else {
-            return [:]
-        }
-        return orchestrator.blockChanges
+        editOrchestrator.blockChanges
     }
 
     var hasPendingChanges: Bool {

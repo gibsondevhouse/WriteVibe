@@ -29,7 +29,7 @@ final class ServiceContainer {
     let articleContextMutationAdapter: ArticleContextMutationAdapter
     let articleOutlineMutationAdapter: ArticleOutlineMutationAdapter
     let articleBodyMutationAdapter: ArticleBodyMutationAdapter
-    private let hasOpenRouterKey: @Sendable () -> Bool
+    private let hasOpenRouterKey: @MainActor () -> Bool
 
     init(
         ollamaProvider: OllamaService? = nil,
@@ -38,7 +38,7 @@ final class ServiceContainer {
         conversationService: ConversationService? = nil,
         articleDraftAutofillService: (any ArticleDraftAutofillServicing)? = nil,
         webSearchProvider: (any SearchContextProviding)? = nil,
-        hasSearchAPIKey: (@Sendable () -> Bool)? = nil
+        hasSearchAPIKey: (@MainActor () -> Bool)? = nil
     ) {
         let ollamaProvider = ollamaProvider ?? OllamaService()
         let openRouterProvider = openRouterProvider ?? OpenRouterService()

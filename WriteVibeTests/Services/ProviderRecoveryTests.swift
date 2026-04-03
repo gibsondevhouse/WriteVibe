@@ -90,4 +90,26 @@ struct ProviderRecoveryTests {
         #expect(issue.message.contains("could not authenticate this request"))
         #expect(issue.nextStep.contains("use Claude through OpenRouter"))
     }
+
+    @Test func testRateLimitFailureGuidanceIsExplicitAndBounded() {
+        let issue = WriteVibeError.apiError(
+            provider: "OpenRouter",
+            statusCode: 429,
+            message: nil
+        ).runtimeIssue
+
+        #expect(issue.title == "OpenRouter request failed")
+        #expect(issue.message.contains("rate limiting"))
+        #expect(issue.nextStep.contains("Wait a moment and retry"))
+    }
+
+    @Test func testDecodingFailureSurfacesStableRecoveryGuidance() {
+        let issue = WriteVibeError.decodingFailed(
+            context: "Invalid provider payload"
+        ).runtimeIssue
+
+        #expect(issue.title == "Response could not be read")
+        #expect(issue.message.contains("could not decode the provider response"))
+        #expect(issue.nextStep.contains("Retry once"))
+    }
 }

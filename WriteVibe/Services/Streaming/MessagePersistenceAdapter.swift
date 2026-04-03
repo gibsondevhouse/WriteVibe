@@ -7,10 +7,41 @@ import Foundation
 import SwiftData
 
 @MainActor
-protocol MessagePersistenceAdapter {
+protocol MessagePersistence {
+    func createAssistantPlaceholder(conversationId: UUID, modelName: String, context: ModelContext) throws -> MessageHandle
+    func finalizeAssistantPlaceholder(handle: MessageHandle, outcome: FinalizationOutcome) throws
+}
+
+@MainActor
+protocol MessageTokenBuffering {
+    func appendBufferedTokens(_ text: String, handle: MessageHandle) throws
+}
+
+@MainActor
+protocol MessagePersistenceAdapter: MessagePersistence, MessageTokenBuffering {
     func beginAssistantMessage(run: GenerationRunContext) throws -> MessageHandle
     func appendToken(_ token: String, handle: MessageHandle) throws
     func finalize(handle: MessageHandle, outcome: FinalizationOutcome) throws
+}
+
+extension MessagePersistenceAdapter {
+    func createAssistantPlaceholder(conversationId: UUID, modelName: String, context: ModelContext) throws -> MessageHandle {
+        try beginAssistantMessage(
+            run: GenerationRunContext(
+                conversationId: conversationId,
+                modelName: modelName,
+                context: context
+            )
+        )
+    }
+
+    func appendBufferedTokens(_ text: String, handle: MessageHandle) throws {
+        try appendToken(text, handle: handle)
+    }
+
+    func finalizeAssistantPlaceholder(handle: MessageHandle, outcome: FinalizationOutcome) throws {
+        try finalize(handle: handle, outcome: outcome)
+    }
 }
 
 struct GenerationRunContext {

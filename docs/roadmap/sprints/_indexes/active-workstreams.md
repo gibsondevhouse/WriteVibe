@@ -19,6 +19,20 @@
 | WS-304 | sprint-2026-06 | Command UX feedback and discoverability | @frontend-lead | Complete | TASK-307/308 complete; help/feedback UX and draft indicator delivered |
 | WS-305 | sprint-2026-06 | QA reliability and regression gate pack | @qa-lead | Complete | TASK-309/310 complete; parser matrix + lifecycle suites and expanded gate-pack passed |
 | WS-306 | sprint-2026-06 | Domain boundary cleanup: scripts and emails extraction | @frontend-lead | Complete | TASK-311/312 complete; scripts/emails removed from in-app command/navigation domain |
+| WS-401 | sprint-2026-07 | Product scope lock and acceptance traceability | @product-manager | Complete | TASK-401 complete with acceptance mapping and QA traceability linkage |
+| WS-402 | sprint-2026-07 | Actor-isolation contract and non-drift architecture control | @architect | Complete | TASK-402 complete; contract freeze verified against active implementation |
+| WS-403 | sprint-2026-07 | Backend remediation for envelope equality and key-loading isolation | @backend-lead | Complete | TASK-403/404/405 complete with backend tester verification evidence |
+| WS-404 | sprint-2026-07 | Frontend warning remediation and visual parity protection | @frontend-lead | Complete | TASK-406/407 complete with focused parity validation evidence |
+| WS-405 | sprint-2026-07 | QA gate enforcement and release readiness decision | @qa-lead | Complete | TASK-408/TASK-409 complete with focused and full-suite gate evidence |
+| WS-501 | sprint-2026-08 | Carry-forward scope lock and acceptance traceability | @product-manager | Complete | TASK-501 complete; retro actions now mapped to acceptance language and QA verification across sprint-2026-08 control docs |
+| WS-502 | sprint-2026-08 | Sprint artifact synchronization controls and governance contract | @architect | Complete | TASK-502 complete; governance contract published with same-batch update sets for sprint-local docs and portfolio indexes |
+| WS-503 | sprint-2026-08 | QA command normalization and evidence-log standardization | @qa-lead | Complete | TASK-503/504 published in sprint QA gates; paired WS-504 dry-run approved the process pack for reuse |
+| WS-504 | sprint-2026-08 | Operational rollout, dry-run validation, and closeout discipline | @cto | Complete | TASK-505/506 complete; WS-504 dry-run approved and ready for reuse as the sprint closeout-discipline baseline |
+| WS-601 | sprint-2026-09 | Streaming and persistence decoupling delivery | @backend-lead | In Progress | TASK-601/602 establish `MessagePersistence` contract and focused regression confidence |
+| WS-602 | sprint-2026-09 | Article edit pipeline stabilization | @frontend-lead | In Progress | TASK-603/604 aligned to `ArticleEditOrchestrating` contract invariants and round-trip correctness validation |
+| WS-603 | sprint-2026-09 | Provider reliability and trust hardening | @backend-lead | In Progress | TASK-605 closes scoped provider failure/recovery reliability gaps against frozen taxonomy baseline v1 |
+| WS-604 | sprint-2026-09 | GA-critical test gate expansion and enforcement | @qa-lead | In Progress | TASK-606 baseline published/frozen (B-603 closed); focused gate evidence bundle execution remains active |
+| WS-605 | sprint-2026-09 | Launch blocker burn-down operations | @cto | In Progress | TASK-607 maintains blocker closure sequencing and readiness snapshots with B-601/B-602 closed and implementation evidence tracking active |
 
 ## Status Values
 

@@ -107,14 +107,8 @@ struct ChatRewriteDiffCard: View {
                 .strikethrough()
                 .foregroundStyle(.red)
         case .replace:
-            (
-                Text(verbatim: span.originalText ?? "")
-                    .strikethrough()
-                    .foregroundStyle(.red)
-                + Text(" -> ")
-                    .foregroundStyle(.tertiary)
-                + Text(verbatim: span.proposedText ?? "")
-                    .foregroundStyle(.green)
+            Text(
+                "\(Text(verbatim: span.originalText ?? "").strikethrough().foregroundStyle(.red))\(Text(" -> ").foregroundStyle(.tertiary))\(Text(verbatim: span.proposedText ?? "").foregroundStyle(.green))"
             )
         }
     }

@@ -392,4 +392,93 @@ struct ArticleEditOrchestratorTests {
         #expect(result.rejectedOperations[0].reason.contains("empty non-last block"))
         #expect(article.blocks.count == 2)
     }
+
+    @Test func requestAndApplyEdits_preservesExistingChangesWhenApplyConflictIsRejected() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Hello world", position: 0)
+        article.blocks = [block]
+
+        let existingSpan = ChangeSpan(
+            id: UUID(),
+            changeType: .replace,
+            author: .ai,
+            timestamp: Date(),
+            reason: "existing",
+            proposedRange: block.content.startIndex..<block.content.startIndex,
+            originalText: nil,
+            proposedText: ""
+        )
+        let existingChanges: BlockChanges = [block.id: [existingSpan]]
+
+        let proposed = ProposedEdits(
+            operations: [.replace(blockID: UUID(), range: block.content.startIndex..<block.content.startIndex, newText: "unused", reason: nil)],
+            summary: "conflict only"
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: existingChanges
+        )
+
+        #expect(article.blocks[0].content == "Hello world")
+        #expect(result.rejectedOperations.count == 1)
+        #expect(result.rejectedOperations[0].reason.contains("Apply conflict"))
+        #expect(result.appliedChanges[block.id]?.count == 1)
+        #expect(result.appliedChanges[block.id]?.first?.id == existingSpan.id)
+        #expect(orchestrator.blockChanges[block.id]?.count == 1)
+        #expect(orchestrator.state.isFinalized)
+        #expect(orchestrator.hasPendingChanges)
+    }
+
+    @Test func requestAndApplyEdits_mixedOperationsApplyValidEditsAndRejectInvalidInOrder() async throws {
+        let article = Article(title: "Test")
+        let block = ArticleBlock(type: .paragraph, content: "Alpha beta gamma", position: 0)
+        article.blocks = [block]
+
+        let existingSpan = ChangeSpan(
+            id: UUID(),
+            changeType: .replace,
+            author: .ai,
+            timestamp: Date(),
+            reason: "existing",
+            proposedRange: block.content.startIndex..<block.content.startIndex,
+            originalText: nil,
+            proposedText: ""
+        )
+        let existingChanges: BlockChanges = [block.id: [existingSpan]]
+
+        let replaceRange = try #require(block.content.range(of: "beta"))
+        let foreign = "Detached index source with long tail"
+        let invalidLower = foreign.index(foreign.startIndex, offsetBy: 24)
+        let invalidUpper = foreign.index(foreign.startIndex, offsetBy: 28)
+        let invalidRange = invalidLower..<invalidUpper
+
+        let proposed = ProposedEdits(
+            operations: [
+                .replace(blockID: block.id, range: replaceRange, newText: "BETA", reason: "valid replace"),
+                .insert(blockID: UUID(), at: block.content.startIndex, text: "X", reason: "missing block"),
+                .delete(blockID: block.id, range: invalidRange, reason: "bad range")
+            ],
+            summary: "mixed"
+        )
+
+        let orchestrator = DefaultArticleEditOrchestrator(proposeEdits: { _, _ in proposed })
+        let result = try await orchestrator.requestAndApplyEdits(
+            article: article,
+            modelID: "anthropic/claude-3-7-sonnet",
+            existingChanges: existingChanges
+        )
+
+        #expect(block.content == "Alpha BETA gamma")
+        #expect(result.appliedChanges[block.id]?.count == 2)
+        #expect(result.appliedChanges[block.id]?.first?.id == existingSpan.id)
+        #expect(result.appliedChanges[block.id]?.last?.proposedText == "BETA")
+
+        #expect(result.rejectedOperations.count == 2)
+        let rejectionReasons = result.rejectedOperations.map(\.reason)
+        #expect(rejectionReasons[0].contains("Apply conflict"))
+        #expect(rejectionReasons[1].contains("Validation failure"))
+    }
 }

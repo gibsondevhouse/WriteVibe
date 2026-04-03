@@ -77,6 +77,71 @@ struct StreamingServiceTests {
         }
     }
 
+    actor AttemptCounter {
+        private var value = 0
+
+        func increment() -> Int {
+            value += 1
+            return value
+        }
+
+        func currentValue() -> Int {
+            value
+        }
+    }
+
+    struct RetryThenSucceedAIProvider: AIStreamingProvider {
+        let attemptCounter: AttemptCounter
+
+        func stream(
+            model: String,
+            messages: [[String: String]],
+            systemPrompt: String
+        ) -> AsyncThrowingStream<String, Error> {
+            AsyncThrowingStream { continuation in
+                Task {
+                    let attempt = await attemptCounter.increment()
+                    if attempt == 1 {
+                        continuation.finish(
+                            throwing: WriteVibeError.apiError(
+                                provider: "OpenRouter",
+                                statusCode: 429,
+                                message: "rate limited"
+                            )
+                        )
+                        return
+                    }
+                    continuation.yield("Recovered")
+                    continuation.finish()
+                }
+            }
+        }
+    }
+
+    struct PartialThenTransientFailureAIProvider: AIStreamingProvider {
+        let attemptCounter: AttemptCounter
+
+        func stream(
+            model: String,
+            messages: [[String: String]],
+            systemPrompt: String
+        ) -> AsyncThrowingStream<String, Error> {
+            AsyncThrowingStream { continuation in
+                Task {
+                    _ = await attemptCounter.increment()
+                    continuation.yield("partial")
+                    continuation.finish(
+                        throwing: WriteVibeError.apiError(
+                            provider: "OpenRouter",
+                            statusCode: 503,
+                            message: "service unavailable"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     struct MockSearchContextProvider: SearchContextProviding {
         let result: Result<[SearchResult]?, Error>
 
@@ -94,6 +159,36 @@ struct StreamingServiceTests {
         case succeeded
         case cancelled
         case failed
+    }
+
+    actor PromptCaptureBox {
+        private(set) var value: String = ""
+
+        func store(_ prompt: String) {
+            value = prompt
+        }
+    }
+
+    struct PromptCapturingProvider: AIStreamingProvider {
+        let tokens: [String]
+        let onPromptCaptured: @Sendable (String) async -> Void
+
+        init(tokens: [String] = [], onPromptCaptured: @escaping @Sendable (String) async -> Void) {
+            self.tokens = tokens
+            self.onPromptCaptured = onPromptCaptured
+        }
+
+        func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
+            AsyncThrowingStream { continuation in
+                Task {
+                    await onPromptCaptured(systemPrompt)
+                    for token in tokens {
+                        continuation.yield(token)
+                    }
+                    continuation.finish()
+                }
+            }
+        }
     }
 
     final class RecordingPersistenceAdapter: MessagePersistenceAdapter {
@@ -280,21 +375,92 @@ struct StreamingServiceTests {
         #expect(adapter.finalizedOutcomes == [.failed])
     }
 
+    @Test func testTransientFailureRetriesOnceBeforeAnyTokenAndSucceeds() async throws {
+        let fixture = try makeContextAndConversation()
+        let adapter = RecordingPersistenceAdapter()
+        let attemptCounter = AttemptCounter()
+        let provider = RetryThenSucceedAIProvider(attemptCounter: attemptCounter)
+        let streamingService = StreamingService(
+            conversationService: fixture.conversationService,
+            searchProvider: OpenRouterService(),
+            messagePersistenceAdapter: adapter
+        )
+
+        try await streamingService.streamReply(
+            provider: provider,
+            modelName: "test-model",
+            conversationId: fixture.conversationID,
+            context: fixture.context
+        )
+
+        #expect(await attemptCounter.currentValue() == 2)
+        #expect(adapter.appendedChunks == ["Recovered"])
+        #expect(adapter.finalizedOutcomes == [.succeeded])
+    }
+
+    @Test func testTransientFailureDoesNotRetryAfterPartialTokenEmission() async throws {
+        let fixture = try makeContextAndConversation()
+        let adapter = RecordingPersistenceAdapter()
+        let attemptCounter = AttemptCounter()
+        let provider = PartialThenTransientFailureAIProvider(attemptCounter: attemptCounter)
+        let streamingService = StreamingService(
+            conversationService: fixture.conversationService,
+            searchProvider: OpenRouterService(),
+            messagePersistenceAdapter: adapter
+        )
+
+        await #expect(throws: WriteVibeError.self) {
+            try await streamingService.streamReply(
+                provider: provider,
+                modelName: "test-model",
+                conversationId: fixture.conversationID,
+                context: fixture.context
+            )
+        }
+
+        #expect(await attemptCounter.currentValue() == 1)
+        #expect(adapter.appendedChunks == ["partial"])
+        #expect(adapter.finalizedOutcomes == [.failed])
+    }
+
+    @Test func testEmptyStreamFailsDeterministicallyInsteadOfSilentSuccess() async throws {
+        let fixture = try makeContextAndConversation()
+        let adapter = RecordingPersistenceAdapter()
+        let streamingService = StreamingService(
+            conversationService: fixture.conversationService,
+            searchProvider: OpenRouterService(),
+            messagePersistenceAdapter: adapter
+        )
+
+        do {
+            try await streamingService.streamReply(
+                provider: MockAIProvider(tokens: []),
+                modelName: "test-model",
+                conversationId: fixture.conversationID,
+                context: fixture.context
+            )
+            Issue.record("Expected empty stream to fail deterministically.")
+        } catch let error as WriteVibeError {
+            guard case .decodingFailed(let context) = error else {
+                Issue.record("Expected decodingFailed for empty stream, got \(error)")
+                return
+            }
+            #expect(context.contains("no readable text"))
+        }
+
+        #expect(adapter.appendedChunks.isEmpty)
+        #expect(adapter.finalizedOutcomes == [.failed])
+    }
+
     @Test func testChipPromptAugmentation() async throws {
         let fixture = try makeContextAndConversation(model: .gpt4o)
         let context = fixture.context
         let conversationService = fixture.conversationService
 
-        var capturedPrompt = ""
-        struct PromptCapturingProvider: AIStreamingProvider {
-            let onPromptCaptured: (String) -> Void
-            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
-                onPromptCaptured(systemPrompt)
-                return AsyncThrowingStream { $0.finish() }
-            }
+        let promptCapture = PromptCaptureBox()
+        let provider = PromptCapturingProvider(tokens: ["ok"]) { prompt in
+            await promptCapture.store(prompt)
         }
-
-        let provider = PromptCapturingProvider { capturedPrompt = $0 }
         let streamingService = StreamingService(conversationService: conversationService, searchProvider: OpenRouterService())
 
         try await streamingService.streamReply(
@@ -307,6 +473,7 @@ struct StreamingServiceTests {
             format: "JSON"
         )
 
+        let capturedPrompt = await promptCapture.value
         #expect(capturedPrompt.contains("professional"))
         #expect(capturedPrompt.contains("brief"))
         #expect(capturedPrompt.contains("JSON"))
@@ -317,16 +484,10 @@ struct StreamingServiceTests {
         let context = fixture.context
         let conversationService = fixture.conversationService
 
-        var capturedPrompt = ""
-        struct PromptCapturingProvider: AIStreamingProvider {
-            let onPromptCaptured: (String) -> Void
-            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
-                onPromptCaptured(systemPrompt)
-                return AsyncThrowingStream { $0.finish() }
-            }
+        let promptCapture = PromptCaptureBox()
+        let provider = PromptCapturingProvider(tokens: ["ok"]) { prompt in
+            await promptCapture.store(prompt)
         }
-
-        let provider = PromptCapturingProvider { capturedPrompt = $0 }
         let streamingService = StreamingService(conversationService: conversationService, searchProvider: OpenRouterService())
 
         try await streamingService.streamReply(
@@ -336,6 +497,7 @@ struct StreamingServiceTests {
             context: context
         )
 
+        let capturedPrompt = await promptCapture.value
         #expect(capturedPrompt.contains("Treat only /article slash commands as in-domain command behavior for this app."))
         #expect(capturedPrompt.contains("Command domain boundary: WriteVibe only supports /article commands in this app."))
         #expect(capturedPrompt.contains("For non-command requests (no slash command), continue with normal helpful generation behavior."))
@@ -346,22 +508,10 @@ struct StreamingServiceTests {
         let context = fixture.context
         let conversationService = fixture.conversationService
         let adapter = RecordingPersistenceAdapter()
-        var capturedPrompt = ""
-        struct PromptCapturingProvider: AIStreamingProvider {
-            let onPromptCaptured: (String) -> Void
-            let tokens: [String]
-            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
-                onPromptCaptured(systemPrompt)
-                return AsyncThrowingStream { continuation in
-                    for token in tokens {
-                        continuation.yield(token)
-                    }
-                    continuation.finish()
-                }
-            }
+        let promptCapture = PromptCaptureBox()
+        let provider = PromptCapturingProvider(tokens: ["fallback"]) { prompt in
+            await promptCapture.store(prompt)
         }
-
-        let provider = PromptCapturingProvider(onPromptCaptured: { capturedPrompt = $0 }, tokens: ["fallback"]) 
         let streamingService = StreamingService(
             conversationService: conversationService,
             searchProvider: OpenRouterService(),
@@ -378,6 +528,7 @@ struct StreamingServiceTests {
             isSearchEnabled: true
         )
 
+        let capturedPrompt = await promptCapture.value
         #expect(capturedPrompt.contains("Web search is unavailable for this Ollama request"))
         #expect(capturedPrompt.contains("no OpenRouter API key is configured"))
         #expect(adapter.beganRuns.count == 1)
@@ -390,17 +541,7 @@ struct StreamingServiceTests {
         let context = fixture.context
         let conversationService = fixture.conversationService
         let adapter = RecordingPersistenceAdapter()
-        var capturedPrompt = ""
-        struct PromptCapturingProvider: AIStreamingProvider {
-            let onPromptCaptured: (String) -> Void
-            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
-                onPromptCaptured(systemPrompt)
-                return AsyncThrowingStream {
-                    $0.yield("ok")
-                    $0.finish()
-                }
-            }
-        }
+        let promptCapture = PromptCaptureBox()
 
         let streamingService = StreamingService(
             conversationService: conversationService,
@@ -413,7 +554,9 @@ struct StreamingServiceTests {
         )
 
         try await streamingService.streamReply(
-            provider: PromptCapturingProvider(onPromptCaptured: { capturedPrompt = $0 }),
+            provider: PromptCapturingProvider(tokens: ["ok"]) { prompt in
+                await promptCapture.store(prompt)
+            },
             modelName: "test-model",
             conversationId: fixture.conversationID,
             context: context,
@@ -421,6 +564,7 @@ struct StreamingServiceTests {
             isSearchEnabled: true
         )
 
+        let capturedPrompt = await promptCapture.value
         #expect(capturedPrompt.contains("Web search is unavailable for this Ollama request"))
         #expect(capturedPrompt.contains("OpenRouter search failed with HTTP 503"))
         #expect(adapter.finalizedOutcomes == [.succeeded])

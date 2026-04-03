@@ -91,6 +91,9 @@ protocol ArticleEditOrchestrating {
     
     /// True if any changes are pending acceptance/rejection.
     var hasPendingChanges: Bool { get }
+
+    /// Current pending block-level changes tracked by the orchestrator.
+    var blockChanges: BlockChanges { get }
     
     /// Current edit operation state.
     var state: EditOrchestrationState { get }

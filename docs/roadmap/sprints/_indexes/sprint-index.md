@@ -5,9 +5,19 @@
 | sprint-2026-04 | 2026-04-01 to 2026-04-30 | Active | Reliability hardening with CTO decision lock on WS-103/WS-104 execution and QA gates | @cto |
 | sprint-2026-05 | 2026-05-04 to 2026-05-29 | Closed | v1 GA readiness accelerator focused on reliability closure, provider trust, and launch quality gates | @cto |
 | sprint-2026-06 | 2026-06-01 to 2026-06-26 | Closed | Copilot-driven article creation/editing with scripts+emails extracted to separate app boundary | @cto |
+| sprint-2026-07 | 2026-07-01 to 2026-07-18 | Closed | Swift 6/macOS 26 compile and warning remediation for Round 1 diagnostics | @cto |
+| sprint-2026-08 | 2026-08-03 to 2026-08-28 | Closed | Sprint-operations hardening for status synchronization, QA evidence quality, and closeout discipline | @cto |
+| sprint-2026-09 | 2026-09-01 to 2026-09-26 | Active | Reliability and trust hardening across streaming, article edit pipeline, providers, and GA-critical QA gates | @cto |
 
 ## Notes
 
 - Add one row per sprint.
 - Link each row to its sprint folder once available.
 - 2026-04-02 closeout checkpoint: sprint-2026-06 execution artifacts, QA gates, and blocker/risk registers are marked complete.
+- 2026-04-03 planning update: sprint-2026-07 pack is implementation-ready with linked requirements, architecture contract, workstreams, task board, blockers, QA gates, and handoff chain.
+- 2026-04-03 execution update: sprint-2026-07 remediation implementation completed across WS-401 through WS-405 with QA approval recorded.
+- 2026-04-03 closeout update: sprint-2026-07 is formally closed with WS-401 through WS-405 complete, all blockers closed, and QA decision Approved.
+- 2026-04-03 initiation update: sprint-2026-08 planning pack created to operationalize sprint-2026-07 carry-forward process actions across indexes, QA evidence, and closeout discipline.
+- 2026-04-03 closeout update: sprint-2026-08 is formally closed with WS-501 through WS-504 complete, all blockers closed, all risks mitigated, and QA approval recorded for reuse of the process baseline.
+- 2026-04-03 initiation update: sprint-2026-09 planning pack opened with reliability-first workstreams (WS-601 through WS-605) based on the architecture risk-reduction plan.
+- 2026-04-03 execution update: sprint-2026-09 moved to Active with WS-601 through WS-604 and TASK-601 through TASK-606 in progress.

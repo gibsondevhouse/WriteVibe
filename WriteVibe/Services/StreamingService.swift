@@ -10,11 +10,14 @@ import SwiftData
 @Observable
 final class StreamingService {
 
+    private static let maxTransientStreamRetries = 1
+
     private let conversationService: ConversationService
-    private let messagePersistenceAdapter: MessagePersistenceAdapter
+    private let messagePersistence: MessagePersistence
+    private let tokenBuffering: MessageTokenBuffering
     private let augmentationEngine: PromptAugmentationEngine
     private let webSearchProvider: any SearchContextProviding
-    private let hasSearchAPIKey: @Sendable () -> Bool
+    private let hasSearchAPIKey: @MainActor () -> Bool
 
     init(
         conversationService: ConversationService,
@@ -22,7 +25,7 @@ final class StreamingService {
         messagePersistenceAdapter: MessagePersistenceAdapter? = nil,
         usePersistenceAdapter: Bool? = nil,
         webSearchProvider: (any SearchContextProviding)? = nil,
-        hasSearchAPIKey: (@Sendable () -> Bool)? = nil
+        hasSearchAPIKey: (@MainActor () -> Bool)? = nil
     ) {
         let usePersistenceAdapter = usePersistenceAdapter ?? AppConstants.useStreamingPersistenceAdapter
         let hasSearchAPIKey = hasSearchAPIKey ?? {
@@ -30,13 +33,16 @@ final class StreamingService {
         }
 
         self.conversationService = conversationService
+        let persistenceAdapter: MessagePersistenceAdapter
         if let messagePersistenceAdapter {
-            self.messagePersistenceAdapter = messagePersistenceAdapter
+            persistenceAdapter = messagePersistenceAdapter
         } else if usePersistenceAdapter {
-            self.messagePersistenceAdapter = SwiftDataMessagePersistenceAdapter(conversationService: conversationService)
+            persistenceAdapter = SwiftDataMessagePersistenceAdapter(conversationService: conversationService)
         } else {
-            self.messagePersistenceAdapter = InMemoryPersistenceAdapter()
+            persistenceAdapter = InMemoryPersistenceAdapter()
         }
+        self.messagePersistence = persistenceAdapter
+        self.tokenBuffering = persistenceAdapter
         self.augmentationEngine = PromptAugmentationEngine()
         self.webSearchProvider = webSearchProvider ?? WebSearchContextProvider(searchProvider: searchProvider)
         self.hasSearchAPIKey = hasSearchAPIKey
@@ -79,50 +85,69 @@ final class StreamingService {
             )
         }
 
-        let runContext = GenerationRunContext(
+        let handle = try messagePersistence.createAssistantPlaceholder(
             conversationId: conversationId,
             modelName: modelName,
             context: context
         )
-        let handle = try messagePersistenceAdapter.beginAssistantMessage(run: runContext)
 
         var tokenBuffer = ""
         var tokenCount  = 0
+        var didReceiveReadableToken = false
+        var attempt = 0
 
-        let stream = provider.stream(
-            model: modelName,
-            messages: contextMessages,
-            systemPrompt: augmentedPrompt
-        )
+        while true {
+            let stream = provider.stream(
+                model: modelName,
+                messages: contextMessages,
+                systemPrompt: augmentedPrompt
+            )
 
-        do {
-            for try await token in stream {
-                tokenBuffer += token
-                tokenCount  += 1
-                if tokenCount >= AppConstants.tokenBatchSize {
-                    try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
-                    tokenBuffer = ""
-                    tokenCount  = 0
+            do {
+                for try await token in stream {
+                    if !token.isEmpty {
+                        didReceiveReadableToken = true
+                    }
+                    tokenBuffer += token
+                    tokenCount  += 1
+                    if tokenCount >= AppConstants.tokenBatchSize {
+                        try tokenBuffering.appendBufferedTokens(tokenBuffer, handle: handle)
+                        tokenBuffer = ""
+                        tokenCount  = 0
+                    }
                 }
+                break
+            } catch is CancellationError {
+                if !tokenBuffer.isEmpty {
+                    try tokenBuffering.appendBufferedTokens(tokenBuffer, handle: handle)
+                }
+                try messagePersistence.finalizeAssistantPlaceholder(handle: handle, outcome: .cancelled)
+                throw CancellationError()
+            } catch {
+                if shouldRetryTransientStreamFailure(error, attempt: attempt, didReceiveReadableToken: didReceiveReadableToken) {
+                    attempt += 1
+                    continue
+                }
+                if !tokenBuffer.isEmpty {
+                    try tokenBuffering.appendBufferedTokens(tokenBuffer, handle: handle)
+                }
+                try messagePersistence.finalizeAssistantPlaceholder(handle: handle, outcome: .failed(error))
+                throw error
             }
-
-            if !tokenBuffer.isEmpty {
-                try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
-            }
-            try messagePersistenceAdapter.finalize(handle: handle, outcome: .succeeded)
-        } catch is CancellationError {
-            if !tokenBuffer.isEmpty {
-                try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
-            }
-            try messagePersistenceAdapter.finalize(handle: handle, outcome: .cancelled)
-            throw CancellationError()
-        } catch {
-            if !tokenBuffer.isEmpty {
-                try messagePersistenceAdapter.appendToken(tokenBuffer, handle: handle)
-            }
-            try messagePersistenceAdapter.finalize(handle: handle, outcome: .failed(error))
-            throw error
         }
+
+        guard didReceiveReadableToken else {
+            let decodingError = WriteVibeError.decodingFailed(
+                context: "Provider response contained no readable text"
+            )
+            try messagePersistence.finalizeAssistantPlaceholder(handle: handle, outcome: .failed(decodingError))
+            throw decodingError
+        }
+
+        if !tokenBuffer.isEmpty {
+            try tokenBuffering.appendBufferedTokens(tokenBuffer, handle: handle)
+        }
+        try messagePersistence.finalizeAssistantPlaceholder(handle: handle, outcome: .succeeded)
     }
 
     // MARK: - Search Augmentation
@@ -137,7 +162,7 @@ final class StreamingService {
         let selectedModelIsSearchNative = modelName.hasPrefix("perplexity/sonar")
         let searchLayerModel = selectedModelIsSearchNative
             ? modelName
-            : (AIModel.perplexitySonarPro.openRouterModelID ?? "perplexity/sonar-pro")
+            : "perplexity/sonar-pro"
 
         if selectedModelIsSearchNative {
             augmented += "\n\nSearch: Use your built-in web retrieval. Ground factual claims in retrieved sources and include citations/links when possible. If retrieval fails, say that clearly instead of inventing details."
@@ -194,7 +219,7 @@ final class StreamingService {
             case .network(let underlying):
                 return .localSearchUnavailable(reason: "the web search layer could not be reached (\(underlying.localizedDescription))")
             default:
-                return .localSearchUnavailable(reason: error.localizedDescription ?? "the web search layer is unavailable")
+                return .localSearchUnavailable(reason: error.localizedDescription)
             }
         }
 
@@ -203,5 +228,41 @@ final class StreamingService {
 
     private func localSearchFallbackWarning(reason: String) -> String {
         "\n\nSearch: Web search is unavailable for this Ollama request because \(reason). Continue without external web retrieval and do not claim web verification."
+    }
+
+    private func shouldRetryTransientStreamFailure(
+        _ error: Error,
+        attempt: Int,
+        didReceiveReadableToken: Bool
+    ) -> Bool {
+        guard attempt < Self.maxTransientStreamRetries, !didReceiveReadableToken else {
+            return false
+        }
+
+        if let writeVibeError = error as? WriteVibeError {
+            switch writeVibeError {
+            case .network:
+                return true
+            case .apiError(_, let statusCode, _):
+                return isTransientStatusCode(statusCode)
+            default:
+                return false
+            }
+        }
+
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .notConnectedToInternet:
+                return true
+            default:
+                return false
+            }
+        }
+
+        return false
+    }
+
+    private func isTransientStatusCode(_ statusCode: Int) -> Bool {
+        statusCode == 408 || statusCode == 409 || statusCode == 429 || (500...599).contains(statusCode)
     }
 }

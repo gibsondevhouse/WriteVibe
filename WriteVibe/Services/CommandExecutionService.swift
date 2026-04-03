@@ -14,38 +14,67 @@ enum CommandErrorCategory: String, Codable {
     case execution
 }
 
-struct CommandEnvelopeCommand: Codable, Equatable {
+struct CommandEnvelopeCommand: Codable, Equatable, Sendable {
     let namespace: String
     let verb: String?
     let subverb: String?
     let raw: String
+
+    nonisolated static func == (lhs: CommandEnvelopeCommand, rhs: CommandEnvelopeCommand) -> Bool {
+        lhs.namespace == rhs.namespace
+            && lhs.verb == rhs.verb
+            && lhs.subverb == rhs.subverb
+            && lhs.raw == rhs.raw
+    }
 }
 
-struct CommandEnvelopeTarget: Codable, Equatable {
+struct CommandEnvelopeTarget: Codable, Equatable, Sendable {
     let articleId: String?
     let articleTitle: String?
     let scope: String?
+
+    nonisolated static func == (lhs: CommandEnvelopeTarget, rhs: CommandEnvelopeTarget) -> Bool {
+        lhs.articleId == rhs.articleId
+            && lhs.articleTitle == rhs.articleTitle
+            && lhs.scope == rhs.scope
+    }
 }
 
-struct CommandEnvelopeResult: Codable, Equatable {
+struct CommandEnvelopeResult: Codable, Equatable, Sendable {
     let summary: String
     let nextSuggestedCommand: String?
+
+    nonisolated static func == (lhs: CommandEnvelopeResult, rhs: CommandEnvelopeResult) -> Bool {
+        lhs.summary == rhs.summary
+            && lhs.nextSuggestedCommand == rhs.nextSuggestedCommand
+    }
 }
 
-struct CommandEnvelopeArticleMutation: Codable, Equatable {
+struct CommandEnvelopeArticleMutation: Codable, Equatable, Sendable {
     let field: String
     let value: String
+
+    nonisolated static func == (lhs: CommandEnvelopeArticleMutation, rhs: CommandEnvelopeArticleMutation) -> Bool {
+        lhs.field == rhs.field
+            && lhs.value == rhs.value
+    }
 }
 
-struct CommandEnvelopeOutlineOperation: Codable, Equatable {
+struct CommandEnvelopeOutlineOperation: Codable, Equatable, Sendable {
     /// "append" or "replace"
     let operation: String
     /// 1-based line index; present for replace only.
     let index: Int?
     let value: String
+
+    nonisolated static func == (lhs: CommandEnvelopeOutlineOperation, rhs: CommandEnvelopeOutlineOperation) -> Bool {
+        lhs.operation == rhs.operation
+            && lhs.index == rhs.index
+            && lhs.value == rhs.value
+    }
 }
 
-struct CommandEnvelopeBodyOperation: Codable, Equatable {
+struct CommandEnvelopeBodyOperation: Codable, Equatable, Sendable {
     /// "append" or "insert"
     let operation: String
     /// "heading" or "paragraph"; present for insert only.
@@ -53,17 +82,32 @@ struct CommandEnvelopeBodyOperation: Codable, Equatable {
     /// 1-based body-block index; present for insert only.
     let index: Int?
     let value: String
+
+    nonisolated static func == (lhs: CommandEnvelopeBodyOperation, rhs: CommandEnvelopeBodyOperation) -> Bool {
+        lhs.operation == rhs.operation
+            && lhs.blockType == rhs.blockType
+            && lhs.index == rhs.index
+            && lhs.value == rhs.value
+    }
 }
 
-struct CommandEnvelopeError: Codable, Equatable {
+struct CommandEnvelopeError: Codable, Equatable, Sendable {
     let code: String
     let category: CommandErrorCategory
     let message: String
     let recoverable: Bool
     let hint: String
+
+    nonisolated static func == (lhs: CommandEnvelopeError, rhs: CommandEnvelopeError) -> Bool {
+        lhs.code == rhs.code
+            && lhs.category == rhs.category
+            && lhs.message == rhs.message
+            && lhs.recoverable == rhs.recoverable
+            && lhs.hint == rhs.hint
+    }
 }
 
-struct CommandExecutionEnvelope: Codable, Equatable, Error {
+struct CommandExecutionEnvelope: Codable, Equatable, Error, Sendable {
     let ok: Bool
     let requestId: String
     let timestamp: String
@@ -75,6 +119,20 @@ struct CommandExecutionEnvelope: Codable, Equatable, Error {
     let articleMutation: CommandEnvelopeArticleMutation?
     let outlineOperation: CommandEnvelopeOutlineOperation?
     let bodyOperation: CommandEnvelopeBodyOperation?
+
+    nonisolated static func == (lhs: CommandExecutionEnvelope, rhs: CommandExecutionEnvelope) -> Bool {
+        lhs.ok == rhs.ok
+            && lhs.requestId == rhs.requestId
+            && lhs.timestamp == rhs.timestamp
+            && lhs.command == rhs.command
+            && lhs.target == rhs.target
+            && lhs.result == rhs.result
+            && lhs.error == rhs.error
+            && lhs.draftAction == rhs.draftAction
+            && lhs.articleMutation == rhs.articleMutation
+            && lhs.outlineOperation == rhs.outlineOperation
+            && lhs.bodyOperation == rhs.bodyOperation
+    }
 
     func renderForAssistantMessage() -> String {
         if ok {
