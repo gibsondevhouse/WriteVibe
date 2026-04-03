@@ -26,11 +26,9 @@ struct SidebarView: View {
             }
 
             Section {
-                comingSoonRow("Emails",    icon: "envelope.open")
                 comingSoonRow("Stories",   icon: "book.closed")
                 comingSoonRow("Essays",    icon: "doc.text")
                 comingSoonRow("Poetry",    icon: "text.quote")
-                comingSoonRow("Scripts",   icon: "scroll")
                 comingSoonRow("Research",  icon: "magnifyingglass.circle")
             } header: {
                 Text("Coming Soon")

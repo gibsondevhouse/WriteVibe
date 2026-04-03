@@ -90,7 +90,7 @@ enum AIModel: String, CaseIterable, Identifiable, Codable {
         case .appleIntelligence:
             return "Leverages on-device Apple Intelligence for fast, private, and offline-capable generation. Optimized for everyday writing tasks like summarization and drafting."
         case .claudeHaiku:
-            return "Anthropic's fastest, most affordable model. Ideal for short-form tasks: quick edits, email drafts, summarisation, and any flow where speed matters more than depth."
+            return "Anthropic's fastest, most affordable model. Ideal for short-form tasks: quick edits, tight summaries, and any flow where speed matters more than depth."
         case .claudeSonnet:
             return "Anthropic's balanced workhorse. Excels at long-form writing, structured arguments, code explanation, and nuanced feedback — the go-to for most serious writing tasks."
         case .claudeOpus:

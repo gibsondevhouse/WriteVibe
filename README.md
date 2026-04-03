@@ -4,9 +4,13 @@ A macOS AI writing assistant built with SwiftUI.
 
 ## Screenshots
 
-| Light | Dark |
-|-------|------|
-| ![WriteVibe light mode](screenshots/writevibe-light.png) | ![WriteVibe dark mode](screenshots/writevibe-dark.png) |
+### Light
+
+![WriteVibe light mode](screenshots/writevibe-light.png)
+
+### Dark
+
+![WriteVibe dark mode](screenshots/writevibe-dark.png)
 
  Supports on-device Apple Intelligence, local Ollama models, and cloud AI providers — giving you a fully offline or cloud-connected writing experience.
 
@@ -22,6 +26,14 @@ A macOS AI writing assistant built with SwiftUI.
 - **Document ingestion** — Import `.txt`, `.md`, `.rtf` files or fetch and strip a URL
 - **Export** — Copy to clipboard or save conversation as Markdown
 - **Context window indicator** — Live token usage with color-coded warnings
+
+## Sprint Closeout Snapshot (sprint-2026-06)
+
+- Added deterministic `/article` command orchestration for draft lifecycle and post-create mutations.
+- Implemented command contracts for context-field updates plus outline/body append/replace/insert operations.
+- Enforced domain boundary cleanup: scripts/emails removed from in-app command/navigation surfaces.
+- Added command UX improvements: command help reference, actionable next-step suggestions, and active draft indicator in Copilot.
+- Validated with expanded gate-pack including parser matrix, lifecycle integration, command execution, and mutation adapter suites (`TEST SUCCEEDED`).
 
 ## Requirements
 
@@ -41,7 +53,7 @@ A macOS AI writing assistant built with SwiftUI.
 
 WriteVibe uses a protocol-based AI abstraction layer (`AIStreamingProvider`) backed by a `ServiceContainer` DI singleton. All providers are instantiated in `ServiceContainer` — never directly in views or state.
 
-```
+```text
 AppState (Observable)
   └── ConversationGenerationManager    — AI generation orchestration
         └── StreamingService            — delegates to subcomponents:

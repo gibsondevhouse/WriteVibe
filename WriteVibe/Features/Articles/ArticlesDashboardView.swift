@@ -10,6 +10,7 @@ import SwiftData
 
 struct ArticlesDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppState.self) private var appState
     @Query(sort: \Article.updatedAt, order: .reverse) private var articles: [Article]
 
     @State private var selectedArticleID: PersistentIdentifier? = nil
@@ -43,6 +44,7 @@ struct ArticlesDashboardView: View {
             if let article = selectedArticle {
                 ArticleWorkspaceView(article: article) {
                     selectedArticleID = nil
+                    appState.setCurrentArticle(nil)
                 }
             } else {
                 dashboardContent
@@ -53,7 +55,16 @@ struct ArticlesDashboardView: View {
                 modelContext.insert(article)
                 try? modelContext.save()
                 selectedArticleID = article.persistentModelID
+                appState.setCurrentArticle(article.id)
             }
+        }
+        .onChange(of: appState.shouldPresentNewArticleFormFromCommand) { _, shouldPresent in
+            guard shouldPresent else { return }
+
+            selectedArticleID = nil
+            appState.setCurrentArticle(nil)
+            isShowingNewArticle = true
+            appState.consumeNewArticleFormPresentationTrigger()
         }
     }
 
@@ -64,6 +75,40 @@ struct ArticlesDashboardView: View {
             .overlay {
                 if isShowingNewArticle {
                     NewArticleCard(
+                        title: Binding(
+                            get: { appState.activeDraft?.title ?? "" },
+                            set: { appState.updateDraftField(.title, value: $0) }
+                        ),
+                        subtitle: Binding(
+                            get: { appState.activeDraft?.subtitle ?? "" },
+                            set: { appState.updateDraftField(.subtitle, value: $0) }
+                        ),
+                        selectedTone: Binding(
+                            get: {
+                                guard let toneRaw = appState.activeDraft?.tone,
+                                      let tone = ArticleTone(rawValue: toneRaw) else {
+                                    return .conversational
+                                }
+                                return tone
+                            },
+                            set: { appState.updateDraftField(.tone, value: $0.rawValue) }
+                        ),
+                        selectedLength: Binding(
+                            get: {
+                                guard let raw = appState.activeDraft?.targetLength,
+                                      let length = ArticleLength(rawValue: raw) else {
+                                    return .medium
+                                }
+                                return length
+                            },
+                            set: { appState.updateDraftField(.targetLength, value: $0.rawValue) }
+                        ),
+                        isTitleSuggested: appState.hasDraftSuggestion(for: .title),
+                        isSubtitleSuggested: appState.hasDraftSuggestion(for: .subtitle),
+                        isToneSuggested: appState.hasDraftSuggestion(for: .tone),
+                        isLengthSuggested: appState.hasDraftSuggestion(for: .targetLength),
+                        onAcceptSuggestion: { appState.acceptDraftSuggestion(for: $0) },
+                        onRejectSuggestion: { appState.rejectDraftSuggestion(for: $0) },
                         onCreate: createArticle,
                         onCancel: { isShowingNewArticle = false }
                     )
@@ -80,7 +125,10 @@ struct ArticlesDashboardView: View {
             ArticleListHeader(
                 filterStatus: $filterStatus,
                 searchText: $searchText,
-                onNewArticle: { isShowingNewArticle = true }
+                onNewArticle: {
+                    appState.ensureDraftSessionForNewArticleForm()
+                    isShowingNewArticle = true
+                }
             )
             if filteredAndSearched.isEmpty {
                 emptyState
@@ -90,9 +138,13 @@ struct ArticlesDashboardView: View {
                         ForEach(filteredAndSearched) { article in
                             ArticleListItem(article: article) {
                                 selectedArticleID = article.persistentModelID
+                                appState.setCurrentArticle(article.id)
                             } onDelete: {
                                 modelContext.delete(article)
                                 try? modelContext.save()
+                                if appState.currentArticleID == article.id {
+                                    appState.setCurrentArticle(nil)
+                                }
                             }
                         }
                     }
@@ -145,7 +197,9 @@ struct ArticlesDashboardView: View {
         article.drafts = [ArticleDraft(title: "Draft 1", content: finalTitle)]
         modelContext.insert(article)
         try? modelContext.save()
+        appState.clearDraftSession()
         isShowingNewArticle = false
         selectedArticleID = article.persistentModelID
+        appState.setCurrentArticle(article.id)
     }
 }

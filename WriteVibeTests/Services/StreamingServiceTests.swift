@@ -312,6 +312,35 @@ struct StreamingServiceTests {
         #expect(capturedPrompt.contains("JSON"))
     }
 
+    @Test func testSystemPromptEnforcesArticleOnlySlashCommandBoundary() async throws {
+        let fixture = try makeContextAndConversation(model: .gpt4o)
+        let context = fixture.context
+        let conversationService = fixture.conversationService
+
+        var capturedPrompt = ""
+        struct PromptCapturingProvider: AIStreamingProvider {
+            let onPromptCaptured: (String) -> Void
+            func stream(model: String, messages: [[String: String]], systemPrompt: String) -> AsyncThrowingStream<String, Error> {
+                onPromptCaptured(systemPrompt)
+                return AsyncThrowingStream { $0.finish() }
+            }
+        }
+
+        let provider = PromptCapturingProvider { capturedPrompt = $0 }
+        let streamingService = StreamingService(conversationService: conversationService, searchProvider: OpenRouterService())
+
+        try await streamingService.streamReply(
+            provider: provider,
+            modelName: "gpt-4o",
+            conversationId: fixture.conversationID,
+            context: context
+        )
+
+        #expect(capturedPrompt.contains("Treat only /article slash commands as in-domain command behavior for this app."))
+        #expect(capturedPrompt.contains("Command domain boundary: WriteVibe only supports /article commands in this app."))
+        #expect(capturedPrompt.contains("For non-command requests (no slash command), continue with normal helpful generation behavior."))
+    }
+
     @Test func testOllamaSearchMissingKeyAddsSoftWarningAndContinues() async throws {
         let fixture = try makeContextAndConversation()
         let context = fixture.context

@@ -7,9 +7,11 @@ import SwiftUI
 
 struct ChatInputField: View {
     @Binding var text: String
-    let canSend: Bool
     var focused: FocusState<Bool>.Binding
-    let onSend: () -> Void
+    let onSubmit: () -> KeyPress.Result
+    let onMoveUp: () -> KeyPress.Result
+    let onMoveDown: () -> KeyPress.Result
+    let onDismissSuggestions: () -> KeyPress.Result
 
     var body: some View {
         TextField("Describe your idea, draft, or edit…", text: $text, axis: .vertical)
@@ -20,9 +22,16 @@ struct ChatInputField: View {
             .focused(focused)
             .textFieldStyle(.plain)
             .onKeyPress(.return) {
-                guard canSend else { return .ignored }
-                onSend()
-                return .handled
+                onSubmit()
+            }
+            .onKeyPress(.upArrow) {
+                onMoveUp()
+            }
+            .onKeyPress(.downArrow) {
+                onMoveDown()
+            }
+            .onKeyPress(.escape) {
+                onDismissSuggestions()
             }
     }
 }

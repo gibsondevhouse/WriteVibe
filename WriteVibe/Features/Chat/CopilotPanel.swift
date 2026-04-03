@@ -28,6 +28,8 @@ struct CopilotPanel: View {
             panelHeader
             Divider()
 
+            draftBanner
+
             if messages.isEmpty {
                 copilotEmptyState
             } else {
@@ -39,6 +41,7 @@ struct CopilotPanel: View {
                 text: $inputText,
                 isThinking: appState.isThinkingInCopilot,
                 tokenUsage: tokenUsage,
+                showSoftGlow: appState.activeDraft != nil,
                 focused: $inputFocused,
                 onSend: sendMessage,
                 onStop: stopGeneration
@@ -49,6 +52,40 @@ struct CopilotPanel: View {
         .onAppear {
             appState.bindModelContextIfNeeded(modelContext)
             inputFocused = true
+        }
+    }
+
+    // MARK: - Draft indicator
+
+    private var draftBanner: some View {
+        Group {
+            if let draft = appState.activeDraft {
+                VStack(spacing: 0) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.badge.plus")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Draft: \(draft.title.isEmpty ? "Untitled" : draft.title)")
+                                .font(.system(size: 11, weight: .medium))
+                                .lineLimit(1)
+                            Text(draft.title.isEmpty
+                                 ? (appState.isAwaitingDraftSummaryInput
+                                    ? "Next: share a short article summary"
+                                    : "Next: /article set title \"<title>\"")
+                                 : "Next: /article create")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Color.orange.opacity(0.10))
+                    Divider()
+                }
+            }
         }
     }
 

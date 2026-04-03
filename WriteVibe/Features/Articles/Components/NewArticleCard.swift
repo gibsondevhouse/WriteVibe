@@ -8,13 +8,20 @@ import SwiftUI
 // MARK: - NewArticleCard
 
 struct NewArticleCard: View {
+    @Binding var title: String
+    @Binding var subtitle: String
+    @Binding var selectedTone: ArticleTone
+    @Binding var selectedLength: ArticleLength
+
+    var isTitleSuggested: Bool = false
+    var isSubtitleSuggested: Bool = false
+    var isToneSuggested: Bool = false
+    var isLengthSuggested: Bool = false
+    var onAcceptSuggestion: (DraftSuggestionField) -> Void = { _ in }
+    var onRejectSuggestion: (DraftSuggestionField) -> Void = { _ in }
+
     var onCreate: (String, String, ArticleTone, ArticleLength) -> Void
     var onCancel: () -> Void
-
-    @State private var title: String = ""
-    @State private var subtitle: String = ""
-    @State private var selectedTone: ArticleTone = .conversational
-    @State private var selectedLength: ArticleLength = .medium
 
     var body: some View {
         GeometryReader { geo in
@@ -68,9 +75,12 @@ struct NewArticleCard: View {
 
     private var titleInputGroup: some View {
         VStack(alignment: .leading, spacing: WVSpace.sm) {
-            TextField("What are you writing about?", text: $title)
-                .font(.wvHeadline)
-                .textFieldStyle(.plain)
+            HStack(alignment: .center, spacing: WVSpace.sm) {
+                suggestionControls(for: .title, isSuggested: isTitleSuggested)
+                TextField("What are you writing about?", text: $title)
+                    .font(.wvHeadline)
+                    .textFieldStyle(.plain)
+            }
             Color.primary.opacity(0.08)
                 .frame(height: 1)
         }
@@ -80,9 +90,12 @@ struct NewArticleCard: View {
 
     private var subtitleInputGroup: some View {
         VStack(alignment: .leading, spacing: WVSpace.sm) {
-            TextField("Add a subtitle or brief description…", text: $subtitle)
-                .font(.wvBody)
-                .textFieldStyle(.plain)
+            HStack(alignment: .center, spacing: WVSpace.sm) {
+                suggestionControls(for: .subtitle, isSuggested: isSubtitleSuggested)
+                TextField("Add a subtitle or brief description...", text: $subtitle)
+                    .font(.wvBody)
+                    .textFieldStyle(.plain)
+            }
             Color.primary.opacity(0.08)
                 .frame(height: 1)
         }
@@ -100,16 +113,22 @@ struct NewArticleCard: View {
     private var optionsGroup: some View {
         VStack(alignment: .leading, spacing: WVSpace.lg) {
             VStack(alignment: .leading, spacing: WVSpace.sm) {
-                Text("Tone")
-                    .font(.wvFootnote)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: WVSpace.sm) {
+                    suggestionControls(for: .tone, isSuggested: isToneSuggested)
+                    Text("Tone")
+                        .font(.wvFootnote)
+                        .foregroundStyle(.secondary)
+                }
                 toneGrid
             }
 
             VStack(alignment: .leading, spacing: WVSpace.sm) {
-                Text("Length")
-                    .font(.wvFootnote)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: WVSpace.sm) {
+                    suggestionControls(for: .targetLength, isSuggested: isLengthSuggested)
+                    Text("Length")
+                        .font(.wvFootnote)
+                        .foregroundStyle(.secondary)
+                }
                 HStack(spacing: WVSpace.sm) {
                     ForEach(ArticleLength.allCases, id: \.self) { length in
                         LengthChip(
@@ -171,6 +190,33 @@ struct NewArticleCard: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+        }
+    }
+
+    private func suggestionControls(for field: DraftSuggestionField, isSuggested: Bool) -> some View {
+        Group {
+            if isSuggested {
+                HStack(spacing: 6) {
+                    Button {
+                        onRejectSuggestion(field)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reject AI suggestion")
+
+                    Button {
+                        onAcceptSuggestion(field)
+                    } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Accept AI suggestion")
+                }
+                .font(.system(size: 12, weight: .semibold))
+            }
         }
     }
 }

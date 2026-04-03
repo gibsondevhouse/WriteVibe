@@ -24,6 +24,11 @@ final class ServiceContainer {
     let anthropicProvider: AnthropicService
     let conversationService: ConversationService
     let streamingService: StreamingService
+    let commandExecutionService: CommandExecutionService
+    let articleDraftAutofillService: any ArticleDraftAutofillServicing
+    let articleContextMutationAdapter: ArticleContextMutationAdapter
+    let articleOutlineMutationAdapter: ArticleOutlineMutationAdapter
+    let articleBodyMutationAdapter: ArticleBodyMutationAdapter
     private let hasOpenRouterKey: @Sendable () -> Bool
 
     init(
@@ -31,6 +36,7 @@ final class ServiceContainer {
         openRouterProvider: OpenRouterService? = nil,
         anthropicProvider: AnthropicService? = nil,
         conversationService: ConversationService? = nil,
+        articleDraftAutofillService: (any ArticleDraftAutofillServicing)? = nil,
         webSearchProvider: (any SearchContextProviding)? = nil,
         hasSearchAPIKey: (@Sendable () -> Bool)? = nil
     ) {
@@ -47,6 +53,11 @@ final class ServiceContainer {
         self.anthropicProvider = anthropicProvider
         self.conversationService = conversationService
         self.hasOpenRouterKey = hasOpenRouterKey
+        self.commandExecutionService = CommandExecutionService()
+        self.articleDraftAutofillService = articleDraftAutofillService ?? ArticleDraftAutofillService()
+        self.articleContextMutationAdapter = ArticleContextMutationAdapter()
+        self.articleOutlineMutationAdapter = ArticleOutlineMutationAdapter()
+        self.articleBodyMutationAdapter = ArticleBodyMutationAdapter()
         self.streamingService = StreamingService(
             conversationService: conversationService,
             searchProvider: openRouterProvider,

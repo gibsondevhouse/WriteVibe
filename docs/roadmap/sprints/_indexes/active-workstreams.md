@@ -13,6 +13,12 @@
 | WS-203 | sprint-2026-05 | Article edit confidence and user trust UX | @frontend-lead | Complete | TASK-207/208/209 complete with orchestrator parity and clarity validation |
 | WS-204 | sprint-2026-05 | GA-critical quality gates and automation | @qa-lead | Complete | TASK-210 gate activated and TASK-211 stabilization checkpoint completed with B-204 closure |
 | WS-205 | sprint-2026-05 | v1 launch blocker burn-down and sign-off ops | @cto | Complete | TASK-212 complete; blocker ops and closeout recommendation co-reviewed by CTO/QA |
+| WS-301 | sprint-2026-06 | Command orchestration and domain contracts | @backend-lead | Complete | TASK-301/302 complete; deterministic parser + dispatcher/envelope validated |
+| WS-302 | sprint-2026-06 | App state integration and global routing | @frontend-lead | Complete | TASK-303/304 complete; command intercept, draft lifecycle, and global route handoff validated |
+| WS-303 | sprint-2026-06 | Article mutation adapters and safety guards | @backend-lead | Complete | TASK-305/306 complete; context, outline, and body adapters validated |
+| WS-304 | sprint-2026-06 | Command UX feedback and discoverability | @frontend-lead | Complete | TASK-307/308 complete; help/feedback UX and draft indicator delivered |
+| WS-305 | sprint-2026-06 | QA reliability and regression gate pack | @qa-lead | Complete | TASK-309/310 complete; parser matrix + lifecycle suites and expanded gate-pack passed |
+| WS-306 | sprint-2026-06 | Domain boundary cleanup: scripts and emails extraction | @frontend-lead | Complete | TASK-311/312 complete; scripts/emails removed from in-app command/navigation domain |
 
 ## Status Values
 
