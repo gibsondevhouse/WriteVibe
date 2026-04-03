@@ -47,3 +47,22 @@
 - Workstreams WS-201 through WS-205 are Complete.
 - Delivery closeout approved by `@cto` with `@qa-lead` co-review.
 - Remaining provider availability monitoring (B-201) continues as release operations governance, not open sprint implementation scope.
+
+## Post-Close Intake Queue (Apple Structured Workflow)
+
+These tasks are queued after sprint close and do not alter the final status of TASK-201 through TASK-212.
+
+| Task ID | Workstream | Task | Owner | Status | Priority |
+| --- | --- | --- | --- | --- | --- |
+| TASK-301 | WS-301 | Publish final architecture contract for structured Apple workflow actions | `@architect` | Planned | High |
+| TASK-302 | WS-301 | Publish data contract addendum for structured output schemas and constraints | `@architect` | Planned | High |
+| TASK-303 | WS-302 | Produce backend execution plan for bounded structured tasks and fallback states | `@backend-lead` | Planned | High |
+| TASK-304 | WS-302 | Define backend validation checklist for deterministic structured output mapping | `@backend-tester` | Planned | Medium |
+| TASK-305 | WS-303 | Produce frontend integration plan for commands and selected-text actions | `@frontend-lead` | Planned | High |
+| TASK-306 | WS-303 | Define UX copy and state checklist for non-chat Apple scope messaging | `@product-manager`, `@frontend-lead` | Planned | High |
+| TASK-307 | WS-304 | Define QA gate pack for structured workflows, fallbacks, and observability artifacts | `@qa-lead` | Planned | High |
+| TASK-308 | WS-304 | Define test evidence checklist for transcript and feedback capture acceptance | `@qa-lead`, `@backend-tester`, `@frontend-tester` | Planned | Medium |
+
+### Intake Dependencies
+
+- See decision blockers D-301 through D-305 in `docs/requirements/apple-foundation-models-structured-workflow-decision-log.md`.

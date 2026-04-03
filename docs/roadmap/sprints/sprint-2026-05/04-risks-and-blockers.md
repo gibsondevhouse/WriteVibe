@@ -49,3 +49,27 @@
 
 - Any blocker open for more than 2 business days escalates to `@cto`.
 - Any blocker impacting WS-201 or WS-204 requires same-day triage by `@cto` and `@qa-lead`.
+
+## Post-Close Intake Risks (Apple Structured Workflow)
+
+| Risk ID | Description | Impact | Likelihood | Owner | Mitigation | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-301 | Structured output contracts become too broad and increase context cost or mapping ambiguity | High | Medium | `@architect` | Keep schema concise and task-bounded before contract freeze | Open |
+| R-302 | Apple workflow scope drifts into generic chat expectations in UX copy or routing behavior | High | Medium | `@product-manager` | Enforce explicit non-chat copy and route guardrails in acceptance checks | Open |
+| R-303 | Fallback behavior for unavailable Apple Intelligence is inconsistent across entry points | High | Medium | `@frontend-lead` | Define shared fallback UX contract and QA checklist before implementation | Open |
+| R-304 | Transcript and feedback capture lacks approved retention policy before activation | Medium | Medium | `@qa-lead` | Block evaluation-capture rollout until governance decision is closed | Open |
+
+## Post-Close Intake Blockers (Apple Structured Workflow)
+
+| Blocker ID | Description | Blocking Workstream | Escalation Owner | Status |
+| --- | --- | --- | --- | --- |
+| B-301 | Architecture contract and data contract addendum are not finalized for WS-301 | WS-301 | `@architect` | Open |
+| B-302 | Rollout strategy decision (staged flag vs default-on) is unresolved | WS-302, WS-303, WS-304 | `@cto` | Open |
+| B-303 | Structured-task quality threshold and fallback UX standard are unresolved | WS-304 | `@qa-lead` | Open |
+| B-304 | Transcript and feedback retention policy unresolved for internal evaluation artifacts | WS-304 | `@cto` | Open |
+
+## Post-Close Intake Decision Log (Apple Structured Workflow)
+
+- 2026-04-03: Product requirements and handoff package were published for Apple Foundation Models structured workflow augmentation.
+- 2026-04-03: WS-301 through WS-304 were queued as planned post-close intake workstreams pending architecture and governance decisions.
+- 2026-04-03: Decision queue D-301 through D-305 was opened with owner assignments and due dates in `docs/requirements/apple-foundation-models-structured-workflow-decision-log.md`.

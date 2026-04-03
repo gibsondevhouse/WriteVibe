@@ -28,11 +28,10 @@
 | WS-502 | sprint-2026-08 | Sprint artifact synchronization controls and governance contract | @architect | Complete | TASK-502 complete; governance contract published with same-batch update sets for sprint-local docs and portfolio indexes |
 | WS-503 | sprint-2026-08 | QA command normalization and evidence-log standardization | @qa-lead | Complete | TASK-503/504 published in sprint QA gates; paired WS-504 dry-run approved the process pack for reuse |
 | WS-504 | sprint-2026-08 | Operational rollout, dry-run validation, and closeout discipline | @cto | Complete | TASK-505/506 complete; WS-504 dry-run approved and ready for reuse as the sprint closeout-discipline baseline |
-| WS-601 | sprint-2026-09 | Streaming and persistence decoupling delivery | @backend-lead | In Progress | TASK-601/602 establish `MessagePersistence` contract and focused regression confidence |
-| WS-602 | sprint-2026-09 | Article edit pipeline stabilization | @frontend-lead | In Progress | TASK-603/604 aligned to `ArticleEditOrchestrating` contract invariants and round-trip correctness validation |
-| WS-603 | sprint-2026-09 | Provider reliability and trust hardening | @backend-lead | In Progress | TASK-605 closes scoped provider failure/recovery reliability gaps against frozen taxonomy baseline v1 |
-| WS-604 | sprint-2026-09 | GA-critical test gate expansion and enforcement | @qa-lead | In Progress | TASK-606 baseline published/frozen (B-603 closed); focused gate evidence bundle execution remains active |
-| WS-605 | sprint-2026-09 | Launch blocker burn-down operations | @cto | In Progress | TASK-607 maintains blocker closure sequencing and readiness snapshots with B-601/B-602 closed and implementation evidence tracking active |
+| WS-901 | sprint-2026-09 | Structured generation contracts and guardrails | @architect | In Progress | TASK-901/902 publish final structured contract and schema addendum for bounded Apple workflow tasks |
+| WS-902 | sprint-2026-09 | Backend structured task orchestration readiness | @backend-lead | Planned | TASK-903/904 define execution and deterministic mapping validation plans after WS-901 publication |
+| WS-903 | sprint-2026-09 | Frontend workflow and UX integration readiness | @frontend-lead | Planned | TASK-905/906 define integration, non-chat scope copy, and fallback UX checklist |
+| WS-904 | sprint-2026-09 | Quality gates and observability readiness | @qa-lead | Planned | TASK-907/908 define QA gate pack and transcript and feedback evidence checklist after decision closure |
 
 ## Status Values
 

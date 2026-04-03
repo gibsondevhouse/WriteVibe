@@ -116,3 +116,30 @@ Recommendation to `@cto`: Approve sprint-2026-05 closeout. Delivery scope is com
 - Decision Date: 2026-04-02
 - Rationale: Entry gate passed, workflow freeze/gate enforcement active, and planning-phase blockers B-202/B-203/B-204/B-205 are closed.
 - Constraint: Historical entry decision only. Sprint implementation scope was later completed and formally closed on 2026-04-02.
+
+## Post-Close Intake Gates (Apple Structured Workflow)
+
+These gates apply to post-close intake WS-301 through WS-304 and do not modify the historical 2026-04-02 sprint close decision.
+
+### Intake Entry Checklist
+
+- [ ] Architecture contract is finalized for structured workflow boundaries and non-chat guardrails (TASK-301).
+- [ ] Data contract addendum is finalized for typed output schemas and bounded field mapping (TASK-302).
+- [ ] Decision queue D-301 through D-305 has owners, due dates, and active review status.
+- [ ] Fallback UX standard is defined for unavailable Apple Intelligence states.
+- [ ] Transcript/feedback retention policy is approved before evaluation capture activation.
+
+### Intake Exit Checklist
+
+- [ ] Backend and frontend lead plans are approved for WS-302 and WS-303.
+- [ ] QA gate pack draft is approved for structured workflows, fallback behavior, and observability artifacts (TASK-307).
+- [ ] Evidence checklist is approved for transcript and feedback capture acceptance (TASK-308).
+- [ ] No unresolved high-severity blockers remain in B-301 through B-304.
+
+### Intake References
+
+- `docs/requirements/apple-foundation-models-structured-workflow-augmentation.md`
+- `docs/requirements/apple-foundation-models-structured-workflow-augmentation-handoff.md`
+- `docs/architecture/service-contracts/apple-foundation-models-structured-workflow-contract.md`
+- `docs/requirements/apple-foundation-models-structured-workflow-decision-log.md`
+- `docs/requirements/apple-foundation-models-structured-workflow-task-stubs.md`
