@@ -24,7 +24,7 @@ private func makeTestArticle(title: String = "Test Article", topic: String = "Sw
 
 private func makeSelectionPayload(
     token: String = "tok-1",
-    selectedText: String = "Hello world"
+    selectedText: String = String(repeating: "A", count: 80)
 ) -> EditorSelectionPayload {
     EditorSelectionPayload(
         blockID: UUID(),

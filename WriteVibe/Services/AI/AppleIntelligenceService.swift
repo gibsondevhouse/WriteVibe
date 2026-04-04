@@ -145,6 +145,46 @@ struct AppleStructuredContextSuggestionProposal: Equatable, Sendable {
     let acceptedFields: [String]
 }
 
+struct SummarizeProposal: Codable, Equatable, Sendable {
+    let summarizedText: String
+    let wordCount: Int
+    let generatedOn: Date
+}
+
+struct ImproveProposal: Codable, Equatable, Sendable {
+    let improvedText: String
+    let rationale: String?
+    let generatedOn: Date
+}
+
+struct VariantsProposal: Codable, Equatable, Sendable {
+    let variants: [TextVariant]
+    let generatedOn: Date
+}
+
+struct TextVariant: Codable, Equatable, Sendable {
+    let text: String
+    let style: String?
+}
+
+enum AppleStructuredWorkflowFeatureFlag: Sendable {
+    case summarizeSelection
+    case improveSelection
+    case generateVariants
+
+    var isEnabled: Bool {
+        AppConstants.isAppleStructuredWorkflowEnabled
+    }
+}
+
+struct AppleWorkflowInputSummary: Equatable, Sendable {
+    let selectionWordCount: Int
+    let selectionToken: String
+    let blockID: UUID?
+    let selectionRangeLocation: Int
+    let selectionRangeLength: Int
+}
+
 struct AppleWorkflowRunArtifact: Equatable, Sendable {
     let runID: UUID
     let taskKind: AppleWorkflowTaskKind
@@ -157,6 +197,7 @@ struct AppleWorkflowRunArtifact: Equatable, Sendable {
     let startedAt: Date
     let completedAt: Date
     let schemaVersion: String
+    let inputSummary: AppleWorkflowInputSummary?
 }
 
 protocol AppleStructuredWorkflowRouting: Sendable {
@@ -167,6 +208,9 @@ protocol AppleStructuredWorkflowServicing: Sendable {
     func autofillDraft(from summary: String, articleSnapshot: DraftAutofillSeed?) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal>
     func suggestOutline(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>
     func suggestContext(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>
+    func summarizeSelectedText(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<SummarizeProposal>
+    func improveSelectedText(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<ImproveProposal>
+    func generateVariants(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<VariantsProposal>
 }
 
 protocol AppleWorkflowObservabilityServicing: Sendable {
@@ -220,7 +264,10 @@ struct DefaultAppleStructuredWorkflowRouter: AppleStructuredWorkflowRouting {
     private let supportedTaskKinds: Set<AppleWorkflowTaskKind> = [
         .draftAutofill,
         .outlineSuggestion,
-        .contextSuggestion
+        .contextSuggestion,
+        .summarizeSelection,
+        .improveSelection,
+        .generateVariants
     ]
 
     private func supportedEntryPoint(for taskKind: AppleWorkflowTaskKind) -> AppleWorkflowEntryPoint {
@@ -278,6 +325,9 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
     typealias DraftAutofillExecutor = @MainActor (DraftAutofillSeed) async throws -> DraftAutofillProposal
     typealias OutlineExecutor = @MainActor (AppleStructuredPlanningSnapshot) async throws -> AppleStructuredOutlineSuggestionProposal
     typealias ContextExecutor = @MainActor (AppleStructuredPlanningSnapshot) async throws -> AppleStructuredContextSuggestionProposal
+    typealias SummarizeSelectionExecutor = @MainActor (String) async throws -> String
+    typealias ImproveSelectionExecutor = @MainActor (String, String?) async throws -> String
+    typealias VariantsSelectionExecutor = @MainActor (String, String) async throws -> DraftVariants
 
     static let schemaVersion = "apple-structured-workflow/v1"
 
@@ -289,6 +339,9 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
     private let draftAutofillExecutor: DraftAutofillExecutor
     private let outlineExecutor: OutlineExecutor
     private let contextExecutor: ContextExecutor
+    private let summarizeSelectionExecutor: SummarizeSelectionExecutor
+    private let improveSelectionExecutor: ImproveSelectionExecutor
+    private let variantsSelectionExecutor: VariantsSelectionExecutor
 
     init(
         heuristicDraftAutofillService: any ArticleDraftAutofillServicing,
@@ -313,6 +366,24 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
                 throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
             }
             return try await AppleIntelligenceService.generateContextSuggestion(from: snapshot)
+        },
+        summarizeSelectionExecutor: @escaping SummarizeSelectionExecutor = { text in
+            guard #available(macOS 26, *) else {
+                throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
+            }
+            return try await AppleIntelligenceService.summarize(text)
+        },
+        improveSelectionExecutor: @escaping ImproveSelectionExecutor = { text, tone in
+            guard #available(macOS 26, *) else {
+                throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
+            }
+            return try await AppleIntelligenceService.rewriteSelection(text, tone: tone)
+        },
+        variantsSelectionExecutor: @escaping VariantsSelectionExecutor = { text, tone in
+            guard #available(macOS 26, *) else {
+                throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
+            }
+            return try await AppleIntelligenceService.generateVariants(for: text, tone: tone)
         }
     ) {
         self.heuristicDraftAutofillService = heuristicDraftAutofillService
@@ -323,6 +394,9 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
         self.draftAutofillExecutor = draftAutofillExecutor
         self.outlineExecutor = outlineExecutor
         self.contextExecutor = contextExecutor
+        self.summarizeSelectionExecutor = summarizeSelectionExecutor
+        self.improveSelectionExecutor = improveSelectionExecutor
+        self.variantsSelectionExecutor = variantsSelectionExecutor
     }
 
     func autofillDraft(from summary: String, articleSnapshot: DraftAutofillSeed?) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal> {
@@ -569,6 +643,343 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
         }
     }
 
+    func summarizeSelectedText(
+        text: String,
+        selection: EditorSelectionPayload,
+        article: Article
+    ) async -> AppleStructuredWorkflowTaskResult<SummarizeProposal> {
+        let runID = UUID()
+        let startedAt = Date()
+        let inputSummary = makeInputSummary(selection: selection)
+        let normalizedText = text.trimmed
+
+        guard AppleStructuredWorkflowFeatureFlag.summarizeSelection.isEnabled else {
+            return await summarizeSelectionFallback(
+                text: normalizedText,
+                selection: selection,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .featureFlagDisabled,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "We couldn't enhance this right now. Try again later.",
+                inputSummary: inputSummary
+            )
+        }
+
+        guard validateSelectedTextInput(text: normalizedText, selection: selection) else {
+            let result = AppleStructuredWorkflowTaskResult<SummarizeProposal>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .validationFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Select at least 50 characters before summarizing.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .summarizeSelection, entryPoint: .articleEditorSelection, articleID: article.id, startedAt: startedAt, inputSummary: inputSummary)
+            return result
+        }
+
+        switch availabilityEvaluator() {
+        case .available:
+            break
+        case .unsupportedPlatform:
+            return await summarizeSelectionFallback(
+                text: normalizedText,
+                selection: selection,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .unsupportedPlatform,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "We couldn't enhance this right now. Try again later.",
+                inputSummary: inputSummary
+            )
+        case .modelUnavailable:
+            return await summarizeSelectionFallback(
+                text: normalizedText,
+                selection: selection,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .modelUnavailable,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "We couldn't enhance this right now. Try again later.",
+                inputSummary: inputSummary
+            )
+        }
+
+        do {
+            let summaryText = try await summarizeSelectionExecutor(normalizedText).trimmed
+            guard !summaryText.isEmpty else {
+                return await summarizeSelectionFallback(
+                    text: normalizedText,
+                    selection: selection,
+                    articleID: article.id,
+                    runID: runID,
+                    startedAt: startedAt,
+                    reason: .executionFailed,
+                    fallbackCode: .retrySameAction,
+                    userMessage: "We couldn't enhance this right now. Try again later.",
+                    inputSummary: inputSummary
+                )
+            }
+
+            let payload = SummarizeProposal(
+                summarizedText: summaryText,
+                wordCount: wordCount(in: summaryText),
+                generatedOn: Date()
+            )
+            let result = AppleStructuredWorkflowTaskResult(
+                state: .success,
+                payload: payload,
+                unavailableReason: nil,
+                fallbackCode: nil,
+                userMessage: "Summary is ready to review.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .summarizeSelection, entryPoint: .articleEditorSelection, articleID: article.id, startedAt: startedAt, inputSummary: inputSummary)
+            return result
+        } catch {
+            return await summarizeSelectionFallback(
+                text: normalizedText,
+                selection: selection,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .executionFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "We couldn't enhance this right now. Try again later.",
+                inputSummary: inputSummary
+            )
+        }
+    }
+
+    func improveSelectedText(
+        text: String,
+        selection: EditorSelectionPayload,
+        article: Article
+    ) async -> AppleStructuredWorkflowTaskResult<ImproveProposal> {
+        let runID = UUID()
+        let startedAt = Date()
+        let inputSummary = makeInputSummary(selection: selection)
+        let normalizedText = text.trimmed
+
+        guard AppleStructuredWorkflowFeatureFlag.improveSelection.isEnabled else {
+            return await improveSelectionFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .featureFlagDisabled,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "This utility isn't available now.",
+                inputSummary: inputSummary
+            )
+        }
+
+        guard validateSelectedTextInput(text: normalizedText, selection: selection) else {
+            let result = AppleStructuredWorkflowTaskResult<ImproveProposal>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .validationFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Select at least 50 characters before improving text.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .improveSelection, entryPoint: .articleEditorSelection, articleID: article.id, startedAt: startedAt, inputSummary: inputSummary)
+            return result
+        }
+
+        switch availabilityEvaluator() {
+        case .available:
+            break
+        case .unsupportedPlatform:
+            return await improveSelectionFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .unsupportedPlatform,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "This utility isn't available now.",
+                inputSummary: inputSummary
+            )
+        case .modelUnavailable:
+            return await improveSelectionFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .modelUnavailable,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "This utility isn't available now.",
+                inputSummary: inputSummary
+            )
+        }
+
+        do {
+            let improvedText = try await improveSelectionExecutor(normalizedText, article.tone.rawValue).trimmed
+            guard !improvedText.isEmpty else {
+                return await improveSelectionFallback(
+                    originalText: normalizedText,
+                    articleID: article.id,
+                    runID: runID,
+                    startedAt: startedAt,
+                    reason: .executionFailed,
+                    fallbackCode: .retrySameAction,
+                    userMessage: "This utility isn't available now.",
+                    inputSummary: inputSummary
+                )
+            }
+
+            let payload = ImproveProposal(
+                improvedText: improvedText,
+                rationale: "Clarified while preserving original intent.",
+                generatedOn: Date()
+            )
+            let result = AppleStructuredWorkflowTaskResult(
+                state: .success,
+                payload: payload,
+                unavailableReason: nil,
+                fallbackCode: nil,
+                userMessage: "Improved text is ready to review.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .improveSelection, entryPoint: .articleEditorSelection, articleID: article.id, startedAt: startedAt, inputSummary: inputSummary)
+            return result
+        } catch {
+            return await improveSelectionFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .executionFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "This utility isn't available now.",
+                inputSummary: inputSummary
+            )
+        }
+    }
+
+    func generateVariants(
+        text: String,
+        selection: EditorSelectionPayload,
+        article: Article
+    ) async -> AppleStructuredWorkflowTaskResult<VariantsProposal> {
+        let runID = UUID()
+        let startedAt = Date()
+        let inputSummary = makeInputSummary(selection: selection)
+        let normalizedText = text.trimmed
+
+        guard AppleStructuredWorkflowFeatureFlag.generateVariants.isEnabled else {
+            return await variantsFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .featureFlagDisabled,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "Variants aren't available now.",
+                inputSummary: inputSummary
+            )
+        }
+
+        guard validateSelectedTextInput(text: normalizedText, selection: selection) else {
+            let result = AppleStructuredWorkflowTaskResult<VariantsProposal>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .validationFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Select at least 50 characters before generating variants.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .generateVariants, entryPoint: .articleEditorSelection, articleID: article.id, startedAt: startedAt, inputSummary: inputSummary)
+            return result
+        }
+
+        switch availabilityEvaluator() {
+        case .available:
+            break
+        case .unsupportedPlatform:
+            return await variantsFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .unsupportedPlatform,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "Variants aren't available now.",
+                inputSummary: inputSummary
+            )
+        case .modelUnavailable:
+            return await variantsFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .modelUnavailable,
+                fallbackCode: .manualSelectionEditing,
+                userMessage: "Variants aren't available now.",
+                inputSummary: inputSummary
+            )
+        }
+
+        do {
+            let generated = try await variantsSelectionExecutor(normalizedText, article.tone.rawValue)
+            let variants = generated.variants
+                .map { $0.trimmed }
+                .filter { !$0.isEmpty }
+                .prefix(3)
+                .map { TextVariant(text: $0, style: nil) }
+
+            guard !variants.isEmpty else {
+                return await variantsFallback(
+                    originalText: normalizedText,
+                    articleID: article.id,
+                    runID: runID,
+                    startedAt: startedAt,
+                    reason: .executionFailed,
+                    fallbackCode: .retrySameAction,
+                    userMessage: "Variants aren't available now.",
+                    inputSummary: inputSummary
+                )
+            }
+
+            let payload = VariantsProposal(
+                variants: Array(variants),
+                generatedOn: Date()
+            )
+            let result = AppleStructuredWorkflowTaskResult(
+                state: .success,
+                payload: payload,
+                unavailableReason: nil,
+                fallbackCode: nil,
+                userMessage: "Variants are ready to review.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .generateVariants, entryPoint: .articleEditorSelection, articleID: article.id, startedAt: startedAt, inputSummary: inputSummary)
+            return result
+        } catch {
+            return await variantsFallback(
+                originalText: normalizedText,
+                articleID: article.id,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .executionFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Variants aren't available now.",
+                inputSummary: inputSummary
+            )
+        }
+    }
+
     nonisolated static func defaultAvailability() -> AppleWorkflowAvailability {
         guard #available(macOS 26, *) else {
             return .unsupportedPlatform
@@ -618,7 +1029,8 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
         taskKind: AppleWorkflowTaskKind,
         entryPoint: AppleWorkflowEntryPoint,
         articleID: UUID?,
-        startedAt: Date
+        startedAt: Date,
+        inputSummary: AppleWorkflowInputSummary? = nil
     ) async {
         await observabilityService.recordRun(
             AppleWorkflowRunArtifact(
@@ -632,7 +1044,8 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
                 userMessage: result.userMessage,
                 startedAt: startedAt,
                 completedAt: Date(),
-                schemaVersion: result.schemaVersion
+                schemaVersion: result.schemaVersion,
+                inputSummary: inputSummary
             )
         )
     }
@@ -643,6 +1056,135 @@ final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
 
     private func isValidContextSnapshot(_ snapshot: AppleStructuredPlanningSnapshot) -> Bool {
         !snapshot.title.trimmed.isEmpty || !snapshot.topic.trimmed.isEmpty || !snapshot.summary.trimmed.isEmpty
+    }
+
+    private func validateSelectedTextInput(text: String, selection: EditorSelectionPayload) -> Bool {
+        let trimmedSelectedText = selection.selectedText.trimmed
+        let token = selection.token.trimmed
+        let hasBlockID = selection.blockID != nil
+        let range = selection.range
+        let selectedLength = (selection.selectedText as NSString).length
+
+        guard !text.isEmpty,
+              !trimmedSelectedText.isEmpty,
+              !token.isEmpty,
+              hasBlockID,
+              text.count >= 50,
+              text.count <= 50_000,
+              range.location >= 0,
+              range.length > 0,
+              NSMaxRange(range) <= selectedLength else {
+            return false
+        }
+        return true
+    }
+
+    private func makeInputSummary(selection: EditorSelectionPayload) -> AppleWorkflowInputSummary {
+        AppleWorkflowInputSummary(
+            selectionWordCount: wordCount(in: selection.selectedText),
+            selectionToken: selection.token,
+            blockID: selection.blockID,
+            selectionRangeLocation: selection.range.location,
+            selectionRangeLength: selection.range.length
+        )
+    }
+
+    private func summarizeSelectionFallback(
+        text: String,
+        selection: EditorSelectionPayload,
+        articleID: UUID,
+        runID: UUID,
+        startedAt: Date,
+        reason: AppleWorkflowUnavailableReason,
+        fallbackCode: AppleWorkflowFallbackCode,
+        userMessage: String,
+        inputSummary: AppleWorkflowInputSummary
+    ) async -> AppleStructuredWorkflowTaskResult<SummarizeProposal> {
+        let fallbackSummary = summarizeFallbackText(from: text.isEmpty ? selection.selectedText : text)
+        let payload = SummarizeProposal(
+            summarizedText: fallbackSummary,
+            wordCount: wordCount(in: fallbackSummary),
+            generatedOn: Date()
+        )
+        let result = AppleStructuredWorkflowTaskResult(
+            state: .completedWithFallback,
+            payload: payload,
+            unavailableReason: reason,
+            fallbackCode: fallbackCode,
+            userMessage: userMessage,
+            runID: runID,
+            schemaVersion: Self.schemaVersion
+        )
+        await record(result, taskKind: .summarizeSelection, entryPoint: .articleEditorSelection, articleID: articleID, startedAt: startedAt, inputSummary: inputSummary)
+        return result
+    }
+
+    private func improveSelectionFallback(
+        originalText: String,
+        articleID: UUID,
+        runID: UUID,
+        startedAt: Date,
+        reason: AppleWorkflowUnavailableReason,
+        fallbackCode: AppleWorkflowFallbackCode,
+        userMessage: String,
+        inputSummary: AppleWorkflowInputSummary
+    ) async -> AppleStructuredWorkflowTaskResult<ImproveProposal> {
+        let payload = ImproveProposal(
+            improvedText: originalText,
+            rationale: nil,
+            generatedOn: Date()
+        )
+        let result = AppleStructuredWorkflowTaskResult(
+            state: .completedWithFallback,
+            payload: payload,
+            unavailableReason: reason,
+            fallbackCode: fallbackCode,
+            userMessage: userMessage,
+            runID: runID,
+            schemaVersion: Self.schemaVersion
+        )
+        await record(result, taskKind: .improveSelection, entryPoint: .articleEditorSelection, articleID: articleID, startedAt: startedAt, inputSummary: inputSummary)
+        return result
+    }
+
+    private func variantsFallback(
+        originalText: String,
+        articleID: UUID,
+        runID: UUID,
+        startedAt: Date,
+        reason: AppleWorkflowUnavailableReason,
+        fallbackCode: AppleWorkflowFallbackCode,
+        userMessage: String,
+        inputSummary: AppleWorkflowInputSummary
+    ) async -> AppleStructuredWorkflowTaskResult<VariantsProposal> {
+        let payload = VariantsProposal(
+            variants: [TextVariant(text: originalText, style: nil)],
+            generatedOn: Date()
+        )
+        let result = AppleStructuredWorkflowTaskResult(
+            state: .completedWithFallback,
+            payload: payload,
+            unavailableReason: reason,
+            fallbackCode: fallbackCode,
+            userMessage: userMessage,
+            runID: runID,
+            schemaVersion: Self.schemaVersion
+        )
+        await record(result, taskKind: .generateVariants, entryPoint: .articleEditorSelection, articleID: articleID, startedAt: startedAt, inputSummary: inputSummary)
+        return result
+    }
+
+    private func summarizeFallbackText(from text: String) -> String {
+        let normalized = text.replacingOccurrences(of: "\n", with: " ").trimmed
+        guard normalized.count > 220 else {
+            return normalized
+        }
+        let index = normalized.index(normalized.startIndex, offsetBy: 220)
+        return "\(normalized[..<index])."
+    }
+
+    private func wordCount(in text: String) -> Int {
+        text.split { $0.isWhitespace || $0.isNewline }.count
     }
 }
 

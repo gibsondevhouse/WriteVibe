@@ -158,9 +158,20 @@ struct SelectionRewriteProposal: Equatable, Sendable {
     let sourceSelectionHash: String
 }
 
+struct SelectionVariantItem: Equatable, Sendable {
+    let text: String
+    let styleLabel: String
+}
+
+struct SelectionVariantsProposal: Equatable, Sendable {
+    let variants: [SelectionVariantItem]
+    let sourceSelectionHash: String
+}
+
 enum SelectionWorkflowKind: String, Equatable, Sendable {
     case summarize
     case improve
+    case variants
 
     var title: String {
         switch self {
@@ -168,6 +179,54 @@ enum SelectionWorkflowKind: String, Equatable, Sendable {
             return "Selection Summary"
         case .improve:
             return "Improved Selection"
+        case .variants:
+            return "Selection Variants"
+        }
+    }
+
+    var primaryActionTitle: String? {
+        switch self {
+        case .summarize, .variants:
+            return nil
+        case .improve:
+            return "Apply Revision"
+        }
+    }
+
+    var requiresVariantActions: Bool {
+        self == .variants
+    }
+
+    var unavailableMessage: String {
+        switch self {
+        case .summarize:
+            return "Summarize is unavailable right now. Your selected text is unchanged."
+        case .improve:
+            return "Improve is unavailable right now. Your selected text is unchanged."
+        case .variants:
+            return "Variants are unavailable right now. Your selected text is unchanged."
+        }
+    }
+
+    var failureMessage: String {
+        switch self {
+        case .summarize:
+            return "Summarize could not be completed. Your selected text is unchanged. Please retry."
+        case .improve:
+            return "Improve could not be completed. Your selected text is unchanged. Please retry."
+        case .variants:
+            return "Variants could not be generated. Your selected text is unchanged. Please retry."
+        }
+    }
+
+    var validationMessage: String {
+        switch self {
+        case .summarize:
+            return "Select more text to summarize."
+        case .improve:
+            return "Select more text to improve."
+        case .variants:
+            return "Select more text to generate variants."
         }
     }
 }
@@ -175,6 +234,7 @@ enum SelectionWorkflowKind: String, Equatable, Sendable {
 enum SelectionWorkflowPayload: Equatable {
     case summary(SelectionSummaryProposal)
     case rewrite(SelectionRewriteProposal)
+    case variants(SelectionVariantsProposal)
 }
 
 enum OutlineWorkflowState {
@@ -198,6 +258,7 @@ final class ArticleEditorViewModel {
     typealias SuggestOutlineWorkflow = @MainActor (ArticlePlanningSnapshot) async -> AppleWorkflowTaskResult<OutlineSuggestionProposal>
     typealias SummarizeSelectionWorkflow = @MainActor (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionSummaryProposal>
     typealias ImproveSelectionWorkflow = @MainActor (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionRewriteProposal>
+    typealias GenerateVariantsWorkflow = @MainActor (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionVariantsProposal>
 
     var showEdits = true
     var isRequestingEdits = false
@@ -210,17 +271,20 @@ final class ArticleEditorViewModel {
     private let suggestOutlineWorkflow: SuggestOutlineWorkflow
     private let summarizeSelectionWorkflow: SummarizeSelectionWorkflow
     private let improveSelectionWorkflow: ImproveSelectionWorkflow
+    private let generateVariantsWorkflow: GenerateVariantsWorkflow
 
     init(
         editOrchestrator: ArticleEditOrchestrating? = nil,
         suggestOutlineWorkflow: SuggestOutlineWorkflow? = nil,
         summarizeSelectionWorkflow: SummarizeSelectionWorkflow? = nil,
-        improveSelectionWorkflow: ImproveSelectionWorkflow? = nil
+        improveSelectionWorkflow: ImproveSelectionWorkflow? = nil,
+        generateVariantsWorkflow: GenerateVariantsWorkflow? = nil
     ) {
         self.editOrchestrator = editOrchestrator ?? DefaultArticleEditOrchestrator()
         self.suggestOutlineWorkflow = suggestOutlineWorkflow ?? Self.defaultSuggestOutlineWorkflow
         self.summarizeSelectionWorkflow = summarizeSelectionWorkflow ?? Self.defaultSummarizeSelectionWorkflow
         self.improveSelectionWorkflow = improveSelectionWorkflow ?? Self.defaultImproveSelectionWorkflow
+        self.generateVariantsWorkflow = generateVariantsWorkflow ?? Self.defaultGenerateVariantsWorkflow
     }
 
     var blockChanges: BlockChanges {
@@ -328,12 +392,22 @@ final class ArticleEditorViewModel {
             surroundingContext: selection.surroundingContext,
             requestedAt: Date()
         )
+
+        if let validationResult = Self.validateSelectionRequest(request, kind: kind) {
+            selectionWorkflowState = .result(
+                kind: kind,
+                selectionToken: selection.token,
+                result: validationResult.toSelectionResult()
+            )
+            return
+        }
+
         selectionWorkflowState = .running(kind: kind, selectionToken: selection.token)
 
         Task {
             switch kind {
             case .summarize:
-                let result = await summarizeSelectionWorkflow(request)
+                let result = sanitizeSummarizeResult(await summarizeSelectionWorkflow(request))
                 guard isAwaitingSelectionWorkflow(kind: kind, token: selection.token) else { return }
                 selectionWorkflowState = .result(
                     kind: kind,
@@ -349,7 +423,7 @@ final class ArticleEditorViewModel {
                     )
                 )
             case .improve:
-                let result = await improveSelectionWorkflow(request)
+                let result = sanitizeImproveResult(await improveSelectionWorkflow(request))
                 guard isAwaitingSelectionWorkflow(kind: kind, token: selection.token) else { return }
                 selectionWorkflowState = .result(
                     kind: kind,
@@ -357,6 +431,22 @@ final class ArticleEditorViewModel {
                     result: AppleWorkflowTaskResult<SelectionWorkflowPayload>(
                         state: result.state,
                         payload: result.payload.map { .rewrite($0) },
+                        userMessage: result.userMessage,
+                        nextStep: result.nextStep,
+                        fallbackCode: result.fallbackCode,
+                        runID: result.runID,
+                        schemaVersion: result.schemaVersion
+                    )
+                )
+            case .variants:
+                let result = sanitizeVariantsResult(await generateVariantsWorkflow(request))
+                guard isAwaitingSelectionWorkflow(kind: kind, token: selection.token) else { return }
+                selectionWorkflowState = .result(
+                    kind: kind,
+                    selectionToken: selection.token,
+                    result: AppleWorkflowTaskResult<SelectionWorkflowPayload>(
+                        state: result.state,
+                        payload: result.payload.map { .variants($0) },
                         userMessage: result.userMessage,
                         nextStep: result.nextStep,
                         fallbackCode: result.fallbackCode,
@@ -397,8 +487,35 @@ final class ArticleEditorViewModel {
                 kind: .improve,
                 selectionToken: selectionToken,
                 result: .executionFailure(
-                    userMessage: "The selected text changed before the revision could be applied.",
+                    userMessage: SelectionWorkflowKind.improve.failureMessage,
                     nextStep: "Re-select the passage, then run Improve Selection again."
+                )
+            )
+            return false
+        }
+
+        selectionWorkflowState = .idle
+        return true
+    }
+
+    @discardableResult
+    func applySelectionVariant(using editorState: EditorState, variantIndex: Int) -> Bool {
+        guard case .result(kind: .variants, selectionToken: let selectionToken, result: let result) = selectionWorkflowState,
+              result.state == .success,
+              let payload = result.payload,
+              case .variants(let proposal) = payload,
+              proposal.variants.indices.contains(variantIndex) else {
+            return false
+        }
+
+        let selectedVariant = proposal.variants[variantIndex]
+        guard editorState.replaceSelection(with: selectedVariant.text, matching: selectionToken) else {
+            selectionWorkflowState = .result(
+                kind: .variants,
+                selectionToken: selectionToken,
+                result: .executionFailure(
+                    userMessage: SelectionWorkflowKind.variants.failureMessage,
+                    nextStep: "Re-select the passage, then run Generate Variants again."
                 )
             )
             return false
@@ -456,6 +573,101 @@ final class ArticleEditorViewModel {
             return false
         }
         return activeKind == kind && activeToken == token
+    }
+
+    private func sanitizeSummarizeResult(
+        _ result: AppleWorkflowTaskResult<SelectionSummaryProposal>
+    ) -> AppleWorkflowTaskResult<SelectionSummaryProposal> {
+        guard result.state == .success,
+              let payload = result.payload,
+              !payload.summaryText.trimmed.isEmpty else {
+            if result.state == .success {
+                return .executionFailure(
+                    userMessage: SelectionWorkflowKind.summarize.failureMessage,
+                    nextStep: "Retry Summarize Selection or continue editing manually."
+                )
+            }
+            return result
+        }
+        return result
+    }
+
+    private func sanitizeImproveResult(
+        _ result: AppleWorkflowTaskResult<SelectionRewriteProposal>
+    ) -> AppleWorkflowTaskResult<SelectionRewriteProposal> {
+        guard result.state == .success,
+              let payload = result.payload,
+              !payload.rewrittenText.trimmed.isEmpty else {
+            if result.state == .success {
+                return .executionFailure(
+                    userMessage: SelectionWorkflowKind.improve.failureMessage,
+                    nextStep: "Retry Improve Selection or continue editing manually."
+                )
+            }
+            return result
+        }
+        return result
+    }
+
+    private func sanitizeVariantsResult(
+        _ result: AppleWorkflowTaskResult<SelectionVariantsProposal>
+    ) -> AppleWorkflowTaskResult<SelectionVariantsProposal> {
+        guard result.state == .success,
+              let payload = result.payload else {
+            return result
+        }
+
+        let cleanedVariants = payload.variants.filter { !$0.text.trimmed.isEmpty }
+        guard cleanedVariants.count == 3 else {
+            return .executionFailure(
+                userMessage: SelectionWorkflowKind.variants.failureMessage,
+                nextStep: "Retry Generate Variants or continue editing manually."
+            )
+        }
+
+        if cleanedVariants.count == payload.variants.count {
+            return result
+        }
+
+        return AppleWorkflowTaskResult<SelectionVariantsProposal>(
+            state: .success,
+            payload: SelectionVariantsProposal(
+                variants: cleanedVariants,
+                sourceSelectionHash: payload.sourceSelectionHash
+            ),
+            userMessage: result.userMessage,
+            nextStep: result.nextStep,
+            fallbackCode: result.fallbackCode,
+            runID: result.runID,
+            schemaVersion: result.schemaVersion
+        )
+    }
+
+    private static let minSelectionCharacterCount = 50
+    private static let maxSelectionCharacterCount = 50_000
+
+    private static func validateSelectionRequest(
+        _ request: SelectionWorkflowRequest,
+        kind: SelectionWorkflowKind
+    ) -> AppleWorkflowTaskResult<Never>? {
+        let trimmedSelection = request.selectedText.trimmed
+        guard !trimmedSelection.isEmpty else {
+            return .validationFailure(
+                userMessage: kind.validationMessage,
+                nextStep: "Select a longer passage, then retry."
+            )
+        }
+
+        let selectionLength = (trimmedSelection as NSString).length
+        guard selectionLength >= minSelectionCharacterCount,
+              selectionLength <= maxSelectionCharacterCount else {
+            return .validationFailure(
+                userMessage: kind.validationMessage,
+                nextStep: "Select between 50 and 50,000 characters, then retry."
+            )
+        }
+
+        return nil
     }
 
     private static func defaultSuggestOutlineWorkflow(_ snapshot: ArticlePlanningSnapshot) async -> AppleWorkflowTaskResult<OutlineSuggestionProposal> {
@@ -521,31 +733,28 @@ final class ArticleEditorViewModel {
     private static func defaultSummarizeSelectionWorkflow(_ request: SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionSummaryProposal> {
         guard AppConstants.isAppleStructuredWorkflowEnabled else {
             return .unavailable(
-                userMessage: "Structured selection summaries are disabled for this build.",
-                nextStep: "Review the selected text manually.",
+                userMessage: SelectionWorkflowKind.summarize.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
                 fallbackCode: "manualSelectionEditing"
             )
         }
 
-        guard !request.selectedText.trimmed.isEmpty else {
-            return .validationFailure(
-                userMessage: "Select the passage you want to summarize before running this action.",
-                nextStep: "Highlight text in the draft, then run Summarize Selection again."
-            )
+        if let validationResult = validateSelectionRequest(request, kind: .summarize) {
+            return validationResult.toSelectionResult()
         }
 
         guard #available(macOS 26, *) else {
             return .unavailable(
-                userMessage: "This Mac does not support structured selection summaries.",
-                nextStep: "Review the selected text manually.",
+                userMessage: SelectionWorkflowKind.summarize.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
                 fallbackCode: "manualSelectionEditing"
             )
         }
 
         guard AppleIntelligenceService.isAvailable else {
             return .unavailable(
-                userMessage: "Structured selection summaries are unavailable right now.",
-                nextStep: "Keep editing manually, then retry when Apple Intelligence is available.",
+                userMessage: SelectionWorkflowKind.summarize.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
                 fallbackCode: "manualSelectionEditing"
             )
         }
@@ -559,8 +768,8 @@ final class ArticleEditorViewModel {
             )
         } catch {
             return .executionFailure(
-                userMessage: "WriteVibe could not summarize the selected text.",
-                nextStep: "Retry Summarize Selection, or continue editing manually."
+                userMessage: SelectionWorkflowKind.summarize.failureMessage,
+                nextStep: "Retry Summarize Selection or continue editing manually."
             )
         }
     }
@@ -568,31 +777,28 @@ final class ArticleEditorViewModel {
     private static func defaultImproveSelectionWorkflow(_ request: SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionRewriteProposal> {
         guard AppConstants.isAppleStructuredWorkflowEnabled else {
             return .unavailable(
-                userMessage: "Structured selection improvements are disabled for this build.",
-                nextStep: "Revise the selected text manually.",
+                userMessage: SelectionWorkflowKind.improve.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
                 fallbackCode: "manualSelectionEditing"
             )
         }
 
-        guard !request.selectedText.trimmed.isEmpty else {
-            return .validationFailure(
-                userMessage: "Select the passage you want to improve before running this action.",
-                nextStep: "Highlight text in the draft, then run Improve Selection again."
-            )
+        if let validationResult = validateSelectionRequest(request, kind: .improve) {
+            return validationResult.toSelectionResult()
         }
 
         guard #available(macOS 26, *) else {
             return .unavailable(
-                userMessage: "This Mac does not support structured selection improvements.",
-                nextStep: "Revise the selected text manually.",
+                userMessage: SelectionWorkflowKind.improve.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
                 fallbackCode: "manualSelectionEditing"
             )
         }
 
         guard AppleIntelligenceService.isAvailable else {
             return .unavailable(
-                userMessage: "Structured selection improvements are unavailable right now.",
-                nextStep: "Revise the selected text manually, then retry when Apple Intelligence is available.",
+                userMessage: SelectionWorkflowKind.improve.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
                 fallbackCode: "manualSelectionEditing"
             )
         }
@@ -610,10 +816,91 @@ final class ArticleEditorViewModel {
             )
         } catch {
             return .executionFailure(
-                userMessage: "WriteVibe could not prepare a revision for the selected text.",
-                nextStep: "Retry Improve Selection, or keep revising manually."
+                userMessage: SelectionWorkflowKind.improve.failureMessage,
+                nextStep: "Retry Improve Selection or continue editing manually."
             )
         }
+    }
+
+    private static func defaultGenerateVariantsWorkflow(_ request: SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionVariantsProposal> {
+        guard AppConstants.isAppleStructuredWorkflowEnabled else {
+            return .unavailable(
+                userMessage: SelectionWorkflowKind.variants.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
+                fallbackCode: "manualSelectionEditing"
+            )
+        }
+
+        if let validationResult = validateSelectionRequest(request, kind: .variants) {
+            return validationResult.toSelectionResult()
+        }
+
+        guard #available(macOS 26, *) else {
+            return .unavailable(
+                userMessage: SelectionWorkflowKind.variants.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
+                fallbackCode: "manualSelectionEditing"
+            )
+        }
+
+        guard AppleIntelligenceService.isAvailable else {
+            return .unavailable(
+                userMessage: SelectionWorkflowKind.variants.unavailableMessage,
+                nextStep: "Try again later or continue editing manually.",
+                fallbackCode: "manualSelectionEditing"
+            )
+        }
+
+        do {
+            let generatedVariants = try await AppleIntelligenceService.generateVariants(
+                for: request.selectedText,
+                tone: request.toneContext ?? "balanced"
+            )
+
+            let cleanedVariants = generatedVariants.variants
+                .map { $0.trimmed }
+                .filter { !$0.isEmpty }
+
+            guard cleanedVariants.count >= 3 else {
+                return .executionFailure(
+                    userMessage: SelectionWorkflowKind.variants.failureMessage,
+                    nextStep: "Retry Generate Variants or continue editing manually."
+                )
+            }
+
+            let labels = ["concise", "balanced", "vivid"]
+            let proposal = SelectionVariantsProposal(
+                variants: Array(cleanedVariants.prefix(3)).enumerated().map { index, text in
+                    SelectionVariantItem(text: text, styleLabel: labels[index])
+                },
+                sourceSelectionHash: request.selectionRangeToken
+            )
+
+            return .success(
+                proposal,
+                userMessage: "Variants ready for review.",
+                nextStep: "Apply one variant only if it improves the selected passage."
+            )
+        } catch {
+            return .executionFailure(
+                userMessage: SelectionWorkflowKind.variants.failureMessage,
+                nextStep: "Retry Generate Variants or continue editing manually."
+            )
+        }
+    }
+}
+
+private extension AppleWorkflowTaskResult where Payload == Never {
+    func toSelectionResult<T>() -> AppleWorkflowTaskResult<T> {
+        AppleWorkflowTaskResult<T>(
+            state: state,
+            payload: nil,
+            userMessage: userMessage,
+            nextStep: nextStep,
+            fallbackCode: fallbackCode,
+            runID: runID,
+            schemaVersion: schemaVersion
+        )
     }
 }
 

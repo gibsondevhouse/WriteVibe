@@ -81,7 +81,8 @@ struct ArticleEditorView: View {
                     editorState: editorState,
                     isWorkflowRunning: viewModel.isSelectionWorkflowRunning,
                     onSummarizeSelection: { requestSelectionWorkflow(.summarize) },
-                    onImproveSelection: { requestSelectionWorkflow(.improve) }
+                    onImproveSelection: { requestSelectionWorkflow(.improve) },
+                    onGenerateVariants: { requestSelectionWorkflow(.variants) }
                 )
                 .padding(.top, 8)
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -249,7 +250,7 @@ struct ArticleEditorView: View {
                     title: workflow.kind.title,
                     result: workflow.result,
                     bodyText: selectionBodyText(for: workflow.result.payload),
-                    actionText: nil,
+                    actionText: workflow.kind.primaryActionTitle,
                     onAction: nil,
                     onRetry: { retrySelectionWorkflow(workflow.kind) },
                     onDismiss: viewModel.dismissSelectionWorkflow
@@ -259,8 +260,17 @@ struct ArticleEditorView: View {
                     title: workflow.kind.title,
                     result: workflow.result,
                     bodyText: selectionBodyText(for: workflow.result.payload),
-                    actionText: "Apply Revision",
+                    actionText: workflow.kind.primaryActionTitle,
                     onAction: applySelectionRewrite,
+                    onRetry: { retrySelectionWorkflow(workflow.kind) },
+                    onDismiss: viewModel.dismissSelectionWorkflow
+                )
+            case .variants:
+                variantsWorkflowCard(
+                    title: workflow.kind.title,
+                    result: workflow.result,
+                    variants: selectionVariants(for: workflow.result.payload),
+                    onApplyVariant: applySelectionVariant,
                     onRetry: { retrySelectionWorkflow(workflow.kind) },
                     onDismiss: viewModel.dismissSelectionWorkflow
                 )
@@ -284,6 +294,12 @@ struct ArticleEditorView: View {
         }
     }
 
+    private func applySelectionVariant(_ index: Int) {
+        if viewModel.applySelectionVariant(using: editorState, variantIndex: index) {
+            editorState.syncToArticle(article)
+        }
+    }
+
     private func selectionBodyText(for payload: SelectionWorkflowPayload?) -> String? {
         guard let payload else { return nil }
         switch payload {
@@ -291,7 +307,17 @@ struct ArticleEditorView: View {
             return proposal.summaryText
         case .rewrite(let proposal):
             return proposal.rewrittenText
+        case .variants:
+            return nil
         }
+    }
+
+    private func selectionVariants(for payload: SelectionWorkflowPayload?) -> [SelectionVariantItem] {
+        guard let payload,
+              case .variants(let proposal) = payload else {
+            return []
+        }
+        return proposal.variants
     }
 
     private func workflowCard<Payload>(
@@ -335,6 +361,73 @@ struct ArticleEditorView: View {
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
                 }
+                Button("Retry", action: onRetry)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                Button("Dismiss", action: onDismiss)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+            }
+        }
+        .padding(14)
+        .background(cardBackgroundColor(for: result.state), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func variantsWorkflowCard(
+        title: String,
+        result: AppleWorkflowTaskResult<SelectionWorkflowPayload>,
+        variants: [SelectionVariantItem],
+        onApplyVariant: @escaping (Int) -> Void,
+        onRetry: @escaping () -> Void,
+        onDismiss: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: iconName(for: result.state))
+                    .foregroundStyle(iconColor(for: result.state))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(result.userMessage)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Text("Next step: \(result.nextStep)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            if result.state == .success {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(variants.enumerated()), id: \.offset) { index, item in
+                        HStack(alignment: .top, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.styleLabel.capitalized)
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                Text(item.text)
+                                    .font(.system(size: 12))
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            Button("Apply Variant") {
+                                onApplyVariant(index)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                        .padding(12)
+                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+
+            HStack(spacing: 10) {
                 Button("Retry", action: onRetry)
                     .buttonStyle(.bordered)
                     .controlSize(.small)

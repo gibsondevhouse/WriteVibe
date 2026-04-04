@@ -10,6 +10,7 @@ struct FloatingFormatToolbar: View {
     let isWorkflowRunning: Bool
     let onSummarizeSelection: () -> Void
     let onImproveSelection: () -> Void
+    let onGenerateVariants: () -> Void
 
     var body: some View {
         HStack(spacing: 2) {
@@ -49,6 +50,7 @@ struct FloatingFormatToolbar: View {
             Menu {
                 Button("Summarize Selection", action: onSummarizeSelection)
                 Button("Improve Selection", action: onImproveSelection)
+                Button("Generate Variants", action: onGenerateVariants)
             } label: {
                 HStack(spacing: WVSpace.xs) {
                     if isWorkflowRunning {
