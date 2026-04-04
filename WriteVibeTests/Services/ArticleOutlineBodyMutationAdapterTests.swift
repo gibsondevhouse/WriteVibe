@@ -108,6 +108,42 @@ struct ArticleOutlineMutationAdapterTests {
             #expect(e.code == "CMD-004-UNKNOWN_VERB")
         }
     }
+
+    @Test func testStructuredWorkflowSuggestionReplacesOutlineText() {
+        let article = makeArticle(outline: "Old line")
+        let proposal = AppleStructuredOutlineSuggestionProposal(
+            title: "Planning",
+            sections: [
+                AppleStructuredOutlineSectionProposal(heading: "Opening", summary: "Frame the problem."),
+                AppleStructuredOutlineSectionProposal(heading: "Decision", summary: "Explain the tradeoffs.")
+            ],
+            applyMode: .replaceOutlineText
+        )
+
+        switch adapter.applyStructuredWorkflowSuggestion(proposal, to: article) {
+        case .success(let result):
+            #expect(result.operation == "replaceOutlineText")
+            #expect(article.outline == "1. Opening\n   Frame the problem.\n2. Decision\n   Explain the tradeoffs.")
+        case .failure(let error):
+            Issue.record("Expected outline replacement success, got \(error)")
+        }
+    }
+
+    @Test func testStructuredWorkflowSuggestionRejectsInsertBlocksApplyMode() {
+        let article = makeArticle(outline: "Old line")
+        let proposal = AppleStructuredOutlineSuggestionProposal(
+            title: "Planning",
+            sections: [AppleStructuredOutlineSectionProposal(heading: "Opening", summary: "Frame the problem.")],
+            applyMode: .insertBlocks
+        )
+
+        switch adapter.applyStructuredWorkflowSuggestion(proposal, to: article) {
+        case .success:
+            Issue.record("Expected insertBlocks apply mode to be rejected")
+        case .failure(let error):
+            #expect(error.code == "CMD-012-UNSUPPORTED_OUTLINE_APPLY_MODE")
+        }
+    }
 }
 
 // MARK: - Body Adapter Tests

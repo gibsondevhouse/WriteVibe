@@ -30,6 +30,9 @@ enum AppConstants {
     /// When true: StreamingService uses SwiftDataMessagePersistenceAdapter.
     static let useStreamingPersistenceAdapter = true
 
+    /// Enables bounded Apple structured writing workflows in article surfaces.
+    static let isAppleStructuredWorkflowEnabled = true
+
     // MARK: - Token usage thresholds (fraction of context window)
 
     /// Show usage indicator.

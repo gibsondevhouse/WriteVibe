@@ -10,6 +10,642 @@
 import Foundation
 import FoundationModels
 
+enum AppleWorkflowTaskKind: String, Sendable {
+    case draftAutofill
+    case outlineSuggestion
+    case contextSuggestion
+    case wordPlanSuggestion
+    case summarizeSelection
+    case improveSelection
+    case generateVariants
+}
+
+enum AppleWorkflowEntryPoint: String, Sendable {
+    case articleDraftCreation
+    case articleOutlinePlanning
+    case articleContextPlanning
+    case articleEditorSelection
+    case genericChat
+}
+
+enum AppleStructuredWorkflowTaskState: String, Sendable {
+    case success
+    case featureFlagDisabled
+    case unsupportedPlatform
+    case modelUnavailable
+    case validationFailed
+    case executionFailed
+    case completedWithFallback
+}
+
+enum AppleWorkflowFallbackCode: String, Sendable {
+    case localHeuristicDraftAutofill
+    case manualOutlineEditing
+    case manualContextEditing
+    case manualWordPlanning
+    case manualSelectionEditing
+    case retrySameAction
+}
+
+enum AppleWorkflowRolloutPhase: String, Sendable {
+    case internalValidation
+    case limitedCohort
+    case broadEnablement
+}
+
+enum AppleWorkflowUnavailableReason: String, Sendable {
+    case featureFlagDisabled
+    case unsupportedPlatform
+    case modelUnavailable
+    case validationFailed
+    case executionFailed
+    case routeBlocked
+}
+
+enum AppleStructuredOutlineApplyMode: String, Equatable, Sendable {
+    case replaceOutlineText
+    case insertBlocks
+}
+
+struct AppleWorkflowRouteRequest: Sendable {
+    let taskKind: AppleWorkflowTaskKind
+    let entryPoint: AppleWorkflowEntryPoint
+    let articleID: UUID?
+    let hasSelection: Bool
+    let rolloutPhase: AppleWorkflowRolloutPhase
+    let featureFlagEnabled: Bool
+}
+
+enum AppleWorkflowRouteDecision: Equatable, Sendable {
+    case allowed
+    case blocked(reason: String)
+    case unavailable(reason: AppleWorkflowUnavailableReason, fallback: AppleWorkflowFallbackCode?)
+}
+
+struct AppleStructuredWorkflowTaskResult<Payload>: Sendable where Payload: Sendable {
+    let state: AppleStructuredWorkflowTaskState
+    let payload: Payload?
+    let unavailableReason: AppleWorkflowUnavailableReason?
+    let fallbackCode: AppleWorkflowFallbackCode?
+    let userMessage: String
+    let runID: UUID
+    let schemaVersion: String
+}
+
+struct DraftAutofillSeed: Sendable {
+    let summary: String
+    let existingTitle: String?
+    let existingTopic: String?
+}
+
+struct AppleStructuredPlanningSnapshot: Sendable {
+    let articleID: UUID
+    let title: String
+    let topic: String
+    let audience: String
+    let summary: String
+    let outline: String
+    let purpose: String
+    let style: String
+    let keyTakeaway: String
+    let publishingIntent: String
+    let sourceLinks: String
+    let targetLength: String
+    let tone: String
+    let updatedAt: Date
+}
+
+struct DraftAutofillProposal: Equatable, Sendable {
+    let title: String
+    let subtitle: String
+    let tone: String
+    let targetLength: String
+    let confidenceNotes: [String]
+}
+
+struct AppleStructuredOutlineSectionProposal: Equatable, Sendable {
+    let heading: String
+    let summary: String
+}
+
+struct AppleStructuredOutlineSuggestionProposal: Equatable, Sendable {
+    let title: String
+    let sections: [AppleStructuredOutlineSectionProposal]
+    let applyMode: AppleStructuredOutlineApplyMode
+}
+
+struct AppleStructuredContextSuggestionProposal: Equatable, Sendable {
+    let summary: String
+    let audience: String
+    let purpose: String
+    let style: String
+    let keyTakeaway: String
+    let publishingIntent: String
+    let sourceLinks: String?
+    let acceptedFields: [String]
+}
+
+struct AppleWorkflowRunArtifact: Equatable, Sendable {
+    let runID: UUID
+    let taskKind: AppleWorkflowTaskKind
+    let entryPoint: AppleWorkflowEntryPoint
+    let articleID: UUID?
+    let rolloutPhase: AppleWorkflowRolloutPhase
+    let outcomeState: AppleStructuredWorkflowTaskState
+    let fallbackCode: AppleWorkflowFallbackCode?
+    let userMessage: String
+    let startedAt: Date
+    let completedAt: Date
+    let schemaVersion: String
+}
+
+protocol AppleStructuredWorkflowRouting: Sendable {
+    func evaluateRoute(for request: AppleWorkflowRouteRequest) -> AppleWorkflowRouteDecision
+}
+
+protocol AppleStructuredWorkflowServicing: Sendable {
+    func autofillDraft(from summary: String, articleSnapshot: DraftAutofillSeed?) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal>
+    func suggestOutline(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>
+    func suggestContext(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>
+}
+
+protocol AppleWorkflowObservabilityServicing: Sendable {
+    func recordRun(_ artifact: AppleWorkflowRunArtifact) async
+}
+
+struct NoOpAppleWorkflowObservabilityService: AppleWorkflowObservabilityServicing {
+    func recordRun(_ artifact: AppleWorkflowRunArtifact) async {
+        _ = artifact
+    }
+}
+
+enum AppleWorkflowAvailability: Sendable {
+    case available
+    case unsupportedPlatform
+    case modelUnavailable
+}
+
+struct DefaultAppleStructuredWorkflowRouter: AppleStructuredWorkflowRouting {
+    func evaluateRoute(for request: AppleWorkflowRouteRequest) -> AppleWorkflowRouteDecision {
+        guard request.featureFlagEnabled else {
+            return .unavailable(reason: .featureFlagDisabled, fallback: fallbackCode(for: request.taskKind))
+        }
+
+        guard supportedTaskKinds.contains(request.taskKind) else {
+            return .blocked(reason: "This Apple workflow action is not enabled in slice 1.")
+        }
+
+        guard supportedEntryPoint(for: request.taskKind) == request.entryPoint else {
+            return .blocked(reason: "Apple structured workflows are limited to article draft, outline, and context entry points and cannot route through chat.")
+        }
+
+        if requiresArticleID(request.taskKind), request.articleID == nil {
+            return .blocked(reason: "This Apple workflow action requires an article context before it can run.")
+        }
+
+        if requiresSelection(request.taskKind), request.hasSelection == false {
+            return .blocked(reason: "This Apple workflow action requires an explicit text selection.")
+        }
+
+        switch AppleStructuredWorkflowService.defaultAvailability() {
+        case .available:
+            return .allowed
+        case .unsupportedPlatform:
+            return .unavailable(reason: .unsupportedPlatform, fallback: fallbackCode(for: request.taskKind))
+        case .modelUnavailable:
+            return .unavailable(reason: .modelUnavailable, fallback: fallbackCode(for: request.taskKind))
+        }
+    }
+
+    private let supportedTaskKinds: Set<AppleWorkflowTaskKind> = [
+        .draftAutofill,
+        .outlineSuggestion,
+        .contextSuggestion
+    ]
+
+    private func supportedEntryPoint(for taskKind: AppleWorkflowTaskKind) -> AppleWorkflowEntryPoint {
+        switch taskKind {
+        case .draftAutofill:
+            return .articleDraftCreation
+        case .outlineSuggestion:
+            return .articleOutlinePlanning
+        case .contextSuggestion:
+            return .articleContextPlanning
+        case .wordPlanSuggestion:
+            return .articleOutlinePlanning
+        case .summarizeSelection, .improveSelection, .generateVariants:
+            return .articleEditorSelection
+        }
+    }
+
+    private func requiresArticleID(_ taskKind: AppleWorkflowTaskKind) -> Bool {
+        switch taskKind {
+        case .outlineSuggestion, .contextSuggestion, .wordPlanSuggestion, .summarizeSelection, .improveSelection, .generateVariants:
+            return true
+        case .draftAutofill:
+            return false
+        }
+    }
+
+    private func requiresSelection(_ taskKind: AppleWorkflowTaskKind) -> Bool {
+        switch taskKind {
+        case .summarizeSelection, .improveSelection, .generateVariants:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func fallbackCode(for taskKind: AppleWorkflowTaskKind) -> AppleWorkflowFallbackCode? {
+        switch taskKind {
+        case .draftAutofill:
+            return .localHeuristicDraftAutofill
+        case .outlineSuggestion:
+            return .manualOutlineEditing
+        case .contextSuggestion:
+            return .manualContextEditing
+        case .wordPlanSuggestion:
+            return .manualWordPlanning
+        case .summarizeSelection, .improveSelection, .generateVariants:
+            return .manualSelectionEditing
+        }
+    }
+}
+
+@MainActor
+final class AppleStructuredWorkflowService: AppleStructuredWorkflowServicing {
+    typealias AvailabilityEvaluator = @MainActor () -> AppleWorkflowAvailability
+    typealias DraftAutofillExecutor = @MainActor (DraftAutofillSeed) async throws -> DraftAutofillProposal
+    typealias OutlineExecutor = @MainActor (AppleStructuredPlanningSnapshot) async throws -> AppleStructuredOutlineSuggestionProposal
+    typealias ContextExecutor = @MainActor (AppleStructuredPlanningSnapshot) async throws -> AppleStructuredContextSuggestionProposal
+
+    static let schemaVersion = "apple-structured-workflow/v1"
+
+    private let heuristicDraftAutofillService: any ArticleDraftAutofillServicing
+    private let contextMutationAdapter: ArticleContextMutationAdapter
+    private let observabilityService: any AppleWorkflowObservabilityServicing
+    private let rolloutPhase: AppleWorkflowRolloutPhase
+    private let availabilityEvaluator: AvailabilityEvaluator
+    private let draftAutofillExecutor: DraftAutofillExecutor
+    private let outlineExecutor: OutlineExecutor
+    private let contextExecutor: ContextExecutor
+
+    init(
+        heuristicDraftAutofillService: any ArticleDraftAutofillServicing,
+        contextMutationAdapter: ArticleContextMutationAdapter,
+        observabilityService: any AppleWorkflowObservabilityServicing,
+        rolloutPhase: AppleWorkflowRolloutPhase = .internalValidation,
+        availabilityEvaluator: @escaping AvailabilityEvaluator = { AppleStructuredWorkflowService.defaultAvailability() },
+        draftAutofillExecutor: @escaping DraftAutofillExecutor = { seed in
+            guard #available(macOS 26, *) else {
+                throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
+            }
+            return try await AppleIntelligenceService.generateDraftAutofill(from: seed)
+        },
+        outlineExecutor: @escaping OutlineExecutor = { snapshot in
+            guard #available(macOS 26, *) else {
+                throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
+            }
+            return try await AppleIntelligenceService.generateOutlineSuggestion(from: snapshot)
+        },
+        contextExecutor: @escaping ContextExecutor = { snapshot in
+            guard #available(macOS 26, *) else {
+                throw WriteVibeError.modelUnavailable(name: "Apple Intelligence")
+            }
+            return try await AppleIntelligenceService.generateContextSuggestion(from: snapshot)
+        }
+    ) {
+        self.heuristicDraftAutofillService = heuristicDraftAutofillService
+        self.contextMutationAdapter = contextMutationAdapter
+        self.observabilityService = observabilityService
+        self.rolloutPhase = rolloutPhase
+        self.availabilityEvaluator = availabilityEvaluator
+        self.draftAutofillExecutor = draftAutofillExecutor
+        self.outlineExecutor = outlineExecutor
+        self.contextExecutor = contextExecutor
+    }
+
+    func autofillDraft(from summary: String, articleSnapshot: DraftAutofillSeed?) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal> {
+        let runID = UUID()
+        let startedAt = Date()
+        let normalizedSummary = summary.trimmed
+        let seed = DraftAutofillSeed(
+            summary: normalizedSummary,
+            existingTitle: articleSnapshot?.existingTitle,
+            existingTopic: articleSnapshot?.existingTopic
+        )
+
+        guard !normalizedSummary.isEmpty else {
+            let result = AppleStructuredWorkflowTaskResult<DraftAutofillProposal>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .validationFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Add a short article summary to generate draft details.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .draftAutofill, entryPoint: .articleDraftCreation, articleID: nil, startedAt: startedAt)
+            return result
+        }
+
+        switch availabilityEvaluator() {
+        case .available:
+            break
+        case .unsupportedPlatform:
+            return await fallbackDraftAutofill(
+                seed: seed,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .unsupportedPlatform,
+                userMessage: "Apple draft autofill is unavailable on this Mac. WriteVibe used the local draft autofill fallback instead."
+            )
+        case .modelUnavailable:
+            return await fallbackDraftAutofill(
+                seed: seed,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .modelUnavailable,
+                userMessage: "Apple draft autofill is unavailable right now. WriteVibe used the local draft autofill fallback instead."
+            )
+        }
+
+        do {
+            let proposal = try await draftAutofillExecutor(seed)
+            let result = AppleStructuredWorkflowTaskResult(
+                state: .success,
+                payload: proposal,
+                unavailableReason: nil,
+                fallbackCode: nil,
+                userMessage: "Draft details are ready to review.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .draftAutofill, entryPoint: .articleDraftCreation, articleID: nil, startedAt: startedAt)
+            return result
+        } catch {
+            return await fallbackDraftAutofill(
+                seed: seed,
+                runID: runID,
+                startedAt: startedAt,
+                reason: .executionFailed,
+                userMessage: "Apple draft autofill could not complete. WriteVibe used the local draft autofill fallback instead."
+            )
+        }
+    }
+
+    func suggestOutline(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal> {
+        let runID = UUID()
+        let startedAt = Date()
+
+        guard isValidOutlineSnapshot(snapshot) else {
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .validationFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Add a title or topic before requesting an outline suggestion.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .outlineSuggestion, entryPoint: .articleOutlinePlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        }
+
+        switch availabilityEvaluator() {
+        case .available:
+            break
+        case .unsupportedPlatform:
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>(
+                state: .unsupportedPlatform,
+                payload: nil,
+                unavailableReason: .unsupportedPlatform,
+                fallbackCode: .manualOutlineEditing,
+                userMessage: "Apple outline suggestion is unavailable on this Mac. Continue editing the outline manually or use /article outline commands.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .outlineSuggestion, entryPoint: .articleOutlinePlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        case .modelUnavailable:
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>(
+                state: .modelUnavailable,
+                payload: nil,
+                unavailableReason: .modelUnavailable,
+                fallbackCode: .manualOutlineEditing,
+                userMessage: "Apple outline suggestion is unavailable right now. Continue editing the outline manually or use /article outline commands.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .outlineSuggestion, entryPoint: .articleOutlinePlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        }
+
+        do {
+            let proposal = try await outlineExecutor(snapshot)
+            let result = AppleStructuredWorkflowTaskResult(
+                state: .success,
+                payload: proposal,
+                unavailableReason: nil,
+                fallbackCode: nil,
+                userMessage: "Outline suggestion is ready to review.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .outlineSuggestion, entryPoint: .articleOutlinePlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        } catch {
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>(
+                state: .executionFailed,
+                payload: nil,
+                unavailableReason: .executionFailed,
+                fallbackCode: .manualOutlineEditing,
+                userMessage: "Apple outline suggestion could not complete. Continue editing the outline manually or use /article outline commands.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .outlineSuggestion, entryPoint: .articleOutlinePlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        }
+    }
+
+    func suggestContext(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal> {
+        let runID = UUID()
+        let startedAt = Date()
+
+        guard isValidContextSnapshot(snapshot) else {
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .validationFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Add a title, topic, or summary before requesting context suggestions.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .contextSuggestion, entryPoint: .articleContextPlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        }
+
+        switch availabilityEvaluator() {
+        case .available:
+            break
+        case .unsupportedPlatform:
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>(
+                state: .unsupportedPlatform,
+                payload: nil,
+                unavailableReason: .unsupportedPlatform,
+                fallbackCode: .manualContextEditing,
+                userMessage: "Apple context suggestion is unavailable on this Mac. Continue editing the article context fields manually.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .contextSuggestion, entryPoint: .articleContextPlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        case .modelUnavailable:
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>(
+                state: .modelUnavailable,
+                payload: nil,
+                unavailableReason: .modelUnavailable,
+                fallbackCode: .manualContextEditing,
+                userMessage: "Apple context suggestion is unavailable right now. Continue editing the article context fields manually.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .contextSuggestion, entryPoint: .articleContextPlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        }
+
+        do {
+            let generatedProposal = try await contextExecutor(snapshot)
+            switch contextMutationAdapter.structuredWorkflowRequests(from: generatedProposal) {
+            case .success(let requests):
+                let proposal = AppleStructuredContextSuggestionProposal(
+                    summary: generatedProposal.summary,
+                    audience: generatedProposal.audience,
+                    purpose: generatedProposal.purpose,
+                    style: generatedProposal.style,
+                    keyTakeaway: generatedProposal.keyTakeaway,
+                    publishingIntent: generatedProposal.publishingIntent,
+                    sourceLinks: generatedProposal.sourceLinks,
+                    acceptedFields: requests.map(\.field)
+                )
+                let result = AppleStructuredWorkflowTaskResult(
+                    state: .success,
+                    payload: proposal,
+                    unavailableReason: nil,
+                    fallbackCode: nil,
+                    userMessage: "Context suggestions are ready to review.",
+                    runID: runID,
+                    schemaVersion: Self.schemaVersion
+                )
+                await record(result, taskKind: .contextSuggestion, entryPoint: .articleContextPlanning, articleID: snapshot.articleID, startedAt: startedAt)
+                return result
+            case .failure:
+                let result = AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>(
+                    state: .executionFailed,
+                    payload: nil,
+                    unavailableReason: .executionFailed,
+                    fallbackCode: .manualContextEditing,
+                    userMessage: "Apple context suggestion returned fields that could not be mapped. Continue editing the article context fields manually.",
+                    runID: runID,
+                    schemaVersion: Self.schemaVersion
+                )
+                await record(result, taskKind: .contextSuggestion, entryPoint: .articleContextPlanning, articleID: snapshot.articleID, startedAt: startedAt)
+                return result
+            }
+        } catch {
+            let result = AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>(
+                state: .executionFailed,
+                payload: nil,
+                unavailableReason: .executionFailed,
+                fallbackCode: .manualContextEditing,
+                userMessage: "Apple context suggestion could not complete. Continue editing the article context fields manually.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .contextSuggestion, entryPoint: .articleContextPlanning, articleID: snapshot.articleID, startedAt: startedAt)
+            return result
+        }
+    }
+
+    nonisolated static func defaultAvailability() -> AppleWorkflowAvailability {
+        guard #available(macOS 26, *) else {
+            return .unsupportedPlatform
+        }
+        if case .available = SystemLanguageModel.default.availability {
+            return .available
+        }
+        return .modelUnavailable
+    }
+
+    private func fallbackDraftAutofill(
+        seed: DraftAutofillSeed,
+        runID: UUID,
+        startedAt: Date,
+        reason: AppleWorkflowUnavailableReason,
+        userMessage: String
+    ) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal> {
+        guard let payload = heuristicDraftAutofillService.fallbackProposal(from: seed) else {
+            let result = AppleStructuredWorkflowTaskResult<DraftAutofillProposal>(
+                state: reason == .executionFailed ? .executionFailed : .validationFailed,
+                payload: nil,
+                unavailableReason: reason,
+                fallbackCode: .retrySameAction,
+                userMessage: "WriteVibe could not derive draft details from this summary yet.",
+                runID: runID,
+                schemaVersion: Self.schemaVersion
+            )
+            await record(result, taskKind: .draftAutofill, entryPoint: .articleDraftCreation, articleID: nil, startedAt: startedAt)
+            return result
+        }
+
+        let result = AppleStructuredWorkflowTaskResult(
+            state: .completedWithFallback,
+            payload: payload,
+            unavailableReason: reason,
+            fallbackCode: .localHeuristicDraftAutofill,
+            userMessage: userMessage,
+            runID: runID,
+            schemaVersion: Self.schemaVersion
+        )
+        await record(result, taskKind: .draftAutofill, entryPoint: .articleDraftCreation, articleID: nil, startedAt: startedAt)
+        return result
+    }
+
+    private func record<Payload: Sendable>(
+        _ result: AppleStructuredWorkflowTaskResult<Payload>,
+        taskKind: AppleWorkflowTaskKind,
+        entryPoint: AppleWorkflowEntryPoint,
+        articleID: UUID?,
+        startedAt: Date
+    ) async {
+        await observabilityService.recordRun(
+            AppleWorkflowRunArtifact(
+                runID: result.runID,
+                taskKind: taskKind,
+                entryPoint: entryPoint,
+                articleID: articleID,
+                rolloutPhase: rolloutPhase,
+                outcomeState: result.state,
+                fallbackCode: result.fallbackCode,
+                userMessage: result.userMessage,
+                startedAt: startedAt,
+                completedAt: Date(),
+                schemaVersion: result.schemaVersion
+            )
+        )
+    }
+
+    private func isValidOutlineSnapshot(_ snapshot: AppleStructuredPlanningSnapshot) -> Bool {
+        !snapshot.title.trimmed.isEmpty || !snapshot.topic.trimmed.isEmpty
+    }
+
+    private func isValidContextSnapshot(_ snapshot: AppleStructuredPlanningSnapshot) -> Bool {
+        !snapshot.title.trimmed.isEmpty || !snapshot.topic.trimmed.isEmpty || !snapshot.summary.trimmed.isEmpty
+    }
+}
+
 // MARK: - AppleIntelligenceService
 
 /// Namespace wrapping FoundationModels for on-device utility generation.
@@ -17,6 +653,27 @@ import FoundationModels
 @available(macOS 26, *)
 @MainActor
 enum AppleIntelligenceService {
+
+    @Generable
+    struct GeneratedDraftAutofillProposal {
+        var title: String
+        var subtitle: String
+        var tone: String
+        var targetLength: String
+        var confidenceNotes: [String]
+    }
+
+    @Generable
+    struct GeneratedContextSuggestionProposal {
+        var summary: String
+        var audience: String
+        var purpose: String
+        var style: String
+        var keyTakeaway: String
+        var publishingIntent: String
+        var sourceLinks: String
+        var acceptedFields: [String]
+    }
 
     /// True when Apple Intelligence is enabled and this hardware is eligible.
     static var isAvailable: Bool {
@@ -78,6 +735,19 @@ enum AppleIntelligenceService {
         return response.content
     }
 
+    /// Rewrites the given selection for clarity while preserving meaning and scope.
+    static func rewriteSelection(_ text: String, tone: String?) async throws -> String {
+        let options = GenerationOptions(temperature: GenerationTemperature.balanced)
+        let normalizedTone = tone?.trimmed ?? ""
+        let toneLine = normalizedTone.isEmpty ? "" : "Tone context: \(normalizedTone)\n"
+        let session = LanguageModelSession(
+            instructions: "You rewrite selected article text for clarity and flow. Return only the revised text. Preserve the original meaning, scope, and point of view. Do not add commentary, bullets, or quotes."
+        )
+        let prompt = "\(toneLine)Selected text:\n\(text)"
+        let response = try await session.respond(to: prompt, options: options)
+        return response.content.trimmed
+    }
+
     /// Analyzes the writing for tone, reading level, word count, readability, and suggestions.
     static func analyzeWriting(text: String) async throws -> WritingAnalysis {
         let options = GenerationOptions(temperature: GenerationTemperature.analytical)
@@ -113,6 +783,102 @@ enum AppleIntelligenceService {
             options: options
         )
         return response.content
+    }
+
+    static func generateDraftAutofill(from seed: DraftAutofillSeed) async throws -> DraftAutofillProposal {
+        let options = GenerationOptions(temperature: GenerationTemperature.analytical)
+        let session = LanguageModelSession(
+            tools: [DateTimeTool()],
+            instructions: """
+            You generate structured article draft metadata for WriteVibe.
+            Return only schema-compliant values.
+            Title must be concise and publication-ready.
+            Subtitle must complement the title and may be empty.
+            Tone must be exactly one of: \(ArticleTone.allCases.map(\.rawValue).joined(separator: ", ")).
+            Target length must be exactly one of: \(ArticleLength.allCases.map(\.rawValue).joined(separator: ", ")).
+            Confidence notes are internal-only short bullet fragments.
+            """
+        )
+        let prompt = """
+        Summary: \(seed.summary)
+        Existing title: \(seed.existingTitle ?? "")
+        Existing topic: \(seed.existingTopic ?? "")
+        """
+        let response = try await session.respond(
+            to: prompt,
+            generating: GeneratedDraftAutofillProposal.self,
+            options: options
+        )
+        let content = response.content
+        guard let tone = normalizedTone(content.tone),
+              let targetLength = normalizedTargetLength(content.targetLength) else {
+            throw WriteVibeError.decodingFailed(context: "Apple structured draft autofill returned unsupported metadata.")
+        }
+        return DraftAutofillProposal(
+            title: content.title.trimmed,
+            subtitle: content.subtitle.trimmed,
+            tone: tone.rawValue,
+            targetLength: targetLength.rawValue,
+            confidenceNotes: content.confidenceNotes
+        )
+    }
+
+    static func generateOutlineSuggestion(from snapshot: AppleStructuredPlanningSnapshot) async throws -> AppleStructuredOutlineSuggestionProposal {
+        let outline = try await generateOutline(
+            title: snapshot.title,
+            topic: snapshot.topic,
+            audience: snapshot.audience,
+            targetLength: snapshot.targetLength
+        )
+        return AppleStructuredOutlineSuggestionProposal(
+            title: outline.title.trimmed,
+            sections: outline.sections.map {
+                AppleStructuredOutlineSectionProposal(heading: $0.heading.trimmed, summary: $0.summary.trimmed)
+            },
+            applyMode: .replaceOutlineText
+        )
+    }
+
+    static func generateContextSuggestion(from snapshot: AppleStructuredPlanningSnapshot) async throws -> AppleStructuredContextSuggestionProposal {
+        let options = GenerationOptions(temperature: GenerationTemperature.analytical)
+        let session = LanguageModelSession(
+            tools: [DateTimeTool()],
+            instructions: """
+            You generate structured article context suggestions for WriteVibe.
+            Return only schema-compliant values for summary, audience, purpose, style, keyTakeaway, publishingIntent, and sourceLinks.
+            acceptedFields must list only these canonical keys when a field should be applied: summary, audience, purpose, style, keytakeaway, publishingintent, sourcelinks.
+            Do not return prose outside the schema.
+            """
+        )
+        let prompt = """
+        Title: \(snapshot.title)
+        Topic: \(snapshot.topic)
+        Audience: \(snapshot.audience)
+        Summary: \(snapshot.summary)
+        Purpose: \(snapshot.purpose)
+        Style: \(snapshot.style)
+        Key takeaway: \(snapshot.keyTakeaway)
+        Publishing intent: \(snapshot.publishingIntent)
+        Source links: \(snapshot.sourceLinks)
+        Target length: \(snapshot.targetLength)
+        Tone: \(snapshot.tone)
+        """
+        let response = try await session.respond(
+            to: prompt,
+            generating: GeneratedContextSuggestionProposal.self,
+            options: options
+        )
+        let content = response.content
+        return AppleStructuredContextSuggestionProposal(
+            summary: content.summary.trimmed,
+            audience: content.audience.trimmed,
+            purpose: content.purpose.trimmed,
+            style: content.style.trimmed,
+            keyTakeaway: content.keyTakeaway.trimmed,
+            publishingIntent: content.publishingIntent.trimmed,
+            sourceLinks: content.sourceLinks.trimmed.isEmpty ? nil : content.sourceLinks.trimmed,
+            acceptedFields: content.acceptedFields.map { $0.lowercased().trimmed }
+        )
     }
 
     // MARK: - Draft Variants
@@ -184,5 +950,15 @@ enum AppleIntelligenceService {
         // FoundationModels does not yet expose a public prewarm API.
         // Accessing the model object is the closest available approximation.
         _ = SystemLanguageModel.default
+    }
+
+    private static func normalizedTone(_ rawValue: String) -> ArticleTone? {
+        let normalized = rawValue.trimmed
+        return ArticleTone.allCases.first { $0.rawValue.caseInsensitiveCompare(normalized) == .orderedSame }
+    }
+
+    private static func normalizedTargetLength(_ rawValue: String) -> ArticleLength? {
+        let normalized = rawValue.trimmed
+        return ArticleLength.allCases.first { $0.rawValue.caseInsensitiveCompare(normalized) == .orderedSame }
     }
 }

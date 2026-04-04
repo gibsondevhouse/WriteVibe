@@ -1,7 +1,16 @@
 import Testing
 @testable import WriteVibe
 
+@MainActor
 struct ArticleDraftAutofillServiceTests {
+    @MainActor
+    private final class RecordingObservabilityService: AppleWorkflowObservabilityServicing {
+        private(set) var artifacts: [AppleWorkflowRunArtifact] = []
+
+        func recordRun(_ artifact: AppleWorkflowRunArtifact) async {
+            artifacts.append(artifact)
+        }
+    }
 
     @Test func testDeterministicOutputsForCityEconomySummary() {
         let service = ArticleDraftAutofillService()
@@ -73,5 +82,41 @@ struct ArticleDraftAutofillServiceTests {
         #expect(!subtitle.lowercased().hasPrefix("the article"))
         #expect(!subtitle.lowercased().hasPrefix("this article"))
         #expect(!subtitle.lowercased().hasPrefix("in this article"))
+    }
+
+    @Test func testFallbackProposalUsesHeuristicFieldsOnly() {
+        let service = ArticleDraftAutofillService()
+        let proposal = service.fallbackProposal(from: DraftAutofillSeed(
+            summary: "This article explores supply-chain tooling that helps independent pharmacies reduce stockouts while improving inventory planning.",
+            existingTitle: nil,
+            existingTopic: nil
+        ))
+
+        #expect(proposal?.title.isEmpty == false)
+        #expect(proposal?.subtitle.isEmpty == false)
+        #expect(proposal?.confidenceNotes == ["Derived from the local heuristic draft autofill path."])
+    }
+
+    @Test func testStructuredDraftAutofillFallsBackToLocalHeuristicWhenModelUnavailable() async {
+        let recorder = RecordingObservabilityService()
+        let workflowService = AppleStructuredWorkflowService(
+            heuristicDraftAutofillService: ArticleDraftAutofillService(),
+            contextMutationAdapter: ArticleContextMutationAdapter(),
+            observabilityService: recorder,
+            availabilityEvaluator: { .modelUnavailable }
+        )
+
+        let result = await workflowService.autofillDraft(
+            from: "The article is about remote work changing downtown real estate demand and why local businesses need a better playbook.",
+            articleSnapshot: nil
+        )
+
+        #expect(result.state == .completedWithFallback)
+        #expect(result.fallbackCode == .localHeuristicDraftAutofill)
+        #expect(result.unavailableReason == .modelUnavailable)
+        #expect(result.payload?.title.isEmpty == false)
+        #expect(recorder.artifacts.count == 1)
+        #expect(recorder.artifacts.first?.outcomeState == .completedWithFallback)
+        #expect(recorder.artifacts.first?.fallbackCode == .localHeuristicDraftAutofill)
     }
 }

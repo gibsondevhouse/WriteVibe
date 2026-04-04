@@ -19,6 +19,18 @@ struct ArticleCommandLifecycleTests {
             _ = summary
             return result
         }
+
+        func fallbackProposal(from seed: DraftAutofillSeed) -> DraftAutofillProposal? {
+            _ = seed
+            guard let title = result.title else { return nil }
+            return DraftAutofillProposal(
+                title: title,
+                subtitle: result.subtitle ?? "",
+                tone: (result.tone ?? .informative).rawValue,
+                targetLength: (result.targetLength ?? .medium).rawValue,
+                confidenceNotes: ["Stub fallback"]
+            )
+        }
     }
 
     private struct Harness {

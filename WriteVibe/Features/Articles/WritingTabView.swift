@@ -22,6 +22,7 @@ enum WritingMode: String, CaseIterable {
 struct WritingTabView: View {
     @Bindable var article: Article
     @State private var writingMode: WritingMode = .draft
+    @State private var viewModel = ArticleEditorViewModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,14 +66,14 @@ struct WritingTabView: View {
     private var modeContent: some View {
         switch writingMode {
         case .draft:
-            ArticleEditorView(article: article)
+            ArticleEditorView(article: article, viewModel: viewModel)
         case .outline:
-            OutlineEditorView(article: article)
+            OutlineEditorView(article: article, viewModel: viewModel)
         case .both:
             HSplitView {
-                OutlineEditorView(article: article)
+                OutlineEditorView(article: article, viewModel: viewModel)
                     .frame(minWidth: 240, idealWidth: 320, maxWidth: 400)
-                ArticleEditorView(article: article)
+                ArticleEditorView(article: article, viewModel: viewModel)
             }
         }
     }

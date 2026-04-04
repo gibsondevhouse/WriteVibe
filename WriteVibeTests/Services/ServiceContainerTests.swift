@@ -10,18 +10,24 @@ import Foundation
 @MainActor
 struct ServiceContainerTests {
 
+    @MainActor
+    private final class RecordingObservabilityService: AppleWorkflowObservabilityServicing {
+        private(set) var artifacts: [AppleWorkflowRunArtifact] = []
+
+        func recordRun(_ artifact: AppleWorkflowRunArtifact) async {
+            artifacts.append(artifact)
+        }
+    }
+
     @Test func testClaudeRoutingToOpenRouterWhenGatewayKeyIsPresent() async throws {
         let container = ServiceContainer(hasSearchAPIKey: { true })
-        
-        // Claude Sonnet should prefer OpenRouter when the gateway is configured.
+
         let sonnetProvider = container.provider(for: .claudeSonnet)
         #expect(sonnetProvider is OpenRouterService)
-        
-        // GPT-4o should also use OpenRouter
+
         let gptProvider = container.provider(for: .gpt4o)
         #expect(gptProvider is OpenRouterService)
-        
-        // Ollama should use OllamaService
+
         let ollamaProvider = container.provider(for: .ollama)
         #expect(ollamaProvider is OllamaService)
     }
@@ -32,14 +38,69 @@ struct ServiceContainerTests {
         let sonnetProvider = container.provider(for: .claudeSonnet)
         #expect(sonnetProvider is AnthropicService)
     }
-    
+
     @Test func testAppleIntelligenceNotRoutedForChat() async throws {
-        // Apple Intelligence is not a chat provider — it has no entry in provider(for:)
-        // and .appleIntelligence is no longer in isLocal, so it falls through to the
-        // guard in AppState.generateReply before a provider is ever selected.
         let container = ServiceContainer()
-        // Verify Ollama still routes correctly as the only local model
+        #expect(container.route(for: .appleIntelligence, modelIdentifier: nil) == nil)
+
         let ollamaProvider = container.provider(for: .ollama)
         #expect(ollamaProvider is OllamaService)
+
+        let appleProvider = container.provider(for: .appleIntelligence)
+        let stream = appleProvider.stream(model: "Apple Intelligence", messages: [], systemPrompt: "")
+        do {
+            for try await _ in stream {
+                Issue.record("Expected Apple Intelligence chat provider stream to fail immediately")
+            }
+            Issue.record("Expected Apple Intelligence chat provider stream to throw")
+        } catch {
+            #expect(true)
+        }
+    }
+
+    @Test func testStructuredWorkflowRouteBlocksGenericChatEntryPoint() async throws {
+        let container = ServiceContainer()
+        let decision = container.evaluateAppleStructuredWorkflowRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .outlineSuggestion,
+            entryPoint: .genericChat,
+            articleID: UUID(),
+            hasSelection: false,
+            rolloutPhase: .internalValidation,
+            featureFlagEnabled: true
+        ))
+
+        switch decision {
+        case .blocked(let reason):
+            #expect(reason.contains("cannot route through chat"))
+        default:
+            Issue.record("Expected generic chat route to be blocked")
+        }
+    }
+
+    @Test func testStructuredWorkflowServiceIsWiredWithObservabilityBoundary() async throws {
+        let recorder = RecordingObservabilityService()
+        let container = ServiceContainer(appleWorkflowObservabilityService: recorder)
+        let snapshot = AppleStructuredPlanningSnapshot(
+            articleID: UUID(),
+            title: "",
+            topic: "",
+            audience: "",
+            summary: "",
+            outline: "",
+            purpose: "",
+            style: "",
+            keyTakeaway: "",
+            publishingIntent: "",
+            sourceLinks: "",
+            targetLength: ArticleLength.medium.rawValue,
+            tone: ArticleTone.informative.rawValue,
+            updatedAt: Date()
+        )
+
+        let result = await container.appleStructuredWorkflowService.suggestOutline(from: snapshot)
+
+        #expect(result.state == .validationFailed)
+        #expect(recorder.artifacts.count == 1)
+        #expect(recorder.artifacts.first?.taskKind == .outlineSuggestion)
     }
 }

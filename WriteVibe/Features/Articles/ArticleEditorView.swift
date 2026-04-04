@@ -11,21 +11,21 @@ struct ArticleEditorView: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
-    @State private var vm = ArticleEditorViewModel()
+    let viewModel: ArticleEditorViewModel
     @State private var editorState = EditorState()
 
     var body: some View {
         VStack(spacing: 0) {
-            if vm.hasPendingChanges {
+            if viewModel.hasPendingChanges {
                 aiEditBar
                 Divider()
             }
-            if let issue = vm.aiError {
+            if let issue = viewModel.aiError {
                 errorBanner(issue)
                 Divider()
             }
 
-            if vm.hasPendingChanges {
+            if viewModel.hasPendingChanges {
                 blockReviewCanvas
             } else {
                 mediumEditorCanvas
@@ -55,6 +55,10 @@ struct ArticleEditorView: View {
                         .padding(.top, 14)
                         .padding(.bottom, 2)
 
+                    selectionWorkflowCard
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+
                     EditorTextView(editorState: editorState, initialBlocks: article.bodyBlocks)
                         .frame(minHeight: 200, alignment: .topLeading)
                         .overlay(alignment: .topLeading) {
@@ -73,12 +77,20 @@ struct ArticleEditorView: View {
             }
 
             if editorState.hasSelection {
-                FloatingFormatToolbar(editorState: editorState)
-                    .padding(.top, 8)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                FloatingFormatToolbar(
+                    editorState: editorState,
+                    isWorkflowRunning: viewModel.isSelectionWorkflowRunning,
+                    onSummarizeSelection: { requestSelectionWorkflow(.summarize) },
+                    onImproveSelection: { requestSelectionWorkflow(.improve) }
+                )
+                .padding(.top, 8)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
         .animation(.easeOut(duration: 0.15), value: editorState.hasSelection)
+        .onChange(of: editorState.selectionPayload?.token) { _, newToken in
+            viewModel.handleSelectionChange(currentToken: newToken)
+        }
         .onDisappear {
             editorState.syncToArticle(article)
         }
@@ -87,9 +99,9 @@ struct ArticleEditorView: View {
     private var aiEditButton: some View {
         Button {
             editorState.syncToArticle(article)
-            vm.requestAIEdits(for: article, defaultModel: appState.defaultModel)
+            viewModel.requestAIEdits(for: article, defaultModel: appState.defaultModel)
         } label: {
-            if vm.isRequestingEdits {
+            if viewModel.isRequestingEdits {
                 ProgressView()
                     .progressViewStyle(.circular)
                     .controlSize(.small)
@@ -101,7 +113,7 @@ struct ArticleEditorView: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.small)
-        .disabled(vm.isRequestingEdits || article.sortedBlocks.isEmpty)
+        .disabled(viewModel.isRequestingEdits || article.sortedBlocks.isEmpty)
         .help("Ask AI to propose edits to this article")
     }
 
@@ -113,16 +125,16 @@ struct ArticleEditorView: View {
                 ForEach(article.sortedBlocks) { block in
                     BlockRowView(
                         block: block,
-                        spans: vm.showEdits ? (vm.blockChanges[block.id] ?? []) : [],
-                        showEdits: vm.showEdits,
-                        onAccept: { span in vm.acceptSpan(span, in: block, article: article) },
-                        onReject: { span in vm.rejectSpan(span, in: block, article: article) },
+                        spans: viewModel.showEdits ? (viewModel.blockChanges[block.id] ?? []) : [],
+                        showEdits: viewModel.showEdits,
+                        onAccept: { span in viewModel.acceptSpan(span, in: block, article: article) },
+                        onReject: { span in viewModel.rejectSpan(span, in: block, article: article) },
                         onReturnAtEnd: {
-                            vm.addBlock(type: .paragraph, to: article, after: block)
+                            viewModel.addBlock(type: .paragraph, to: article, after: block)
                             try? modelContext.save()
                         },
                         onDeleteEmpty: {
-                            vm.deleteBlockIfEmpty(block, from: article)
+                            viewModel.deleteBlockIfEmpty(block, from: article)
                             try? modelContext.save()
                         }
                     )
@@ -139,7 +151,7 @@ struct ArticleEditorView: View {
 
     private var aiEditBar: some View {
         HStack(spacing: 12) {
-            if let summary = vm.editSummary {
+            if let summary = viewModel.editSummary {
                 Image(systemName: "sparkles")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.accentColor)
@@ -151,18 +163,18 @@ struct ArticleEditorView: View {
             Spacer()
 
             Button {
-                withAnimation(.easeInOut(duration: 0.15)) { vm.showEdits.toggle() }
+                withAnimation(.easeInOut(duration: 0.15)) { viewModel.showEdits.toggle() }
             } label: {
                 Label(
-                    vm.showEdits ? "Hide Edits" : "Show Edits",
-                    systemImage: vm.showEdits ? "eye.slash" : "eye"
+                    viewModel.showEdits ? "Hide Edits" : "Show Edits",
+                    systemImage: viewModel.showEdits ? "eye.slash" : "eye"
                 )
                 .font(.system(size: 11, weight: .medium))
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Button { vm.acceptAllChanges() } label: {
+            Button { viewModel.acceptAllChanges() } label: {
                 Label("Accept All", systemImage: "checkmark.circle")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.green)
@@ -170,7 +182,7 @@ struct ArticleEditorView: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
 
-            Button { vm.rejectAllChanges(for: article) } label: {
+            Button { viewModel.rejectAllChanges(for: article) } label: {
                 Label("Reject All", systemImage: "xmark.circle")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.red)
@@ -180,9 +192,9 @@ struct ArticleEditorView: View {
 
             Button {
                 editorState.syncToArticle(article)
-                vm.requestAIEdits(for: article, defaultModel: appState.defaultModel)
+                viewModel.requestAIEdits(for: article, defaultModel: appState.defaultModel)
             } label: {
-                if vm.isRequestingEdits {
+                if viewModel.isRequestingEdits {
                     ProgressView()
                         .progressViewStyle(.circular)
                         .controlSize(.small)
@@ -194,7 +206,7 @@ struct ArticleEditorView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .disabled(vm.isRequestingEdits || article.sortedBlocks.isEmpty)
+            .disabled(viewModel.isRequestingEdits || article.sortedBlocks.isEmpty)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -219,12 +231,162 @@ struct ArticleEditorView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Dismiss") { vm.aiError = nil }
+            Button("Dismiss") { viewModel.aiError = nil }
                 .font(.system(size: 11))
                 .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(Color.orange.opacity(0.07))
+    }
+
+    @ViewBuilder
+    private var selectionWorkflowCard: some View {
+        if let workflow = viewModel.latestSelectionWorkflow {
+            switch workflow.kind {
+            case .summarize:
+                workflowCard(
+                    title: workflow.kind.title,
+                    result: workflow.result,
+                    bodyText: selectionBodyText(for: workflow.result.payload),
+                    actionText: nil,
+                    onAction: nil,
+                    onRetry: { retrySelectionWorkflow(workflow.kind) },
+                    onDismiss: viewModel.dismissSelectionWorkflow
+                )
+            case .improve:
+                workflowCard(
+                    title: workflow.kind.title,
+                    result: workflow.result,
+                    bodyText: selectionBodyText(for: workflow.result.payload),
+                    actionText: "Apply Revision",
+                    onAction: applySelectionRewrite,
+                    onRetry: { retrySelectionWorkflow(workflow.kind) },
+                    onDismiss: viewModel.dismissSelectionWorkflow
+                )
+            }
+        }
+    }
+
+    private func requestSelectionWorkflow(_ kind: SelectionWorkflowKind) {
+        guard let selection = editorState.selectionPayload else { return }
+        viewModel.requestSelectionWorkflow(kind, article: article, selection: selection)
+    }
+
+    private func retrySelectionWorkflow(_ kind: SelectionWorkflowKind) {
+        guard let selection = editorState.selectionPayload else { return }
+        viewModel.requestSelectionWorkflow(kind, article: article, selection: selection)
+    }
+
+    private func applySelectionRewrite() {
+        if viewModel.applySelectionRewrite(using: editorState) {
+            editorState.syncToArticle(article)
+        }
+    }
+
+    private func selectionBodyText(for payload: SelectionWorkflowPayload?) -> String? {
+        guard let payload else { return nil }
+        switch payload {
+        case .summary(let proposal):
+            return proposal.summaryText
+        case .rewrite(let proposal):
+            return proposal.rewrittenText
+        }
+    }
+
+    private func workflowCard<Payload>(
+        title: String,
+        result: AppleWorkflowTaskResult<Payload>,
+        bodyText: String?,
+        actionText: String?,
+        onAction: (() -> Void)?,
+        onRetry: @escaping () -> Void,
+        onDismiss: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: iconName(for: result.state))
+                    .foregroundStyle(iconColor(for: result.state))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(result.userMessage)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Text("Next step: \(result.nextStep)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            if let bodyText, !bodyText.isEmpty {
+                Text(bodyText)
+                    .font(.system(size: 12))
+                    .textSelection(.enabled)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+            }
+
+            HStack(spacing: 10) {
+                if let actionText, let onAction, result.state == .success {
+                    Button(actionText, action: onAction)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                }
+                Button("Retry", action: onRetry)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                Button("Dismiss", action: onDismiss)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+            }
+        }
+        .padding(14)
+        .background(cardBackgroundColor(for: result.state), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func iconName(for state: AppleWorkflowTaskState) -> String {
+        switch state {
+        case .success:
+            return "checkmark.circle"
+        case .unavailable:
+            return "slash.circle"
+        case .validationFailure:
+            return "exclamationmark.circle"
+        case .executionFailure:
+            return "exclamationmark.triangle"
+        }
+    }
+
+    private func iconColor(for state: AppleWorkflowTaskState) -> Color {
+        switch state {
+        case .success:
+            return .green
+        case .unavailable:
+            return .orange
+        case .validationFailure:
+            return .yellow
+        case .executionFailure:
+            return .red
+        }
+    }
+
+    private func cardBackgroundColor(for state: AppleWorkflowTaskState) -> Color {
+        switch state {
+        case .success:
+            return Color.green.opacity(0.06)
+        case .unavailable:
+            return Color.orange.opacity(0.08)
+        case .validationFailure:
+            return Color.yellow.opacity(0.08)
+        case .executionFailure:
+            return Color.red.opacity(0.08)
+        }
     }
 }

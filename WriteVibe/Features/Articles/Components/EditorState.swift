@@ -11,6 +11,14 @@
 import AppKit
 import SwiftUI
 
+struct EditorSelectionPayload: Equatable {
+    let blockID: UUID?
+    let range: NSRange
+    let selectedText: String
+    let surroundingContext: String?
+    let token: String
+}
+
 @MainActor
 @Observable
 final class EditorState {
@@ -25,6 +33,7 @@ final class EditorState {
     var currentBlockType: BlockType = .paragraph
     var showInsertionButton = false
     var insertionButtonYOffset: CGFloat = 0
+    var selectionPayload: EditorSelectionPayload?
 
     weak var textView: NSTextView?
 
@@ -43,7 +52,6 @@ final class EditorState {
             from: storage,
             existingBlocks: bodyBlocks
         )
-        // Preserve the leading H1 title block, replace only body blocks
         let titleBlock = article.sortedBlocks.first { $0.blockType == .heading(level: 1) && $0.position == 0 }
         var newBlocks: [ArticleBlock] = []
         if let titleBlock { newBlocks.append(titleBlock) }
@@ -104,7 +112,6 @@ final class EditorState {
         let pStyle = DocumentSyncEngine.paragraphStyleForBlockType(type)
         let fgColor: NSColor = type == .blockquote ? .secondaryLabelColor : .textColor
 
-        // Apply to existing text in the paragraph
         if paraRange.length > 0 {
             storage.beginEditing()
             storage.addAttribute(.font, value: font, range: paraRange)
@@ -119,7 +126,6 @@ final class EditorState {
             storage.endEditing()
         }
 
-        // Also update typingAttributes so the next keystroke uses this style
         var typing = tv.typingAttributes
         typing[.font] = font
         typing[.paragraphStyle] = pStyle
@@ -138,17 +144,20 @@ final class EditorState {
         hasSelection = range.length > 0
 
         guard let storage = textView.textStorage else {
+            selectionPayload = nil
             showInsertionButton = false
             return
         }
 
         if hasSelection {
             selectionScreenRect = selectionBounds(for: range, in: textView)
+            selectionPayload = makeSelectionPayload(range: range, storage: storage)
             showInsertionButton = false
             return
         }
 
-        // Empty document
+        selectionPayload = nil
+
         if storage.length == 0 {
             isBold = false; isItalic = false; isLink = false
             currentBlockType = .paragraph
@@ -170,6 +179,32 @@ final class EditorState {
         currentBlockType = DocumentSyncEngine.resolveBlockType(tag: tag, metadata: meta)
 
         updateInsertionButtonState(range: range, storage: storage, textView: textView)
+    }
+
+    @discardableResult
+    func replaceSelection(with replacement: String, matching token: String) -> Bool {
+        guard let tv = textView,
+              let storage = tv.textStorage,
+              let payload = selectionPayload,
+              payload.token == token else {
+            return false
+        }
+
+        let attributeIndex = min(payload.range.location, max(storage.length - 1, 0))
+        let attributes = storage.length > 0
+            ? storage.attributes(at: attributeIndex, effectiveRange: nil)
+            : tv.typingAttributes
+
+        storage.beginEditing()
+        storage.replaceCharacters(
+            in: payload.range,
+            with: NSAttributedString(string: replacement, attributes: attributes)
+        )
+        storage.endEditing()
+
+        tv.setSelectedRange(NSRange(location: payload.range.location, length: replacement.count))
+        updateSelectionState(from: tv)
+        return true
     }
 
     // MARK: - Private
@@ -219,5 +254,45 @@ final class EditorState {
 
         article.blocks = newBlocks
         article.updatedAt = Date()
+    }
+
+    private func makeSelectionPayload(range: NSRange, storage: NSTextStorage) -> EditorSelectionPayload? {
+        guard range.length > 0, range.location != NSNotFound else { return nil }
+
+        let documentText = storage.string as NSString
+        let safeRange = NSIntersectionRange(range, NSRange(location: 0, length: documentText.length))
+        guard safeRange.length > 0 else { return nil }
+
+        let selectedText = documentText.substring(with: safeRange)
+        let contextRadius = 120
+        let contextStart = max(0, safeRange.location - contextRadius)
+        let contextEnd = min(documentText.length, safeRange.location + safeRange.length + contextRadius)
+        let contextRange = NSRange(location: contextStart, length: contextEnd - contextStart)
+        let surroundingContext = documentText.substring(with: contextRange).trimmed
+
+        let startIndex = min(safeRange.location, max(storage.length - 1, 0))
+        let endIndex = min(max(safeRange.location + safeRange.length - 1, 0), max(storage.length - 1, 0))
+        let startBlockID = storage.attribute(.wvBlockID, at: startIndex, effectiveRange: nil) as? UUID
+        let endBlockID = storage.attribute(.wvBlockID, at: endIndex, effectiveRange: nil) as? UUID
+        let blockID = startBlockID == endBlockID ? startBlockID : nil
+        let token = selectionToken(for: safeRange, selectedText: selectedText, blockID: blockID)
+
+        return EditorSelectionPayload(
+            blockID: blockID,
+            range: safeRange,
+            selectedText: selectedText,
+            surroundingContext: surroundingContext.isEmpty ? nil : surroundingContext,
+            token: token
+        )
+    }
+
+    private func selectionToken(for range: NSRange, selectedText: String, blockID: UUID?) -> String {
+        let prefix = selectedText.prefix(48).replacingOccurrences(of: "\n", with: " ")
+        return [
+            blockID?.uuidString ?? "multi-block",
+            String(range.location),
+            String(range.length),
+            prefix
+        ].joined(separator: ":")
     }
 }

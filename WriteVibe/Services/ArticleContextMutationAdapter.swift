@@ -26,12 +26,76 @@ final class ArticleContextMutationAdapter {
     typealias Validation = (String) -> Result<String, ArticleContextMutationError>
     typealias Apply = (Article, String) -> Void
 
+    static let structuredWorkflowCanonicalFields: [String] = [
+        "summary",
+        "audience",
+        "purpose",
+        "style",
+        "keytakeaway",
+        "publishingintent",
+        "sourcelinks"
+    ]
+
     private struct MatrixEntry {
         let validation: Validation
         let apply: Apply
     }
 
     static let supportedFields: Set<String> = Set(fieldAliases.keys)
+
+    func canonicalStructuredWorkflowField(for rawField: String) -> String? {
+        let normalizedField = rawField.lowercased().trimmed
+        guard let canonicalField = Self.fieldAliases[normalizedField],
+              Self.structuredWorkflowCanonicalFields.contains(canonicalField) else {
+            return nil
+        }
+        return canonicalField
+    }
+
+    func validateStructuredWorkflow(field rawField: String, value rawValue: String) -> Result<ArticleContextMutationRequest, ArticleContextMutationError> {
+        guard let canonicalField = canonicalStructuredWorkflowField(for: rawField),
+              let entry = Self.matrix[canonicalField] else {
+            return .failure(ArticleContextMutationError(
+                code: "CMD-008-UNKNOWN_FIELD",
+                message: "Unknown field '\(rawField)'.",
+                hint: "Use one of: \(Self.structuredWorkflowCanonicalFields.joined(separator: ", "))"
+            ))
+        }
+
+        switch entry.validation(rawValue) {
+        case .success(let normalizedValue):
+            return .success(ArticleContextMutationRequest(field: canonicalField, value: normalizedValue))
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    func structuredWorkflowRequests(from proposal: AppleStructuredContextSuggestionProposal) -> Result<[ArticleContextMutationRequest], ArticleContextMutationError> {
+        let candidates: [(String, String?)] = [
+            ("summary", proposal.summary),
+            ("audience", proposal.audience),
+            ("purpose", proposal.purpose),
+            ("style", proposal.style),
+            ("keytakeaway", proposal.keyTakeaway),
+            ("publishingintent", proposal.publishingIntent),
+            ("sourcelinks", proposal.sourceLinks)
+        ]
+
+        var requests: [ArticleContextMutationRequest] = []
+        for (field, value) in candidates {
+            let normalizedValue = (value ?? "").trimmed
+            guard !normalizedValue.isEmpty else { continue }
+
+            switch validateStructuredWorkflow(field: field, value: normalizedValue) {
+            case .success(let request):
+                requests.append(request)
+            case .failure(let error):
+                return .failure(error)
+            }
+        }
+
+        return .success(requests)
+    }
 
     func validate(field rawField: String, value rawValue: String) -> Result<ArticleContextMutationRequest, ArticleContextMutationError> {
         let normalizedField = rawField.lowercased()

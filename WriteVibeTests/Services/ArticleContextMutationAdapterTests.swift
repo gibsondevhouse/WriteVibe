@@ -72,4 +72,29 @@ struct ArticleContextMutationAdapterTests {
             #expect(error.message.contains("targetlength") == true)
         }
     }
+
+    @Test func testStructuredWorkflowRequestsUseCanonicalKeysOnly() {
+        let proposal = AppleStructuredContextSuggestionProposal(
+            summary: "Explain the market shift.",
+            audience: "Operators",
+            purpose: "Clarify tradeoffs",
+            style: "Direct",
+            keyTakeaway: "Execution matters more than hype.",
+            publishingIntent: "Newsletter",
+            sourceLinks: "https://example.com/report",
+            acceptedFields: []
+        )
+
+        switch adapter.structuredWorkflowRequests(from: proposal) {
+        case .success(let requests):
+            #expect(requests.map(\.field) == ["summary", "audience", "purpose", "style", "keytakeaway", "publishingintent", "sourcelinks"])
+        case .failure(let error):
+            Issue.record("Expected structured workflow requests to canonicalize fields, got \(error)")
+        }
+    }
+
+    @Test func testStructuredWorkflowCanonicalFieldRejectsUnsupportedKey() {
+        #expect(adapter.canonicalStructuredWorkflowField(for: "title") == nil)
+        #expect(adapter.canonicalStructuredWorkflowField(for: "sourceLinks") == "sourcelinks")
+    }
 }

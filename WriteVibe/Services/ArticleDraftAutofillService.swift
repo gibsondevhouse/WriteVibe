@@ -14,6 +14,7 @@ struct ArticleDraftAutofillResult {
 
 protocol ArticleDraftAutofillServicing {
     func autofill(from summary: String) -> ArticleDraftAutofillResult
+    func fallbackProposal(from seed: DraftAutofillSeed) -> DraftAutofillProposal?
 }
 
 final class ArticleDraftAutofillService: ArticleDraftAutofillServicing {
@@ -84,6 +85,21 @@ final class ArticleDraftAutofillService: ArticleDraftAutofillServicing {
             subtitle: subtitle,
             tone: tone,
             targetLength: length
+        )
+    }
+
+    func fallbackProposal(from seed: DraftAutofillSeed) -> DraftAutofillProposal? {
+        let result = autofill(from: seed.summary)
+        guard let title = result.title?.trimmed, !title.isEmpty else {
+            return nil
+        }
+
+        return DraftAutofillProposal(
+            title: title,
+            subtitle: result.subtitle?.trimmed ?? "",
+            tone: (result.tone ?? .informative).rawValue,
+            targetLength: (result.targetLength ?? .medium).rawValue,
+            confidenceNotes: ["Derived from the local heuristic draft autofill path."]
         )
     }
 

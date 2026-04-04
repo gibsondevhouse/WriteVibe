@@ -7,6 +7,9 @@ import SwiftUI
 
 struct FloatingFormatToolbar: View {
     let editorState: EditorState
+    let isWorkflowRunning: Bool
+    let onSummarizeSelection: () -> Void
+    let onImproveSelection: () -> Void
 
     var body: some View {
         HStack(spacing: 2) {
@@ -39,6 +42,28 @@ struct FloatingFormatToolbar: View {
                     .font(.system(size: 8))
             }
             .menuStyle(.borderlessButton)
+            .fixedSize()
+
+            Divider().frame(height: 16).padding(.horizontal, WVSpace.xs)
+
+            Menu {
+                Button("Summarize Selection", action: onSummarizeSelection)
+                Button("Improve Selection", action: onImproveSelection)
+            } label: {
+                HStack(spacing: WVSpace.xs) {
+                    if isWorkflowRunning {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "sparkles.rectangle.stack")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    Text("Writing Tools")
+                        .font(.wvLabel)
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .disabled(isWorkflowRunning)
             .fixedSize()
         }
         .padding(.horizontal, WVSpace.md)

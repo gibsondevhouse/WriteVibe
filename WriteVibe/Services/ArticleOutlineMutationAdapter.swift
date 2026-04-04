@@ -27,6 +27,34 @@ struct ArticleOutlineMutationError: Error, Equatable {
 @MainActor
 final class ArticleOutlineMutationAdapter {
 
+    func applyStructuredWorkflowSuggestion(
+        _ proposal: AppleStructuredOutlineSuggestionProposal,
+        to article: Article
+    ) -> Result<ArticleOutlineMutationResult, ArticleOutlineMutationError> {
+        guard proposal.applyMode == .replaceOutlineText else {
+            return .failure(ArticleOutlineMutationError(
+                code: "CMD-012-UNSUPPORTED_OUTLINE_APPLY_MODE",
+                message: "Only outline text replacement is supported for this Apple workflow slice.",
+                hint: "Use replaceOutlineText for structured outline suggestions"
+            ))
+        }
+
+        let sections = proposal.sections.filter {
+            !$0.heading.trimmed.isEmpty || !$0.summary.trimmed.isEmpty
+        }
+        guard !sections.isEmpty else {
+            return .failure(ArticleOutlineMutationError(
+                code: "CMD-011-VALIDATION_FAILED",
+                message: "Outline suggestion did not include any sections.",
+                hint: "Retry the outline suggestion with a clearer title or topic"
+            ))
+        }
+
+        article.outline = formattedOutlineText(from: sections)
+        article.updatedAt = Date()
+        return .success(ArticleOutlineMutationResult(operation: "replaceOutlineText", lineCount: countLines(article.outline)))
+    }
+
     func apply(
         _ request: ArticleOutlineMutationRequest,
         to article: Article
@@ -71,5 +99,14 @@ final class ArticleOutlineMutationAdapter {
 
     private func countLines(_ text: String) -> Int {
         text.isEmpty ? 0 : text.components(separatedBy: "\n").count
+    }
+
+    private func formattedOutlineText(from sections: [AppleStructuredOutlineSectionProposal]) -> String {
+        sections.enumerated().map { index, section in
+            let headingLine = "\(index + 1). \(section.heading.trimmed)"
+            let summaryLine = section.summary.trimmed.isEmpty ? nil : "   \(section.summary.trimmed)"
+            return [headingLine, summaryLine].compactMap { $0 }.joined(separator: "\n")
+        }
+        .joined(separator: "\n")
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 import Testing
 @testable import WriteVibe
 
@@ -132,4 +133,135 @@ struct WriteVibeTests {
         #expect(vm.editSummary == "captured")
     }
 
+    @Test func outlineSuggestionRequiresExplicitApplyBeforeMutatingArticle() async throws {
+        let article = Article(title: "Platform rollout", topic: "Feature adoption")
+        article.outline = "Existing outline"
+
+        let vm = ArticleEditorViewModel(
+            suggestOutlineWorkflow: { _ in
+                .success(
+                    OutlineSuggestionProposal(
+                        title: "Platform rollout",
+                        sections: [
+                            OutlineSectionProposal(heading: "Current State", summary: "Describe the current rollout baseline."),
+                            OutlineSectionProposal(heading: "Next Phase", summary: "Define the next staged rollout step.")
+                        ],
+                        applyMode: .replaceOutlineText
+                    ),
+                    userMessage: "Outline suggestion ready.",
+                    nextStep: "Apply it if it fits."
+                )
+            }
+        )
+
+        vm.requestOutlineSuggestion(for: article)
+
+        for _ in 0..<20 {
+            if vm.isOutlineWorkflowRunning == false {
+                break
+            }
+            await Task.yield()
+        }
+
+        #expect(article.outline == "Existing outline")
+        let result = try #require(vm.latestOutlineWorkflowResult)
+        #expect(result.state == .success)
+
+        vm.applyOutlineSuggestion(to: article)
+
+        #expect(article.outline.contains("Current State"))
+        #expect(article.outline.contains("Next Phase"))
+    }
+
+    @Test func summarizeSelectionStoresReadOnlyResult() async throws {
+        let article = Article(title: "Draft")
+        let selection = EditorSelectionPayload(
+            blockID: UUID(),
+            range: NSRange(location: 0, length: 5),
+            selectedText: "Hello world",
+            surroundingContext: "Hello world in context.",
+            token: "selection-1"
+        )
+
+        let vm = ArticleEditorViewModel(
+            summarizeSelectionWorkflow: { request in
+                .success(
+                    SelectionSummaryProposal(
+                        summaryText: "A concise summary of the selected passage.",
+                        sourceSelectionHash: request.selectionRangeToken
+                    ),
+                    userMessage: "Selection summary ready.",
+                    nextStep: "Review the summary."
+                )
+            }
+        )
+
+        vm.requestSelectionWorkflow(.summarize, article: article, selection: selection)
+
+        for _ in 0..<20 {
+            if vm.isSelectionWorkflowRunning == false {
+                break
+            }
+            await Task.yield()
+        }
+
+        let workflow = try #require(vm.latestSelectionWorkflow)
+        #expect(workflow.kind == .summarize)
+        #expect(workflow.result.state == .success)
+        if case .summary(let proposal)? = workflow.result.payload {
+            #expect(proposal.summaryText.contains("concise summary"))
+            #expect(proposal.sourceSelectionHash == "selection-1")
+        } else {
+            Issue.record("Expected a summary payload.")
+        }
+    }
+
+    @Test func improveSelectionAppliesOnlyWhenCurrentSelectionStillMatches() async throws {
+        let article = Article(title: "Draft")
+        let textView = NSTextView(frame: .zero)
+        let blockID = UUID()
+        let attributed = NSMutableAttributedString(string: "Original draft text")
+        attributed.addAttribute(.wvBlockID, value: blockID, range: NSRange(location: 0, length: attributed.length))
+        textView.textStorage?.setAttributedString(attributed)
+        textView.setSelectedRange(NSRange(location: 0, length: 8))
+
+        let editorState = EditorState()
+        editorState.textView = textView
+        editorState.updateSelectionState(from: textView)
+        let selection = try #require(editorState.selectionPayload)
+
+        let vm = ArticleEditorViewModel(
+            improveSelectionWorkflow: { request in
+                .success(
+                    SelectionRewriteProposal(
+                        rewrittenText: "Refined draft",
+                        changeIntent: "Clarify the opening.",
+                        sourceSelectionHash: request.selectionRangeToken
+                    ),
+                    userMessage: "Revision ready.",
+                    nextStep: "Apply it if it fits."
+                )
+            }
+        )
+
+        vm.requestSelectionWorkflow(.improve, article: article, selection: selection)
+
+        for _ in 0..<20 {
+            if vm.isSelectionWorkflowRunning == false {
+                break
+            }
+            await Task.yield()
+        }
+
+        let applied = vm.applySelectionRewrite(using: editorState)
+
+        #expect(applied)
+        #expect(textView.string.hasPrefix("Refined draft"))
+        switch vm.latestSelectionWorkflow {
+        case nil:
+            break
+        case .some:
+            Issue.record("Expected rewrite workflow state to clear after apply.")
+        }
+    }
 }

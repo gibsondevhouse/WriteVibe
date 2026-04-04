@@ -19,6 +19,21 @@ final class ServiceContainer {
         let modelName: String
     }
 
+    private struct BlockedAppleIntelligenceChatProvider: AIStreamingProvider {
+        func stream(
+            model: String,
+            messages: [[String: String]],
+            systemPrompt: String
+        ) -> AsyncThrowingStream<String, Error> {
+            _ = model
+            _ = messages
+            _ = systemPrompt
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: WriteVibeError.generationFailed(reason: "Apple Intelligence is limited to structured article workflows and cannot be used as a chat provider."))
+            }
+        }
+    }
+
     let ollamaProvider: OllamaService
     let openRouterProvider: OpenRouterService
     let anthropicProvider: AnthropicService
@@ -29,7 +44,11 @@ final class ServiceContainer {
     let articleContextMutationAdapter: ArticleContextMutationAdapter
     let articleOutlineMutationAdapter: ArticleOutlineMutationAdapter
     let articleBodyMutationAdapter: ArticleBodyMutationAdapter
+    let appleStructuredWorkflowService: any AppleStructuredWorkflowServicing
+    let appleStructuredWorkflowRouter: any AppleStructuredWorkflowRouting
+    let appleWorkflowObservabilityService: any AppleWorkflowObservabilityServicing
     private let hasOpenRouterKey: @MainActor () -> Bool
+    private let blockedAppleIntelligenceChatProvider = BlockedAppleIntelligenceChatProvider()
 
     init(
         ollamaProvider: OllamaService? = nil,
@@ -37,6 +56,9 @@ final class ServiceContainer {
         anthropicProvider: AnthropicService? = nil,
         conversationService: ConversationService? = nil,
         articleDraftAutofillService: (any ArticleDraftAutofillServicing)? = nil,
+        appleStructuredWorkflowService: (any AppleStructuredWorkflowServicing)? = nil,
+        appleStructuredWorkflowRouter: (any AppleStructuredWorkflowRouting)? = nil,
+        appleWorkflowObservabilityService: (any AppleWorkflowObservabilityServicing)? = nil,
         webSearchProvider: (any SearchContextProviding)? = nil,
         hasSearchAPIKey: (@MainActor () -> Bool)? = nil
     ) {
@@ -47,6 +69,17 @@ final class ServiceContainer {
         let hasOpenRouterKey = hasSearchAPIKey ?? {
             KeychainService.load(key: "openrouter_api_key") != nil
         }
+        let articleDraftAutofillService = articleDraftAutofillService ?? ArticleDraftAutofillService()
+        let articleContextMutationAdapter = ArticleContextMutationAdapter()
+        let articleOutlineMutationAdapter = ArticleOutlineMutationAdapter()
+        let articleBodyMutationAdapter = ArticleBodyMutationAdapter()
+        let appleWorkflowObservabilityService = appleWorkflowObservabilityService ?? NoOpAppleWorkflowObservabilityService()
+        let appleStructuredWorkflowRouter = appleStructuredWorkflowRouter ?? DefaultAppleStructuredWorkflowRouter()
+        let appleStructuredWorkflowService = appleStructuredWorkflowService ?? AppleStructuredWorkflowService(
+            heuristicDraftAutofillService: articleDraftAutofillService,
+            contextMutationAdapter: articleContextMutationAdapter,
+            observabilityService: appleWorkflowObservabilityService
+        )
 
         self.ollamaProvider = ollamaProvider
         self.openRouterProvider = openRouterProvider
@@ -54,10 +87,13 @@ final class ServiceContainer {
         self.conversationService = conversationService
         self.hasOpenRouterKey = hasOpenRouterKey
         self.commandExecutionService = CommandExecutionService()
-        self.articleDraftAutofillService = articleDraftAutofillService ?? ArticleDraftAutofillService()
-        self.articleContextMutationAdapter = ArticleContextMutationAdapter()
-        self.articleOutlineMutationAdapter = ArticleOutlineMutationAdapter()
-        self.articleBodyMutationAdapter = ArticleBodyMutationAdapter()
+        self.articleDraftAutofillService = articleDraftAutofillService
+        self.articleContextMutationAdapter = articleContextMutationAdapter
+        self.articleOutlineMutationAdapter = articleOutlineMutationAdapter
+        self.articleBodyMutationAdapter = articleBodyMutationAdapter
+        self.appleStructuredWorkflowService = appleStructuredWorkflowService
+        self.appleStructuredWorkflowRouter = appleStructuredWorkflowRouter
+        self.appleWorkflowObservabilityService = appleWorkflowObservabilityService
         self.streamingService = StreamingService(
             conversationService: conversationService,
             searchProvider: openRouterProvider,
@@ -87,13 +123,17 @@ final class ServiceContainer {
         }
     }
 
+    func evaluateAppleStructuredWorkflowRoute(for request: AppleWorkflowRouteRequest) -> AppleWorkflowRouteDecision {
+        appleStructuredWorkflowRouter.evaluateRoute(for: request)
+    }
+
     /// Returns the appropriate `AIStreamingProvider` for the given model.
     func provider(for model: AIModel) -> AIStreamingProvider {
         switch model {
         case .ollama:
             return ollamaProvider
         case .appleIntelligence:
-            return openRouterProvider
+            return blockedAppleIntelligenceChatProvider
         default:
             return route(for: model, modelIdentifier: "route-probe")?.provider ?? openRouterProvider
         }
