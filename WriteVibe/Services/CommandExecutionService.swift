@@ -79,11 +79,27 @@ struct CommandEnvelopeBodyOperation: Codable, Equatable, Sendable {
 struct CommandEnvelopeSeriesSelection: Codable, Equatable, Sendable {
     let seriesId: String
     let seriesTitle: String
+
+    nonisolated static func == (lhs: CommandEnvelopeSeriesSelection, rhs: CommandEnvelopeSeriesSelection) -> Bool {
+        lhs.seriesId == rhs.seriesId
+            && lhs.seriesTitle == rhs.seriesTitle
+    }
 }
 
 enum SeriesCommandMutation: Codable, Equatable, Sendable {
     case focusDashboard
     case selectSeries(CommandEnvelopeSeriesSelection)
+
+    nonisolated static func == (lhs: SeriesCommandMutation, rhs: SeriesCommandMutation) -> Bool {
+        switch (lhs, rhs) {
+        case (.focusDashboard, .focusDashboard):
+            return true
+        case (.selectSeries(let l), .selectSeries(let r)):
+            return l == r
+        default:
+            return false
+        }
+    }
 }
 
 struct CommandEnvelopeError: Codable, Equatable, Sendable {
@@ -112,11 +128,31 @@ enum CommandMutationPayload: Codable, Equatable, Sendable {
     case articleOutline(CommandEnvelopeOutlineOperation)
     case articleBody(CommandEnvelopeBodyOperation)
     case series(SeriesCommandMutation)
+
+    nonisolated static func == (lhs: CommandMutationPayload, rhs: CommandMutationPayload) -> Bool {
+        switch (lhs, rhs) {
+        case (.articleContext(let l), .articleContext(let r)):
+            return l == r
+        case (.articleOutline(let l), .articleOutline(let r)):
+            return l == r
+        case (.articleBody(let l), .articleBody(let r)):
+            return l == r
+        case (.series(let l), .series(let r)):
+            return l == r
+        default:
+            return false
+        }
+    }
 }
 
 struct CommandMutationEnvelope: Codable, Equatable, Sendable {
     let domain: CommandMutationDomain
     let payload: CommandMutationPayload
+
+    nonisolated static func == (lhs: CommandMutationEnvelope, rhs: CommandMutationEnvelope) -> Bool {
+        lhs.domain == rhs.domain
+            && lhs.payload == rhs.payload
+    }
 }
 
 struct CommandResult: Codable, Equatable, Sendable {
@@ -124,6 +160,13 @@ struct CommandResult: Codable, Equatable, Sendable {
     let nextSuggestedCommand: String?
     let draftAction: String?
     let mutation: CommandMutationEnvelope?
+
+    nonisolated static func == (lhs: CommandResult, rhs: CommandResult) -> Bool {
+        lhs.summary == rhs.summary
+            && lhs.nextSuggestedCommand == rhs.nextSuggestedCommand
+            && lhs.draftAction == rhs.draftAction
+            && lhs.mutation == rhs.mutation
+    }
 }
 
 struct CommandExecutionEnvelope: Codable, Equatable, Error, Sendable {

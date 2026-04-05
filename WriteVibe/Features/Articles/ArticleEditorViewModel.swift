@@ -267,13 +267,13 @@ enum SelectionWorkflowState {
 @Observable
 final class ArticleEditorViewModel {
 
-    typealias SuggestOutlineWorkflow = @MainActor (ArticlePlanningSnapshot) async -> AppleWorkflowTaskResult<OutlineSuggestionProposal>
-    typealias SummarizeSelectionWorkflow = @MainActor (SelectionWorkflowRequest, EditorSelectionPayload, Article) async -> AppleWorkflowTaskResult<SelectionSummaryProposal>
-    typealias ImproveSelectionWorkflow = @MainActor (SelectionWorkflowRequest, EditorSelectionPayload, Article) async -> AppleWorkflowTaskResult<SelectionRewriteProposal>
-    typealias GenerateVariantsWorkflow = @MainActor (SelectionWorkflowRequest, EditorSelectionPayload, Article) async -> AppleWorkflowTaskResult<SelectionVariantsProposal>
-    typealias LegacySummarizeSelectionWorkflow = @MainActor (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionSummaryProposal>
-    typealias LegacyImproveSelectionWorkflow = @MainActor (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionRewriteProposal>
-    typealias LegacyGenerateVariantsWorkflow = @MainActor (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionVariantsProposal>
+    typealias SuggestOutlineWorkflow = @MainActor @Sendable (ArticlePlanningSnapshot) async -> AppleWorkflowTaskResult<OutlineSuggestionProposal>
+    typealias SummarizeSelectionWorkflow = @MainActor @Sendable (SelectionWorkflowRequest, EditorSelectionPayload, Article) async -> AppleWorkflowTaskResult<SelectionSummaryProposal>
+    typealias ImproveSelectionWorkflow = @MainActor @Sendable (SelectionWorkflowRequest, EditorSelectionPayload, Article) async -> AppleWorkflowTaskResult<SelectionRewriteProposal>
+    typealias GenerateVariantsWorkflow = @MainActor @Sendable (SelectionWorkflowRequest, EditorSelectionPayload, Article) async -> AppleWorkflowTaskResult<SelectionVariantsProposal>
+    typealias LegacySummarizeSelectionWorkflow = @MainActor @Sendable (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionSummaryProposal>
+    typealias LegacyImproveSelectionWorkflow = @MainActor @Sendable (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionRewriteProposal>
+    typealias LegacyGenerateVariantsWorkflow = @MainActor @Sendable (SelectionWorkflowRequest) async -> AppleWorkflowTaskResult<SelectionVariantsProposal>
 
     var showEdits = true
     var isRequestingEdits = false
@@ -346,13 +346,13 @@ final class ArticleEditorViewModel {
             structuredWorkflowCoordinator: nil,
             suggestOutlineWorkflow: suggestOutlineWorkflow,
             summarizeSelectionWorkflow: summarizeSelectionWorkflow.map { legacy in
-                { request, _, _ in await legacy(request) }
+                { @MainActor @Sendable request, _, _ in await legacy(request) }
             },
             improveSelectionWorkflow: improveSelectionWorkflow.map { legacy in
-                { request, _, _ in await legacy(request) }
+                { @MainActor @Sendable request, _, _ in await legacy(request) }
             },
             generateVariantsWorkflow: generateVariantsWorkflow.map { legacy in
-                { request, _, _ in await legacy(request) }
+                { @MainActor @Sendable request, _, _ in await legacy(request) }
             }
         )
     }

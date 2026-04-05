@@ -19,9 +19,9 @@ struct WriteVibeApp: App {
         _appState = State(initialValue: AppState(services: container))
 
         let schema = Schema(versionedSchema: WriteVibeSchemaV2.self)
+
         let config = ModelConfiguration(
             "WriteVibe",
-            schema: schema,
             url: URL.applicationSupportDirectory.appending(path: "WriteVibe.store"),
             allowsSave: true
         )
@@ -32,7 +32,26 @@ struct WriteVibeApp: App {
                 configurations: config
             )
         } catch {
-            fatalError("Failed to create ModelContainer: \(error)")
+            let message = String(describing: error).lowercased()
+            let isKnownMigrationReferenceFailure =
+                message.contains("current model reference") &&
+                message.contains("next model reference") &&
+                message.contains("cannot be equal")
+
+            if isKnownMigrationReferenceFailure {
+                // Warning: retry without migration plan to avoid known SwiftData runtime abort.
+                NSLog("WriteVibe warning: retrying ModelContainer creation without migration plan due to known migration reference failure: \(error)")
+                do {
+                    modelContainer = try ModelContainer(
+                        for: schema,
+                        configurations: config
+                    )
+                } catch {
+                    fatalError("Failed to create ModelContainer after fallback retry: \(error)")
+                }
+            } else {
+                fatalError("Failed to create ModelContainer: \(error)")
+            }
         }
     }
 
