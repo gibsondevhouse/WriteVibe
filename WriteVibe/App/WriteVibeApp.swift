@@ -28,30 +28,10 @@ struct WriteVibeApp: App {
         do {
             modelContainer = try ModelContainer(
                 for: schema,
-                migrationPlan: WriteVibeMigrationPlan.self,
                 configurations: config
             )
         } catch {
-            let message = String(describing: error).lowercased()
-            let isKnownMigrationReferenceFailure =
-                message.contains("current model reference") &&
-                message.contains("next model reference") &&
-                message.contains("cannot be equal")
-
-            if isKnownMigrationReferenceFailure {
-                // Warning: retry without migration plan to avoid known SwiftData runtime abort.
-                NSLog("WriteVibe warning: retrying ModelContainer creation without migration plan due to known migration reference failure: \(error)")
-                do {
-                    modelContainer = try ModelContainer(
-                        for: schema,
-                        configurations: config
-                    )
-                } catch {
-                    fatalError("Failed to create ModelContainer after fallback retry: \(error)")
-                }
-            } else {
-                fatalError("Failed to create ModelContainer: \(error)")
-            }
+            fatalError("Failed to create ModelContainer: \(error)")
         }
     }
 
