@@ -62,6 +62,194 @@ struct DraftFieldSuggestion: Equatable {
     let suggestedValue: String
 }
 
+// MARK: - AppCommandMutationCoordinator
+
+@MainActor
+final class AppCommandMutationCoordinator {
+    struct Outcome {
+        let destination: SidebarDestination?
+        let route: WorkspaceRoute?
+    }
+
+    private let services: ServiceContainer
+
+    init(services: ServiceContainer) {
+        self.services = services
+    }
+
+    func resolveArticleContext(
+        currentRoute: WorkspaceRoute,
+        in context: ModelContext
+    ) -> CommandExecutionService.ArticleContext {
+        guard let currentArticleID = currentRoute.articleID else {
+            return CommandExecutionService.ArticleContext(
+                hasArticleContext: false,
+                articleId: nil,
+                articleTitle: nil
+            )
+        }
+
+        guard let article = fetchArticle(id: currentArticleID, context: context) else {
+            return CommandExecutionService.ArticleContext(
+                hasArticleContext: true,
+                articleId: nil,
+                articleTitle: nil
+            )
+        }
+
+        return CommandExecutionService.ArticleContext(
+            hasArticleContext: true,
+            articleId: article.id.uuidString,
+            articleTitle: article.title
+        )
+    }
+
+    func resolveSeriesContext(
+        currentRoute: WorkspaceRoute,
+        in context: ModelContext
+    ) -> CommandExecutionService.SeriesContext {
+        guard let currentSeriesID = currentRoute.seriesID else {
+            return CommandExecutionService.SeriesContext(
+                hasSeriesContext: false,
+                seriesId: nil,
+                seriesTitle: nil
+            )
+        }
+
+        guard let series = fetchSeries(id: currentSeriesID, context: context) else {
+            return CommandExecutionService.SeriesContext(
+                hasSeriesContext: true,
+                seriesId: nil,
+                seriesTitle: nil
+            )
+        }
+
+        return CommandExecutionService.SeriesContext(
+            hasSeriesContext: true,
+            seriesId: series.id.uuidString,
+            seriesTitle: series.title
+        )
+    }
+
+    func apply(
+        envelope: CommandExecutionEnvelope,
+        currentRoute: WorkspaceRoute,
+        in context: ModelContext
+    ) -> Outcome {
+        guard envelope.ok else {
+            return Outcome(destination: nil, route: nil)
+        }
+
+        var nextRoute: WorkspaceRoute? = nil
+        guard let mutation = envelope.mutation else {
+            return Outcome(destination: destination(for: envelope.target?.scope), route: nil)
+        }
+
+        switch mutation.payload {
+        case .articleContext(let request):
+            guard let article = resolveTargetArticle(from: envelope, currentRoute: currentRoute, in: context) else { break }
+            switch services.articleContextMutationAdapter.apply(
+                ArticleContextMutationRequest(field: request.field, value: request.value),
+                to: article
+            ) {
+            case .success:
+                nextRoute = .article(id: article.id)
+                try? context.save()
+            case .failure:
+                break
+            }
+
+        case .articleOutline(let request):
+            guard let article = resolveTargetArticle(from: envelope, currentRoute: currentRoute, in: context) else { break }
+            switch services.articleOutlineMutationAdapter.apply(
+                ArticleOutlineMutationRequest(
+                    operation: request.operation,
+                    index: request.index,
+                    value: request.value
+                ),
+                to: article
+            ) {
+            case .success:
+                try? context.save()
+            case .failure:
+                break
+            }
+
+        case .articleBody(let request):
+            guard let article = resolveTargetArticle(from: envelope, currentRoute: currentRoute, in: context) else { break }
+            switch services.articleBodyMutationAdapter.apply(
+                ArticleBodyMutationRequest(
+                    operation: request.operation,
+                    blockType: request.blockType,
+                    index: request.index,
+                    value: request.value
+                ),
+                to: article
+            ) {
+            case .success:
+                try? context.save()
+            case .failure:
+                break
+            }
+
+        case .series(let request):
+            switch request {
+            case .focusDashboard:
+                nextRoute = WorkspaceRoute.none
+            case .selectSeries(let selection):
+                if let id = UUID(uuidString: selection.seriesId) {
+                    nextRoute = .series(id: id)
+                }
+            }
+        }
+
+        return Outcome(destination: destination(for: envelope.target?.scope), route: nextRoute)
+    }
+
+    private func destination(for scope: String?) -> SidebarDestination? {
+        guard let scope else { return nil }
+        switch scope {
+        case "draft", "article":
+            return .articles
+        case "series":
+            return .series
+        default:
+            return nil
+        }
+    }
+
+    private func resolveTargetArticle(
+        from envelope: CommandExecutionEnvelope,
+        currentRoute: WorkspaceRoute,
+        in context: ModelContext
+    ) -> Article? {
+        if let targetID = envelope.target?.articleId,
+           let articleID = UUID(uuidString: targetID) {
+            return fetchArticle(id: articleID, context: context)
+        }
+
+        if let currentID = currentRoute.articleID {
+            return fetchArticle(id: currentID, context: context)
+        }
+
+        return nil
+    }
+
+    private func fetchArticle(id: UUID, context: ModelContext) -> Article? {
+        let descriptor = FetchDescriptor<Article>(predicate: #Predicate<Article> { article in
+            article.id == id
+        })
+        return try? context.fetch(descriptor).first
+    }
+
+    private func fetchSeries(id: UUID, context: ModelContext) -> Series? {
+        let descriptor = FetchDescriptor<Series>(predicate: #Predicate<Series> { series in
+            series.id == id
+        })
+        return try? context.fetch(descriptor).first
+    }
+}
+
 // MARK: - AppState
 
 @MainActor
@@ -81,9 +269,16 @@ final class AppState {
     var selectedFormat: String = "Markdown"
     var isMemoryEnabled: Bool = true
 
-    // Sidebar navigation
-    var selectedDestination: SidebarDestination = .articles
-    var isArticlesSectionExpanded: Bool = true
+    // Sidebar and workspace navigation
+    private let workspaceNavigation = WorkspaceNavigationState()
+    var selectedDestination: SidebarDestination {
+        get { workspaceNavigation.selectedDestination }
+        set { workspaceNavigation.selectDestination(newValue) }
+    }
+    var isArticlesSectionExpanded: Bool {
+        get { workspaceNavigation.isArticlesSectionExpanded }
+        set { workspaceNavigation.isArticlesSectionExpanded = newValue }
+    }
 
     // Copilot panel
     var isCopilotOpen: Bool          = false
@@ -96,12 +291,16 @@ final class AppState {
     var shouldPresentNewArticleFormFromCommand: Bool = false
 
     // Workspace route — single authoritative source for selected article/series (TASK-1107)
-    var workspaceRoute: WorkspaceRoute = .none
+    var workspaceRoute: WorkspaceRoute {
+        get { workspaceNavigation.route }
+        set { workspaceNavigation.setRoute(newValue) }
+    }
     /// Convenience accessor: the currently selected article's UUID, or nil.
-    var currentArticleID: UUID? { workspaceRoute.articleID }
+    var currentArticleID: UUID? { workspaceNavigation.currentArticleID }
 
     let services: ServiceContainer
     private let generationManager: ConversationGenerationManager
+    private let commandMutationCoordinator: AppCommandMutationCoordinator
 
     /// Default model applied to every new conversation. Persisted across launches.
     var defaultModel: AIModel = {
@@ -137,6 +336,7 @@ final class AppState {
     init(services: ServiceContainer) {
         self.services = services
         self.generationManager = ConversationGenerationManager(services: services)
+        self.commandMutationCoordinator = AppCommandMutationCoordinator(services: services)
     }
 
     // MARK: Context binding
@@ -215,9 +415,23 @@ final class AppState {
             } ?? [:]
         )
 
-        let articleContext = resolveArticleContext(in: ctx)
+        let articleContext = commandMutationCoordinator.resolveArticleContext(
+            currentRoute: workspaceRoute,
+            in: ctx
+        )
+        let seriesContext = commandMutationCoordinator.resolveSeriesContext(
+            currentRoute: workspaceRoute,
+            in: ctx
+        )
 
-        switch services.commandExecutionService.dispatch(input: trimmed, conversationId: conversationId, context: ctx, draftContext: draftContext, articleContext: articleContext) {
+        switch services.commandExecutionService.dispatch(
+            input: trimmed,
+            conversationId: conversationId,
+            context: ctx,
+            draftContext: draftContext,
+            articleContext: articleContext,
+            seriesContext: seriesContext
+        ) {
         case .notACommand:
             if captureDraftSummaryIfNeeded(trimmed, in: conversationId, context: ctx) {
                 if thinkingId == conversationId { thinkingId = nil }
@@ -235,10 +449,13 @@ final class AppState {
             
             // Handle draft state mutations from command
             handleDraftAction(from: envelope)
-            applyCommandMutation(from: envelope, in: ctx)
-            
-            // Route successful article commands to articles destination
-            routeIfNeeded(for: envelope)
+
+            let mutationOutcome = commandMutationCoordinator.apply(
+                envelope: envelope,
+                currentRoute: workspaceRoute,
+                in: ctx
+            )
+            applyNavigationOutcome(mutationOutcome)
         }
 
         return true
@@ -254,6 +471,7 @@ final class AppState {
             isAwaitingDraftSummaryInput = true
             draftFieldSuggestions = [:]
             shouldPresentNewArticleFormFromCommand = true
+            showWorkspaceDashboard(in: .articles)
         } else if action == "cancel" {
             activeDraft = nil
             isAwaitingDraftSummaryInput = false
@@ -414,11 +632,35 @@ final class AppState {
         guard let article = try? services.articleCreationService.createArticle(request, context: ctx) else {
             return
         }
-        workspaceRoute = .article(id: article.id)
+        openArticleWorkspace(article.id)
     }
 
     func setCurrentArticle(_ articleID: UUID?) {
-        workspaceRoute = articleID.map { .article(id: $0) } ?? .none
+        if let articleID {
+            openArticleWorkspace(articleID)
+        } else {
+            workspaceNavigation.showDashboard()
+        }
+    }
+
+    func clearCurrentArticleSelection() {
+        workspaceNavigation.showDashboard()
+    }
+
+    func navigate(to destination: SidebarDestination) {
+        workspaceNavigation.selectDestination(destination)
+    }
+
+    func showWorkspaceDashboard(in destination: SidebarDestination? = nil) {
+        workspaceNavigation.showDashboard(in: destination)
+    }
+
+    func openArticleWorkspace(_ articleID: UUID) {
+        workspaceNavigation.openArticle(id: articleID)
+    }
+
+    func openSeriesWorkspace(_ seriesID: UUID) {
+        workspaceNavigation.openSeries(id: seriesID)
     }
 
     func consumeNewArticleFormPresentationTrigger() {
@@ -440,102 +682,14 @@ final class AppState {
         shouldPresentNewArticleFormFromCommand = false
     }
 
-    private func applyCommandMutation(from envelope: CommandExecutionEnvelope, in context: ModelContext) {
-        guard envelope.ok,
-              let mutation = envelope.mutation,
-              mutation.domain == .article,
-              let article = resolveTargetArticle(from: envelope, in: context) else { return }
-
-        switch mutation.payload {
-        case .articleContext(let request):
-            switch services.articleContextMutationAdapter.apply(
-                ArticleContextMutationRequest(field: request.field, value: request.value),
-                to: article
-            ) {
-            case .success:
-                workspaceRoute = .article(id: article.id)
-                try? context.save()
-            case .failure:
-                break
-            }
-
-        case .articleOutline(let request):
-            switch services.articleOutlineMutationAdapter.apply(
-                ArticleOutlineMutationRequest(
-                    operation: request.operation,
-                    index: request.index,
-                    value: request.value
-                ),
-                to: article
-            ) {
-            case .success:
-                try? context.save()
-            case .failure:
-                break
-            }
-
-        case .articleBody(let request):
-            switch services.articleBodyMutationAdapter.apply(
-                ArticleBodyMutationRequest(
-                    operation: request.operation,
-                    blockType: request.blockType,
-                    index: request.index,
-                    value: request.value
-                ),
-                to: article
-            ) {
-            case .success:
-                try? context.save()
-            case .failure:
-                break
-            }
-
-        case .series:
-            break
-        }
-    }
-
-    private func resolveArticleContext(in context: ModelContext) -> CommandExecutionService.ArticleContext {
-        guard let currentArticleID else {
-            return CommandExecutionService.ArticleContext(hasArticleContext: false, articleId: nil, articleTitle: nil)
+    private func applyNavigationOutcome(_ outcome: AppCommandMutationCoordinator.Outcome) {
+        if let route = outcome.route {
+            workspaceNavigation.setRoute(route)
         }
 
-        guard let article = fetchArticle(id: currentArticleID, context: context) else {
-            return CommandExecutionService.ArticleContext(hasArticleContext: true, articleId: nil, articleTitle: nil)
+        if let destination = outcome.destination {
+            workspaceNavigation.selectDestination(destination)
         }
-
-        return CommandExecutionService.ArticleContext(
-            hasArticleContext: true,
-            articleId: article.id.uuidString,
-            articleTitle: article.title
-        )
-    }
-
-    private func resolveTargetArticle(from envelope: CommandExecutionEnvelope, in context: ModelContext) -> Article? {
-        guard let targetID = envelope.target?.articleId,
-              let articleID = UUID(uuidString: targetID) else {
-            return nil
-        }
-        return fetchArticle(id: articleID, context: context)
-    }
-
-    private func fetchArticle(id: UUID, context: ModelContext) -> Article? {
-        let descriptor = FetchDescriptor<Article>(predicate: #Predicate<Article> { article in
-            article.id == id
-        })
-        return try? context.fetch(descriptor).first
-    }
-
-    // MARK: Command Routing
-
-    /// Routes to articles destination if command envelope indicates article context is needed.
-    /// Respects WS-301 envelope scope field: "draft" and "article" scopes route to .articles.
-    private func routeIfNeeded(for envelope: CommandExecutionEnvelope) {
-        guard envelope.ok else { return }
-        guard let scope = envelope.target?.scope else { return }
-        guard ["draft", "article"].contains(scope) else { return }
-        
-        selectedDestination = .articles
     }
 
     func stopGeneration(for conversationId: UUID) {

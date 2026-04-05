@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Observation
 
 // MARK: - WorkspaceRoute
 
@@ -31,5 +32,77 @@ enum WorkspaceRoute: Equatable {
     var seriesID: UUID? {
         guard case .series(let id) = self else { return nil }
         return id
+    }
+}
+
+// MARK: - WorkspaceNavigationState
+
+/// Unified navigation contract for sidebar destination + workspace resource route.
+///
+/// Invariants:
+/// - `.article` route always implies `.articles` destination.
+/// - `.series` route always implies `.series` destination.
+/// - `.styles` destination can never hold a resource route.
+@MainActor
+@Observable
+final class WorkspaceNavigationState {
+    private(set) var selectedDestination: SidebarDestination = .articles
+    private(set) var route: WorkspaceRoute = .none
+    var isArticlesSectionExpanded: Bool = true
+
+    var currentArticleID: UUID? { route.articleID }
+    var currentSeriesID: UUID? { route.seriesID }
+
+    func selectDestination(_ destination: SidebarDestination) {
+        selectedDestination = destination
+        normalizeForDestination()
+    }
+
+    func setRoute(_ newRoute: WorkspaceRoute) {
+        route = newRoute
+
+        switch newRoute {
+        case .article:
+            selectedDestination = .articles
+        case .series:
+            selectedDestination = .series
+        case .none:
+            break
+        }
+
+        normalizeForDestination()
+    }
+
+    func showDashboard(in destination: SidebarDestination? = nil) {
+        if let destination {
+            selectedDestination = destination
+        }
+        route = .none
+        normalizeForDestination()
+    }
+
+    func openArticle(id: UUID) {
+        selectedDestination = .articles
+        route = .article(id: id)
+    }
+
+    func openSeries(id: UUID) {
+        selectedDestination = .series
+        route = .series(id: id)
+    }
+
+    private func normalizeForDestination() {
+        switch selectedDestination {
+        case .articles:
+            if case .series = route {
+                route = .none
+            }
+        case .series:
+            if case .article = route {
+                route = .none
+            }
+        case .styles:
+            route = .none
+        }
     }
 }

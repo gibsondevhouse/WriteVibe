@@ -71,6 +71,61 @@ struct CommandExecutionServiceTests {
         #expect(envelope.result?.nextSuggestedCommand == "/article new")
     }
 
+    @Test func testSeriesHelpReturnsSuccessEnvelope() throws {
+        let harness = try makeHarness()
+        let service = harness.appState.services.commandExecutionService
+
+        let outcome = service.dispatch(input: "/series help", conversationId: harness.conversationId, context: harness.context)
+
+        guard case .handled(let envelope) = outcome else {
+            Issue.record("Expected /series help to be handled")
+            return
+        }
+
+        #expect(envelope.ok)
+        #expect(envelope.command.namespace == "series")
+        #expect(envelope.command.verb == "help")
+        #expect(envelope.result?.summary.contains("Series command reference") == true)
+    }
+
+    @Test func testSeriesListReturnsSeriesMutation() throws {
+        let harness = try makeHarness()
+        let service = harness.appState.services.commandExecutionService
+
+        let outcome = service.dispatch(input: "/series list", conversationId: harness.conversationId, context: harness.context)
+
+        guard case .handled(let envelope) = outcome else {
+            Issue.record("Expected /series list to be handled")
+            return
+        }
+
+        #expect(envelope.ok)
+        #expect(envelope.command.namespace == "series")
+        #expect(envelope.mutation?.domain == .series)
+        #expect(envelope.seriesMutation == .focusDashboard)
+    }
+
+    @Test func testSeriesOpenByTitleReturnsSeriesSelectionMutation() throws {
+        let harness = try makeHarness()
+        let service = harness.appState.services.commandExecutionService
+        let series = Series(title: "Swift Deep Dives")
+        harness.context.insert(series)
+        try harness.context.save()
+
+        let outcome = service.dispatch(input: "/series open \"Swift Deep Dives\"", conversationId: harness.conversationId, context: harness.context)
+
+        guard case .handled(let envelope) = outcome else {
+            Issue.record("Expected /series open to be handled")
+            return
+        }
+
+        #expect(envelope.ok)
+        #expect(envelope.command.namespace == "series")
+        #expect(envelope.seriesMutation == .selectSeries(
+            CommandEnvelopeSeriesSelection(seriesId: series.id.uuidString, seriesTitle: "Swift Deep Dives")
+        ))
+    }
+
     @Test func testScriptsNamespaceIsBoundaryRejected() throws {
         let harness = try makeHarness()
         let service = harness.appState.services.commandExecutionService
@@ -150,6 +205,16 @@ struct CommandExecutionServiceTests {
         #expect(assistant.content.contains("Article command reference") == true)
         #expect(assistant.content.contains("Next: /article new") == true)
         #expect(assistant.content.contains("```json") == false)
+    }
+
+    @Test func testAppStateSeriesListRoutesToSeriesDashboard() throws {
+        let harness = try makeHarness()
+
+        let sent = harness.appState.send("/series list", in: harness.conversationId)
+
+        #expect(sent)
+        #expect(harness.appState.selectedDestination == .series)
+        #expect(harness.appState.workspaceRoute == .none)
     }
 
     @Test func testAppStateNonCommandStillBypassesCommandEnvelope() throws {

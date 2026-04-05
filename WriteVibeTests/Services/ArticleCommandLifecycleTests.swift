@@ -408,6 +408,64 @@ struct ArticleCommandLifecycleTests {
             #expect(countAfter == countBefore)
     }
 
+    @Test func testSelectingStylesClearsActiveArticleRoute() throws {
+        let h = try makeHarness()
+        let article = Article(title: "Navigation Test")
+        h.context.insert(article)
+        try h.context.save()
+
+        h.appState.openArticleWorkspace(article.id)
+        #expect(h.appState.currentArticleID == article.id)
+
+        h.appState.navigate(to: .styles)
+        #expect(h.appState.selectedDestination == .styles)
+        #expect(h.appState.workspaceRoute == .none)
+        #expect(h.appState.currentArticleID == nil)
+    }
+
+    @Test func testOpeningArticleWorkspaceForcesArticlesDestination() throws {
+        let h = try makeHarness()
+        let article = Article(title: "Route Parity")
+        h.context.insert(article)
+        try h.context.save()
+
+        h.appState.navigate(to: .series)
+        #expect(h.appState.selectedDestination == .series)
+
+        h.appState.openArticleWorkspace(article.id)
+
+        #expect(h.appState.selectedDestination == .articles)
+        #expect(h.appState.workspaceRoute == .article(id: article.id))
+        #expect(h.appState.currentArticleID == article.id)
+    }
+
+    @Test func testOpeningSeriesWorkspaceForcesSeriesDestination() throws {
+        let h = try makeHarness()
+        let series = Series(title: "Launch Series")
+        h.context.insert(series)
+        try h.context.save()
+
+        h.appState.openSeriesWorkspace(series.id)
+
+        #expect(h.appState.selectedDestination == .series)
+        #expect(h.appState.workspaceRoute == .series(id: series.id))
+        #expect(h.appState.currentArticleID == nil)
+    }
+
+    @Test func testShowDashboardClearsRouteAndPreservesCurrentDestination() throws {
+        let h = try makeHarness()
+        let article = Article(title: "Back Behavior")
+        h.context.insert(article)
+        try h.context.save()
+
+        h.appState.openArticleWorkspace(article.id)
+        #expect(h.appState.workspaceRoute == .article(id: article.id))
+
+        h.appState.showWorkspaceDashboard()
+        #expect(h.appState.workspaceRoute == .none)
+        #expect(h.appState.selectedDestination == .articles)
+    }
+
     // MARK: Thinking State Regression
 
     @Test func testCommandDoesNotLeaveThinkingStateActive() throws {

@@ -26,6 +26,16 @@ struct ArticleCreationRequest {
 
 @MainActor
 final class ArticleCreationService {
+    private let seriesMembershipService: SeriesMembershipService
+
+    init(seriesMembershipService: SeriesMembershipService) {
+        self.seriesMembershipService = seriesMembershipService
+    }
+
+    convenience init() {
+        self.init(seriesMembershipService: SeriesMembershipService())
+    }
+
     @discardableResult
     func createArticle(title: String, series: Series?, context: ModelContext) throws -> Article {
         try createArticle(
@@ -59,8 +69,7 @@ final class ArticleCreationService {
         article.publishingIntent = request.publishingIntent
 
         if let series = request.series {
-            article.series = series
-            article.seriesPosition = nextSeriesPosition(in: series)
+            seriesMembershipService.attach(article, to: series)
         }
 
         let titleBlock = ArticleBlock(type: .heading(level: 1), content: finalTitle, position: 0)
@@ -71,10 +80,5 @@ final class ArticleCreationService {
         context.insert(article)
         try context.save()
         return article
-    }
-
-    private func nextSeriesPosition(in series: Series) -> Int {
-        let maxPosition = series.articles.compactMap(\.seriesPosition).max() ?? 0
-        return maxPosition + 1
     }
 }

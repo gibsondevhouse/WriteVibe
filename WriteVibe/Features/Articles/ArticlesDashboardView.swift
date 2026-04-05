@@ -39,7 +39,7 @@ struct ArticlesDashboardView: View {
         Group {
             if let article = selectedArticle {
                 ArticleWorkspaceView(article: article) {
-                    appState.workspaceRoute = .none
+                    appState.showWorkspaceDashboard(in: .articles)
                 }
             } else {
                 dashboardContent
@@ -48,7 +48,7 @@ struct ArticlesDashboardView: View {
         .onChange(of: appState.shouldPresentNewArticleFormFromCommand) { _, shouldPresent in
             guard shouldPresent else { return }
 
-            appState.workspaceRoute = .none
+            appState.showWorkspaceDashboard(in: .articles)
             isShowingNewArticle = true
             appState.consumeNewArticleFormPresentationTrigger()
         }
@@ -123,12 +123,12 @@ struct ArticlesDashboardView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredAndSearched) { article in
                             ArticleListItem(article: article) {
-                                appState.workspaceRoute = .article(id: article.id)
+                                appState.openArticleWorkspace(article.id)
                             } onDelete: {
                                 modelContext.delete(article)
                                 try? modelContext.save()
                                 if appState.currentArticleID == article.id {
-                                    appState.setCurrentArticle(nil)
+                                    appState.clearCurrentArticleSelection()
                                 }
                             }
                         }
@@ -178,6 +178,6 @@ struct ArticlesDashboardView: View {
         }
         appState.clearDraftSession()
         isShowingNewArticle = false
-        appState.workspaceRoute = .article(id: article.id)
+        appState.openArticleWorkspace(article.id)
     }
 }

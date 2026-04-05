@@ -40,6 +40,7 @@ final class ServiceContainer {
     let conversationService: ConversationService
     let streamingService: StreamingService
     let commandExecutionService: CommandExecutionService
+    let seriesMembershipService: SeriesMembershipService
     let articleCreationService: ArticleCreationService
     let articleDraftAutofillService: any ArticleDraftAutofillServicing
     let articleContextMutationAdapter: ArticleContextMutationAdapter
@@ -72,7 +73,8 @@ final class ServiceContainer {
         let hasOpenRouterKey = hasSearchAPIKey ?? {
             KeychainService.load(key: "openrouter_api_key") != nil
         }
-        let articleCreationService = ArticleCreationService()
+        let seriesMembershipService = SeriesMembershipService()
+        let articleCreationService = ArticleCreationService(seriesMembershipService: seriesMembershipService)
         let articleDraftAutofillService = articleDraftAutofillService ?? ArticleDraftAutofillService()
         let articleContextMutationAdapter = ArticleContextMutationAdapter()
         let articleOutlineMutationAdapter = ArticleOutlineMutationAdapter()
@@ -95,6 +97,7 @@ final class ServiceContainer {
         self.conversationService = conversationService
         self.hasOpenRouterKey = hasOpenRouterKey
         self.commandExecutionService = CommandExecutionService()
+        self.seriesMembershipService = seriesMembershipService
         self.articleCreationService = articleCreationService
         self.articleDraftAutofillService = articleDraftAutofillService
         self.articleContextMutationAdapter = articleContextMutationAdapter

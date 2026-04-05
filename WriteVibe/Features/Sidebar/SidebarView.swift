@@ -109,7 +109,7 @@ struct SidebarView: View {
         let isSelected = appState.selectedDestination == destination
         return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                appState.selectedDestination = destination
+                appState.navigate(to: destination)
             }
         } label: {
             HStack(spacing: WVSpace.sm) {
