@@ -307,7 +307,7 @@ struct OutlineBodyCommandDispatchTests {
     private let articleId = UUID()
 
     private func makeContext() throws -> ModelContext {
-        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         return container.mainContext
     }
@@ -315,7 +315,7 @@ struct OutlineBodyCommandDispatchTests {
     private func articleContext(id: UUID? = nil) -> CommandExecutionService.ArticleContext {
         let resolvedId = id ?? articleId
         return CommandExecutionService.ArticleContext(
-            hasSelection: true,
+            hasArticleContext: true,
             articleId: resolvedId.uuidString,
             articleTitle: "Test Article"
         )

@@ -13,7 +13,7 @@ struct ConversationServiceTests {
 
     @Test func testConversationCRUD() async throws {
         // Setup in-memory SwiftData
-        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
         let service = ConversationService()

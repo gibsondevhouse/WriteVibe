@@ -15,7 +15,7 @@ struct CommandParserFailureCaseMatrixTests {
     private let conversationId = UUID()
 
     private func makeContext() throws -> ModelContext {
-        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         return container.mainContext
     }
@@ -32,7 +32,7 @@ struct CommandParserFailureCaseMatrixTests {
     private func dispatchWithArticle(_ input: String) throws -> CommandExecutionEnvelope {
         let ctx = try makeContext()
         let articleCtx = CommandExecutionService.ArticleContext(
-            hasSelection: true,
+            hasArticleContext: true,
             articleId: UUID().uuidString,
             articleTitle: "Target Article"
         )

@@ -94,7 +94,11 @@ final class AppState {
     var isAwaitingDraftSummaryInput: Bool = false
     var draftFieldSuggestions: [DraftSuggestionField: DraftFieldSuggestion] = [:]
     var shouldPresentNewArticleFormFromCommand: Bool = false
-    var currentArticleID: UUID? = nil
+
+    // Workspace route — single authoritative source for selected article/series (TASK-1107)
+    var workspaceRoute: WorkspaceRoute = .none
+    /// Convenience accessor: the currently selected article's UUID, or nil.
+    var currentArticleID: UUID? { workspaceRoute.articleID }
 
     let services: ServiceContainer
     private let generationManager: ConversationGenerationManager
@@ -231,9 +235,7 @@ final class AppState {
             
             // Handle draft state mutations from command
             handleDraftAction(from: envelope)
-            handleArticleMutation(from: envelope, in: ctx)
-            handleOutlineMutation(from: envelope, in: ctx)
-            handleBodyMutation(from: envelope, in: ctx)
+            applyCommandMutation(from: envelope, in: ctx)
             
             // Route successful article commands to articles destination
             routeIfNeeded(for: envelope)
@@ -391,31 +393,32 @@ final class AppState {
 
     private func createArticleFromDraft(_ draft: DraftSession) {
         guard let ctx = modelContext else { return }
-        
-        let article = Article(
+
+        let request = ArticleCreationRequest(
             title: draft.title,
             subtitle: draft.subtitle,
             topic: draft.topic,
+            audience: draft.audience,
+            quickNotes: draft.quickNotes,
+            sourceLinks: draft.sourceLinks,
+            outline: draft.outline,
+            summary: draft.summary,
+            purpose: draft.purpose,
+            style: draft.style,
+            keyTakeaway: draft.keyTakeaway,
+            publishingIntent: draft.publishingIntent,
             tone: ArticleTone(rawValue: draft.tone) ?? .conversational,
             targetLength: ArticleLength(rawValue: draft.targetLength) ?? .medium
         )
-        article.audience = draft.audience
-        article.quickNotes = draft.quickNotes
-        article.sourceLinks = draft.sourceLinks
-        article.outline = draft.outline
-        article.summary = draft.summary
-        article.purpose = draft.purpose
-        article.style = draft.style
-        article.keyTakeaway = draft.keyTakeaway
-        article.publishingIntent = draft.publishingIntent
-        
-        ctx.insert(article)
-        try? ctx.save()
-        currentArticleID = article.id
+
+        guard let article = try? services.articleCreationService.createArticle(request, context: ctx) else {
+            return
+        }
+        workspaceRoute = .article(id: article.id)
     }
 
     func setCurrentArticle(_ articleID: UUID?) {
-        currentArticleID = articleID
+        workspaceRoute = articleID.map { .article(id: $0) } ?? .none
     }
 
     func consumeNewArticleFormPresentationTrigger() {
@@ -437,80 +440,83 @@ final class AppState {
         shouldPresentNewArticleFormFromCommand = false
     }
 
-    private func handleArticleMutation(from envelope: CommandExecutionEnvelope, in context: ModelContext) {
+    private func applyCommandMutation(from envelope: CommandExecutionEnvelope, in context: ModelContext) {
         guard envelope.ok,
-              let mutation = envelope.articleMutation,
-              let targetID = envelope.target?.articleId,
-              let articleID = UUID(uuidString: targetID),
-              let article = fetchArticle(id: articleID, context: context) else { return }
+              let mutation = envelope.mutation,
+              mutation.domain == .article,
+              let article = resolveTargetArticle(from: envelope, in: context) else { return }
 
-        switch services.articleContextMutationAdapter.apply(
-            ArticleContextMutationRequest(field: mutation.field, value: mutation.value),
-            to: article
-        ) {
-        case .success:
-            currentArticleID = article.id
-            try? context.save()
-        case .failure:
-            break
-        }
-    }
+        switch mutation.payload {
+        case .articleContext(let request):
+            switch services.articleContextMutationAdapter.apply(
+                ArticleContextMutationRequest(field: request.field, value: request.value),
+                to: article
+            ) {
+            case .success:
+                workspaceRoute = .article(id: article.id)
+                try? context.save()
+            case .failure:
+                break
+            }
 
-    private func handleOutlineMutation(from envelope: CommandExecutionEnvelope, in context: ModelContext) {
-        guard envelope.ok,
-              let op = envelope.outlineOperation,
-              let targetID = envelope.target?.articleId,
-              let articleID = UUID(uuidString: targetID),
-              let article = fetchArticle(id: articleID, context: context) else { return }
+        case .articleOutline(let request):
+            switch services.articleOutlineMutationAdapter.apply(
+                ArticleOutlineMutationRequest(
+                    operation: request.operation,
+                    index: request.index,
+                    value: request.value
+                ),
+                to: article
+            ) {
+            case .success:
+                try? context.save()
+            case .failure:
+                break
+            }
 
-        let request = ArticleOutlineMutationRequest(
-            operation: op.operation,
-            index: op.index,
-            value: op.value
-        )
-        switch services.articleOutlineMutationAdapter.apply(request, to: article) {
-        case .success:
-            try? context.save()
-        case .failure:
-            break
-        }
-    }
+        case .articleBody(let request):
+            switch services.articleBodyMutationAdapter.apply(
+                ArticleBodyMutationRequest(
+                    operation: request.operation,
+                    blockType: request.blockType,
+                    index: request.index,
+                    value: request.value
+                ),
+                to: article
+            ) {
+            case .success:
+                try? context.save()
+            case .failure:
+                break
+            }
 
-    private func handleBodyMutation(from envelope: CommandExecutionEnvelope, in context: ModelContext) {
-        guard envelope.ok,
-              let op = envelope.bodyOperation,
-              let targetID = envelope.target?.articleId,
-              let articleID = UUID(uuidString: targetID),
-              let article = fetchArticle(id: articleID, context: context) else { return }
-
-        let request = ArticleBodyMutationRequest(
-            operation: op.operation,
-            blockType: op.blockType,
-            index: op.index,
-            value: op.value
-        )
-        switch services.articleBodyMutationAdapter.apply(request, to: article) {
-        case .success:
-            try? context.save()
-        case .failure:
+        case .series:
             break
         }
     }
 
     private func resolveArticleContext(in context: ModelContext) -> CommandExecutionService.ArticleContext {
         guard let currentArticleID else {
-            return CommandExecutionService.ArticleContext(hasSelection: false, articleId: nil, articleTitle: nil)
+            return CommandExecutionService.ArticleContext(hasArticleContext: false, articleId: nil, articleTitle: nil)
         }
 
         guard let article = fetchArticle(id: currentArticleID, context: context) else {
-            return CommandExecutionService.ArticleContext(hasSelection: true, articleId: nil, articleTitle: nil)
+            return CommandExecutionService.ArticleContext(hasArticleContext: true, articleId: nil, articleTitle: nil)
         }
 
         return CommandExecutionService.ArticleContext(
-            hasSelection: true,
+            hasArticleContext: true,
             articleId: article.id.uuidString,
             articleTitle: article.title
         )
+    }
+
+    private func resolveTargetArticle(from envelope: CommandExecutionEnvelope, in context: ModelContext) -> Article? {
+        guard let targetID = envelope.target?.articleId,
+              let articleID = UUID(uuidString: targetID) else {
+            return nil
+        }
+        return fetchArticle(id: articleID, context: context)
     }
 
     private func fetchArticle(id: UUID, context: ModelContext) -> Article? {

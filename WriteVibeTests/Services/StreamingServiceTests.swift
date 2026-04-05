@@ -218,7 +218,7 @@ struct StreamingServiceTests {
     }
 
     private func makeContextAndConversation(model: AIModel = .ollama) throws -> ConversationFixture {
-        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
         let conversationService = ConversationService()

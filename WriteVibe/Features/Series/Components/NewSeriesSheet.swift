@@ -3,9 +3,13 @@
 //  WriteVibe
 //
 
+import SwiftData
 import SwiftUI
 
 struct NewSeriesSheet: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AppState.self) private var appState
+
     @Binding var isPresented: Bool
     var onCreate: (Article) -> Void
 
@@ -144,21 +148,30 @@ struct NewSeriesSheet: View {
     }
 
     private func createSeriesFirstArticle() {
-        let series = seriesName.trimmingCharacters(in: .whitespaces)
+        let seriesTitle = seriesName.trimmingCharacters(in: .whitespaces)
         let title = articleTitle.trimmingCharacters(in: .whitespaces)
-        guard !series.isEmpty, !title.isEmpty else { return }
-        let article = Article(
+        guard !seriesTitle.isEmpty, !title.isEmpty else { return }
+
+        let normalizedDescription = seriesDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let series = Series(
+            title: seriesTitle,
+            seriesDescription: normalizedDescription.isEmpty ? nil : normalizedDescription
+        )
+        modelContext.insert(series)
+
+        let request = ArticleCreationRequest(
             title: title,
             subtitle: "",
             topic: topic.trimmingCharacters(in: .whitespaces),
             tone: tone,
-            targetLength: length
+            targetLength: length,
+            series: series
         )
-        article.seriesName = series
-        let titleBlock = ArticleBlock(type: .heading(level: 1), content: title, position: 0)
-        let bodyBlock  = ArticleBlock(type: .paragraph, content: "", position: 1000)
-        article.blocks = [titleBlock, bodyBlock]
-        article.drafts = [ArticleDraft(title: "Draft 1", content: title)]
+        guard let article = try? appState.services.articleCreationService.createArticle(request, context: modelContext) else {
+            return
+        }
+
+        isPresented = false
         onCreate(article)
     }
 }

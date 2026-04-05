@@ -71,7 +71,10 @@ final class Article: Identifiable {
     var id: UUID
     var title: String
     var subtitle: String
-    var seriesName: String?       // optional group label
+    // MARK: - Legacy (migration residue — do not write in new code)
+    // seriesName is retained solely as source data for the V1 → V2 SchemaVersioning migration.
+    // After migration, all reads and writes must use the `series` relationship instead.
+    var seriesName: String?
     var topic: String
     var audience: String
     var quickNotes: String
@@ -90,6 +93,12 @@ final class Article: Identifiable {
 
     @Relationship(deleteRule: .cascade) var blocks: [ArticleBlock] = []
     @Relationship(deleteRule: .cascade) var drafts: [ArticleDraft] = []
+
+    // MARK: - Series
+    /// Back-reference to the Series this article belongs to. Nil if not part of a series.
+    var series: Series?
+    /// Explicit 1-based position within the series. Backfilled by migration; nil outside a series.
+    var seriesPosition: Int?
 
     init(
         title: String = "Untitled Article",

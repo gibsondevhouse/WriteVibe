@@ -46,6 +46,12 @@
 | WS-1006 | sprint-2026-10 | Backend Apple stack refactor and coordinator migration | @backend-lead | Complete | TASK-1007/1008/1009 complete with coordinator migration, deterministic routing/fallback, and backend evidence capture |
 | WS-1007 | sprint-2026-10 | Frontend coordinator adoption and workflow UX alignment | @frontend-lead | Complete | TASK-1010/1011/1012 complete with coordinator adoption, UX state alignment, and frontend validation |
 | WS-1008 | sprint-2026-10 | QA execution evidence and release-gate enforcement | @qa-lead | Complete | TASK-1013/1014 complete with gate evidence execution, consecutive-pass control, and promotion recommendation |
+| WS-1101 | sprint-2026-11 | Series domain scope lock and acceptance traceability | @product-manager | Complete | TASK-1101 completed with product anti-goals and ready-to-build Series criteria locked |
+| WS-1102 | sprint-2026-11 | Series persistence, migration, and boundary architecture | @architect | Complete | TASK-1102/1103 completed with accepted entity, migration, route-state, and feature-boundary contracts |
+| WS-1103 | sprint-2026-11 | Backend migration and canonical creation boundary execution | @backend-lead | Complete | TASK-1104/1105/1106 complete with QA promotion recommendation accepted |
+| WS-1104 | sprint-2026-11 | Frontend route-state unification and Series feature-boundary refactor | @frontend-lead | Complete | TASK-1107/1108 complete with QA promotion recommendation accepted |
+| WS-1105 | sprint-2026-11 | QA readiness gate pack and evidence control | @qa-lead | Complete | TASK-1109/1110 complete; promotion recommended with explicit residual evidence risks |
+| WS-1106 | sprint-2026-11 | Cross-workstream blocker control and Series build-start decision | @cto | Complete | Go decision recorded: proceed with Series implementation while tracking residual E-1102/E-1110/E-1111 risks |
 
 ## Status Values
 

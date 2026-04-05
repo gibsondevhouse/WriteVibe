@@ -40,16 +40,6 @@ struct CommandEnvelopeTarget: Codable, Equatable, Sendable {
     }
 }
 
-struct CommandEnvelopeResult: Codable, Equatable, Sendable {
-    let summary: String
-    let nextSuggestedCommand: String?
-
-    nonisolated static func == (lhs: CommandEnvelopeResult, rhs: CommandEnvelopeResult) -> Bool {
-        lhs.summary == rhs.summary
-            && lhs.nextSuggestedCommand == rhs.nextSuggestedCommand
-    }
-}
-
 struct CommandEnvelopeArticleMutation: Codable, Equatable, Sendable {
     let field: String
     let value: String
@@ -107,18 +97,42 @@ struct CommandEnvelopeError: Codable, Equatable, Sendable {
     }
 }
 
+enum CommandMutationDomain: String, Codable, Equatable, Sendable {
+    case article
+    case series
+}
+
+struct SeriesCommandMutationStub: Codable, Equatable, Sendable {
+    let note: String
+}
+
+enum CommandMutationPayload: Codable, Equatable, Sendable {
+    case articleContext(CommandEnvelopeArticleMutation)
+    case articleOutline(CommandEnvelopeOutlineOperation)
+    case articleBody(CommandEnvelopeBodyOperation)
+    case series(SeriesCommandMutationStub)
+}
+
+struct CommandMutationEnvelope: Codable, Equatable, Sendable {
+    let domain: CommandMutationDomain
+    let payload: CommandMutationPayload
+}
+
+struct CommandResult: Codable, Equatable, Sendable {
+    let summary: String
+    let nextSuggestedCommand: String?
+    let draftAction: String?
+    let mutation: CommandMutationEnvelope?
+}
+
 struct CommandExecutionEnvelope: Codable, Equatable, Error, Sendable {
     let ok: Bool
     let requestId: String
     let timestamp: String
     let command: CommandEnvelopeCommand
     let target: CommandEnvelopeTarget?
-    let result: CommandEnvelopeResult?
+    let result: CommandResult?
     let error: CommandEnvelopeError?
-    let draftAction: String?  // e.g., "start", "set:field=value", "create", "cancel"
-    let articleMutation: CommandEnvelopeArticleMutation?
-    let outlineOperation: CommandEnvelopeOutlineOperation?
-    let bodyOperation: CommandEnvelopeBodyOperation?
 
     nonisolated static func == (lhs: CommandExecutionEnvelope, rhs: CommandExecutionEnvelope) -> Bool {
         lhs.ok == rhs.ok
@@ -128,10 +142,32 @@ struct CommandExecutionEnvelope: Codable, Equatable, Error, Sendable {
             && lhs.target == rhs.target
             && lhs.result == rhs.result
             && lhs.error == rhs.error
-            && lhs.draftAction == rhs.draftAction
-            && lhs.articleMutation == rhs.articleMutation
-            && lhs.outlineOperation == rhs.outlineOperation
-            && lhs.bodyOperation == rhs.bodyOperation
+    }
+
+    var draftAction: String? {
+        result?.draftAction
+    }
+
+    var mutation: CommandMutationEnvelope? {
+        result?.mutation
+    }
+
+    var articleMutation: CommandEnvelopeArticleMutation? {
+        guard let mutation else { return nil }
+        guard case .articleContext(let request) = mutation.payload else { return nil }
+        return request
+    }
+
+    var outlineOperation: CommandEnvelopeOutlineOperation? {
+        guard let mutation else { return nil }
+        guard case .articleOutline(let request) = mutation.payload else { return nil }
+        return request
+    }
+
+    var bodyOperation: CommandEnvelopeBodyOperation? {
+        guard let mutation else { return nil }
+        guard case .articleBody(let request) = mutation.payload else { return nil }
+        return request
     }
 
     func renderForAssistantMessage() -> String {
@@ -173,7 +209,7 @@ final class CommandExecutionService {
     }
 
     struct ArticleContext {
-        let hasSelection: Bool
+        let hasArticleContext: Bool
         let articleId: String?
         let articleTitle: String?
     }
@@ -568,7 +604,7 @@ final class CommandExecutionService {
                 requestId: conversationId.uuidString
             )
         }
-        guard articleContext.hasSelection,
+                guard articleContext.hasArticleContext,
               let articleId = articleContext.articleId,
               let articleTitle = articleContext.articleTitle else {
             return errorEnvelope(
@@ -640,7 +676,10 @@ final class CommandExecutionService {
                 summary: "Outline item appended to '\(articleTitle)'.",
                 nextSuggestedCommand: "/article outline append <more items>",
                 target: CommandEnvelopeTarget(articleId: articleId, articleTitle: articleTitle, scope: "article"),
-                outlineOperation: CommandEnvelopeOutlineOperation(operation: "append", index: nil, value: value)
+                mutation: CommandMutationEnvelope(
+                    domain: .article,
+                    payload: .articleOutline(CommandEnvelopeOutlineOperation(operation: "append", index: nil, value: value))
+                )
             )
 
         case "replace":
@@ -673,7 +712,10 @@ final class CommandExecutionService {
                 summary: "Outline line \(index) replaced in '\(articleTitle)'.",
                 nextSuggestedCommand: "/article outline append <next item>",
                 target: CommandEnvelopeTarget(articleId: articleId, articleTitle: articleTitle, scope: "article"),
-                outlineOperation: CommandEnvelopeOutlineOperation(operation: "replace", index: index, value: value)
+                mutation: CommandMutationEnvelope(
+                    domain: .article,
+                    payload: .articleOutline(CommandEnvelopeOutlineOperation(operation: "replace", index: index, value: value))
+                )
             )
 
         default:
@@ -736,7 +778,10 @@ final class CommandExecutionService {
                 summary: "Paragraph appended to body of '\(articleTitle)'.",
                 nextSuggestedCommand: "/article body append <more content>",
                 target: CommandEnvelopeTarget(articleId: articleId, articleTitle: articleTitle, scope: "article"),
-                bodyOperation: CommandEnvelopeBodyOperation(operation: "append", blockType: nil, index: nil, value: value)
+                mutation: CommandMutationEnvelope(
+                    domain: .article,
+                    payload: .articleBody(CommandEnvelopeBodyOperation(operation: "append", blockType: nil, index: nil, value: value))
+                )
             )
 
         case "insert":
@@ -778,7 +823,10 @@ final class CommandExecutionService {
                 summary: "\(blockType.capitalized) inserted at position \(index) in '\(articleTitle)'.",
                 nextSuggestedCommand: "/article body append <more content>",
                 target: CommandEnvelopeTarget(articleId: articleId, articleTitle: articleTitle, scope: "article"),
-                bodyOperation: CommandEnvelopeBodyOperation(operation: "insert", blockType: blockType, index: index, value: value)
+                mutation: CommandMutationEnvelope(
+                    domain: .article,
+                    payload: .articleBody(CommandEnvelopeBodyOperation(operation: "insert", blockType: blockType, index: index, value: value))
+                )
             )
 
         default:
@@ -893,7 +941,7 @@ final class CommandExecutionService {
             )
         }
 
-        guard articleContext.hasSelection else {
+        guard articleContext.hasArticleContext else {
             return errorEnvelope(
                 code: "CMD-010-STATE_ERROR",
                 category: .state,
@@ -950,7 +998,10 @@ final class CommandExecutionService {
                     articleTitle: articleTitle,
                     scope: "article"
                 ),
-                articleMutation: CommandEnvelopeArticleMutation(field: request.field, value: request.value)
+                mutation: CommandMutationEnvelope(
+                    domain: .article,
+                    payload: .articleContext(CommandEnvelopeArticleMutation(field: request.field, value: request.value))
+                )
             )
         }
     }
@@ -1137,9 +1188,7 @@ final class CommandExecutionService {
         nextSuggestedCommand: String?,
         target: CommandEnvelopeTarget?,
         draftAction: String? = nil,
-        articleMutation: CommandEnvelopeArticleMutation? = nil,
-        outlineOperation: CommandEnvelopeOutlineOperation? = nil,
-        bodyOperation: CommandEnvelopeBodyOperation? = nil
+        mutation: CommandMutationEnvelope? = nil
     ) -> CommandExecutionEnvelope {
         CommandExecutionEnvelope(
             ok: true,
@@ -1152,15 +1201,13 @@ final class CommandExecutionService {
                 raw: raw
             ),
             target: target,
-            result: CommandEnvelopeResult(
+            result: CommandResult(
                 summary: summary,
-                nextSuggestedCommand: nextSuggestedCommand
+                nextSuggestedCommand: nextSuggestedCommand,
+                draftAction: draftAction,
+                mutation: mutation
             ),
-            error: nil,
-            draftAction: draftAction,
-            articleMutation: articleMutation,
-            outlineOperation: outlineOperation,
-            bodyOperation: bodyOperation
+            error: nil
         )
     }
 
@@ -1174,11 +1221,7 @@ final class CommandExecutionService {
         verb: String?,
         subverb: String?,
         target: CommandEnvelopeTarget? = nil,
-        requestId: String? = nil,
-        draftAction: String? = nil,
-        articleMutation: CommandEnvelopeArticleMutation? = nil,
-        outlineOperation: CommandEnvelopeOutlineOperation? = nil,
-        bodyOperation: CommandEnvelopeBodyOperation? = nil
+        requestId: String? = nil
     ) -> CommandExecutionEnvelope {
         CommandExecutionEnvelope(
             ok: false,
@@ -1198,11 +1241,7 @@ final class CommandExecutionService {
                 message: message,
                 recoverable: true,
                 hint: hint
-            ),
-            draftAction: draftAction,
-            articleMutation: articleMutation,
-            outlineOperation: outlineOperation,
-            bodyOperation: bodyOperation
+            )
         )
     }
 

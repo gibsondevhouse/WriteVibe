@@ -1,8 +1,6 @@
 //
 //  ArticlesDashboardView.swift
 //  WriteVibe
-//
-
 import SwiftUI
 import SwiftData
 
@@ -13,15 +11,13 @@ struct ArticlesDashboardView: View {
     @Environment(AppState.self) private var appState
     @Query(sort: \Article.updatedAt, order: .reverse) private var articles: [Article]
 
-    @State private var selectedArticleID: PersistentIdentifier? = nil
     @State private var filterStatus: PublishStatus? = nil
     @State private var searchText: String = ""
-    @State private var isCreatingSeries = false
     @State private var isShowingNewArticle = false
 
     private var selectedArticle: Article? {
-        guard let id = selectedArticleID else { return nil }
-        return modelContext.model(for: id) as? Article
+        guard case .article(let id) = appState.workspaceRoute else { return nil }
+        return articles.first { $0.id == id }
     }
 
     private var filteredAndSearched: [Article] {
@@ -43,26 +39,16 @@ struct ArticlesDashboardView: View {
         Group {
             if let article = selectedArticle {
                 ArticleWorkspaceView(article: article) {
-                    selectedArticleID = nil
-                    appState.setCurrentArticle(nil)
+                    appState.workspaceRoute = .none
                 }
             } else {
                 dashboardContent
             }
         }
-        .sheet(isPresented: $isCreatingSeries) {
-            NewSeriesSheet(isPresented: $isCreatingSeries) { article in
-                modelContext.insert(article)
-                try? modelContext.save()
-                selectedArticleID = article.persistentModelID
-                appState.setCurrentArticle(article.id)
-            }
-        }
         .onChange(of: appState.shouldPresentNewArticleFormFromCommand) { _, shouldPresent in
             guard shouldPresent else { return }
 
-            selectedArticleID = nil
-            appState.setCurrentArticle(nil)
+            appState.workspaceRoute = .none
             isShowingNewArticle = true
             appState.consumeNewArticleFormPresentationTrigger()
         }
@@ -137,8 +123,7 @@ struct ArticlesDashboardView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredAndSearched) { article in
                             ArticleListItem(article: article) {
-                                selectedArticleID = article.persistentModelID
-                                appState.setCurrentArticle(article.id)
+                                appState.workspaceRoute = .article(id: article.id)
                             } onDelete: {
                                 modelContext.delete(article)
                                 try? modelContext.save()
@@ -181,25 +166,18 @@ struct ArticlesDashboardView: View {
     // MARK: - Create
 
     private func createArticle(title: String, subtitle: String, tone: ArticleTone, targetLength: ArticleLength) {
-        let finalTitle = title.trimmed.isEmpty
-            ? "Untitled Article"
-            : title.trimmed
-        let article = Article(
-            title: finalTitle,
+        let request = ArticleCreationRequest(
+            title: title,
             subtitle: subtitle.trimmed,
             topic: "",
             tone: tone,
             targetLength: targetLength
         )
-        let titleBlock = ArticleBlock(type: .heading(level: 1), content: finalTitle, position: 0)
-        let bodyBlock  = ArticleBlock(type: .paragraph, content: "", position: 1000)
-        article.blocks = [titleBlock, bodyBlock]
-        article.drafts = [ArticleDraft(title: "Draft 1", content: finalTitle)]
-        modelContext.insert(article)
-        try? modelContext.save()
+        guard let article = try? appState.services.articleCreationService.createArticle(request, context: modelContext) else {
+            return
+        }
         appState.clearDraftSession()
         isShowingNewArticle = false
-        selectedArticleID = article.persistentModelID
-        appState.setCurrentArticle(article.id)
+        appState.workspaceRoute = .article(id: article.id)
     }
 }

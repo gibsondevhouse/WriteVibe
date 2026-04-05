@@ -128,7 +128,7 @@ struct StreamingServiceContractTests {
     // SCENARIO 1: Success Path — Create → Update → Finalize
     @Test func testPlaceholderSuccessPath_CreateUpdateFinalize() throws {
         let adapter = makeAdapter()
-        let schema = Schema([Conversation.self, Message.self, Article.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
 
@@ -171,7 +171,7 @@ struct StreamingServiceContractTests {
     // SCENARIO 2: Interruption Path — Create → Cancel → Retry (new handle)
     @Test func testPlaceholderInterruptionPath_CreateCancelRetry() throws {
         let adapter = makeAdapter()
-        let schema = Schema([Conversation.self, Message.self, Article.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
 
@@ -224,7 +224,7 @@ struct StreamingServiceContractTests {
     // SCENARIO 3: Edge Case — Create → Finalize → Cancel (idempotent)
     @Test func testPlaceholderEdgeCase_FinalizeIdempotent() throws {
         let adapter = makeAdapter()
-        let schema = Schema([Conversation.self, Message.self, Article.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
 
@@ -262,7 +262,7 @@ struct StreamingServiceContractTests {
     /// Verify that once a handle is finalized, further token appends are rejected
     @Test func testContractViolation_AppendAfterFinalize() async throws {
         let adapter = makeAdapter()
-        let schema = Schema([Conversation.self, Message.self, Article.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
 
@@ -300,7 +300,7 @@ struct StreamingServiceContractTests {
     /// Verify concurrent handles maintain independent state
     @Test func testConcurrentHandles_IndependentLifecycles() throws {
         let adapter = makeAdapter()
-        let schema = Schema([Conversation.self, Message.self, Article.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
 

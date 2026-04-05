@@ -17,7 +17,7 @@ struct CommandExecutionServiceTests {
     }
 
     private func makeHarness(model: AIModel = .ollama) throws -> Harness {
-        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
         let services = ServiceContainer()
@@ -218,7 +218,7 @@ struct CommandExecutionServiceTests {
             conversationId: harness.conversationId,
             context: harness.context,
             draftContext: noDraft,
-            articleContext: CommandExecutionService.ArticleContext(hasSelection: false, articleId: nil, articleTitle: nil)
+            articleContext: CommandExecutionService.ArticleContext(hasArticleContext: false, articleId: nil, articleTitle: nil)
         )
 
         guard case .handled(let envelope) = outcome else {
@@ -246,7 +246,7 @@ struct CommandExecutionServiceTests {
             context: harness.context,
             draftContext: CommandExecutionService.DraftContext(isActive: false, draftFields: [:]),
             articleContext: CommandExecutionService.ArticleContext(
-                hasSelection: true,
+                hasArticleContext: true,
                 articleId: article.id.uuidString,
                 articleTitle: article.title
             )
@@ -261,6 +261,7 @@ struct CommandExecutionServiceTests {
         #expect(envelope.command.verb == "update")
         #expect(envelope.target?.articleId == article.id.uuidString)
         #expect(envelope.target?.articleTitle == "Current")
+        #expect(envelope.mutation?.domain == .article)
         #expect(envelope.articleMutation == CommandEnvelopeArticleMutation(field: "audience", value: "Technical leaders"))
     }
 
@@ -273,7 +274,7 @@ struct CommandExecutionServiceTests {
             conversationId: harness.conversationId,
             context: harness.context,
             draftContext: CommandExecutionService.DraftContext(isActive: false, draftFields: [:]),
-            articleContext: CommandExecutionService.ArticleContext(hasSelection: true, articleId: nil, articleTitle: nil)
+            articleContext: CommandExecutionService.ArticleContext(hasArticleContext: true, articleId: nil, articleTitle: nil)
         )
 
         guard case .handled(let envelope) = outcome else {
@@ -295,7 +296,7 @@ struct CommandExecutionServiceTests {
             conversationId: harness.conversationId,
             context: harness.context,
             draftContext: CommandExecutionService.DraftContext(isActive: false, draftFields: [:]),
-            articleContext: CommandExecutionService.ArticleContext(hasSelection: true, articleId: UUID().uuidString, articleTitle: "Current")
+            articleContext: CommandExecutionService.ArticleContext(hasArticleContext: true, articleId: UUID().uuidString, articleTitle: "Current")
         )
 
         guard case .handled(let envelope) = outcome else {

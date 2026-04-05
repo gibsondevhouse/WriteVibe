@@ -8,7 +8,8 @@
 | sprint-2026-07 | 2026-07-01 to 2026-07-18 | Closed | Swift 6/macOS 26 compile and warning remediation for Round 1 diagnostics | @cto |
 | sprint-2026-08 | 2026-08-03 to 2026-08-28 | Closed | Sprint-operations hardening for status synchronization, QA evidence quality, and closeout discipline | @cto |
 | sprint-2026-09 | 2026-09-01 to 2026-09-26 | Closed | Reliability and trust hardening across streaming, article edit pipeline, providers, and GA-critical QA gates | @cto |
-| sprint-2026-10 | 2026-04-04 to 2026-04-25 | Active | Apple Foundation Models reframed as a local structured writing engine with coordinator-first architecture migration | @cto |
+| sprint-2026-10 | 2026-04-04 to 2026-04-25 | Closed | Apple Foundation Models reframed as a local structured writing engine with coordinator-first architecture migration | @cto |
+| sprint-2026-11 | 2026-04-27 to 2026-05-15 | Active | Series domain readiness through model correction, migration, canonical creation, and route-state unification | @cto |
 
 ## Notes
 
@@ -24,4 +25,7 @@
 - 2026-04-03 execution update: sprint-2026-09 moved to Active with WS-601 through WS-604 and TASK-601 through TASK-606 in progress.
 - 2026-04-04 closeout update: sprint-2026-09 is formally closed with WS-901 through WS-910 complete and all promotion gates approved.
 - 2026-04-04 initiation update: sprint-2026-10 planning pack is implementation-ready with scope lock, architecture contract, lead execution plans, and QA gate pack published.
-- 2026-04-04 readiness update: sprint-2026-10 remains implementation-ready with WS-1006 through WS-1008 and TASK-1007 through TASK-1014 staged Planned pending execution start authorization.
+- 2026-04-04 closeout update: sprint-2026-10 execution completed with WS-1001 through WS-1008 and TASK-1001 through TASK-1014 complete and QA promotion approved.
+- 2026-04-04 initiation update: sprint-2026-11 planning pack opened to prepare real Series development through domain correction, migration, creation-boundary consolidation, and route-state unification.
+- 2026-04-04 readiness update: sprint-2026-11 is implementation-ready with WS-1101/1102/1105 complete, planning blockers closed, and WS-1103/1104/1106 staged Planned for execution start.
+- 2026-04-04 execution update: sprint-2026-11 moved to Active with WS-1103/WS-1104/WS-1106 in progress and TASK-1104/TASK-1107 opened.

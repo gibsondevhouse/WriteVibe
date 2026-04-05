@@ -130,7 +130,7 @@ struct MessagePersistenceAdapterTests {
     }
 
     private func makeFixture() throws -> Fixture {
-        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self])
+        let schema = Schema([Conversation.self, Message.self, Article.self, ArticleBlock.self, ArticleDraft.self, Series.self])
         let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = container.mainContext
         let conversationService = ConversationService()

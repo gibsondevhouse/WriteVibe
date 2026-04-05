@@ -18,7 +18,7 @@ struct WriteVibeApp: App {
         _services = State(initialValue: container)
         _appState = State(initialValue: AppState(services: container))
 
-        let schema = Schema(versionedSchema: WriteVibeSchemaV1.self)
+        let schema = Schema(versionedSchema: WriteVibeSchemaV2.self)
         let config = ModelConfiguration(
             "WriteVibe",
             schema: schema,
