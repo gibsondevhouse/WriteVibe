@@ -32,9 +32,20 @@
 | WS-902 | sprint-2026-09 | Backend structured task orchestration readiness | @backend-lead | Complete | TASK-903/904 complete with execution plan, validation checklist, and developer/tester handoffs published |
 | WS-903 | sprint-2026-09 | Frontend workflow and UX integration readiness | @frontend-lead | Complete | TASK-905/906 complete with integration plan, copy/state checklist, and frontend implementation/test handoffs published |
 | WS-904 | sprint-2026-09 | Quality gates and observability readiness | @qa-lead | Complete | TASK-907/908 complete with gate pack, evidence checklist, and tester collaboration pack published |
-| WS-905 | sprint-2026-09 | Backend structured workflow implementation | @backend-lead | In Progress | TASK-909 active with TASK-910 queued for focused validation against the frozen Apple workflow contract |
-| WS-906 | sprint-2026-09 | Frontend structured workflow integration implementation | @frontend-lead | In Progress | TASK-911 active with TASK-912 queued for scope, selection, and fallback validation against the approved UX baseline |
-| WS-907 | sprint-2026-09 | QA implementation evidence and promotion control | @qa-lead | In Progress | TASK-913 active for focused evidence collection and promotion gating over implementation slices |
+| WS-905 | sprint-2026-09 | Backend structured workflow implementation | @backend-lead | Complete | TASK-909/910 complete with deterministic routing, fallback, and observability validation evidence |
+| WS-906 | sprint-2026-09 | Frontend structured workflow integration implementation | @frontend-lead | Complete | TASK-911/912 complete with workflow-state, selection-safety, and fallback UX evidence |
+| WS-907 | sprint-2026-09 | QA implementation evidence and promotion control | @qa-lead | Complete | TASK-913 complete with S1-E01 through S1-E09 gate evidence and promotion approval |
+| WS-908 | sprint-2026-09 | Backend selected-text utility implementation (Slice 2) | @backend-lead | Complete | TASK-914/915 complete with focused service, routing, fallback, and observability suite evidence |
+| WS-909 | sprint-2026-09 | Frontend selected-text utility integration (Slice 2) | @frontend-lead | Complete | TASK-916/917 complete with variants workflow integration and regression evidence |
+| WS-910 | sprint-2026-09 | QA selected-text utility evidence and promotion control (Slice 2) | @qa-lead | Complete | TASK-918 complete with S2-E12/S2-E13 consecutive pass evidence and S2-E14 recommendation |
+| WS-1001 | sprint-2026-10 | Product scope lock and workflow outcome definitions | @product-manager | Complete | TASK-1001 complete with bounded non-chat scope lock and implementation-readiness outcomes |
+| WS-1002 | sprint-2026-10 | Apple architecture contract and module decomposition | @architect | Complete | TASK-1002/1003 complete with module map, protocol surface, route matrix, migration phases, and anti-goals |
+| WS-1003 | sprint-2026-10 | Backend execution-readiness planning | @backend-lead | Complete | TASK-1004 complete with backend file targets, sequencing, fallback, and telemetry checkpoints |
+| WS-1004 | sprint-2026-10 | Frontend execution-readiness planning | @frontend-lead | Complete | TASK-1005 complete with coordinator migration plan, UI state alignment, and fallback copy checklist |
+| WS-1005 | sprint-2026-10 | QA gate-pack and promotion control planning | @qa-lead | Complete | TASK-1006 complete with gate definitions, evidence checklist, and promotion disqualifiers |
+| WS-1006 | sprint-2026-10 | Backend Apple stack refactor and coordinator migration | @backend-lead | Complete | TASK-1007/1008/1009 complete with coordinator migration, deterministic routing/fallback, and backend evidence capture |
+| WS-1007 | sprint-2026-10 | Frontend coordinator adoption and workflow UX alignment | @frontend-lead | Complete | TASK-1010/1011/1012 complete with coordinator adoption, UX state alignment, and frontend validation |
+| WS-1008 | sprint-2026-10 | QA execution evidence and release-gate enforcement | @qa-lead | Complete | TASK-1013/1014 complete with gate evidence execution, consecutive-pass control, and promotion recommendation |
 
 ## Status Values
 

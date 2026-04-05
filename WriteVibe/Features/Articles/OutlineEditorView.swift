@@ -152,6 +152,8 @@ struct OutlineEditorView: View {
             return "exclamationmark.circle"
         case .executionFailure:
             return "exclamationmark.triangle"
+        case .fallbackComplete:
+            return "arrow.triangle.2.circlepath.circle"
         }
     }
 
@@ -165,6 +167,8 @@ struct OutlineEditorView: View {
             return .yellow
         case .executionFailure:
             return .red
+        case .fallbackComplete:
+            return .blue
         }
     }
 
@@ -178,6 +182,8 @@ struct OutlineEditorView: View {
             return Color.yellow.opacity(0.08)
         case .executionFailure:
             return Color.red.opacity(0.08)
+        case .fallbackComplete:
+            return Color.blue.opacity(0.08)
         }
     }
 }

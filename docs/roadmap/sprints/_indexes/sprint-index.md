@@ -7,7 +7,8 @@
 | sprint-2026-06 | 2026-06-01 to 2026-06-26 | Closed | Copilot-driven article creation/editing with scripts+emails extracted to separate app boundary | @cto |
 | sprint-2026-07 | 2026-07-01 to 2026-07-18 | Closed | Swift 6/macOS 26 compile and warning remediation for Round 1 diagnostics | @cto |
 | sprint-2026-08 | 2026-08-03 to 2026-08-28 | Closed | Sprint-operations hardening for status synchronization, QA evidence quality, and closeout discipline | @cto |
-| sprint-2026-09 | 2026-09-01 to 2026-09-26 | Active | Reliability and trust hardening across streaming, article edit pipeline, providers, and GA-critical QA gates | @cto |
+| sprint-2026-09 | 2026-09-01 to 2026-09-26 | Closed | Reliability and trust hardening across streaming, article edit pipeline, providers, and GA-critical QA gates | @cto |
+| sprint-2026-10 | 2026-04-04 to 2026-04-25 | Active | Apple Foundation Models reframed as a local structured writing engine with coordinator-first architecture migration | @cto |
 
 ## Notes
 
@@ -21,3 +22,6 @@
 - 2026-04-03 closeout update: sprint-2026-08 is formally closed with WS-501 through WS-504 complete, all blockers closed, all risks mitigated, and QA approval recorded for reuse of the process baseline.
 - 2026-04-03 initiation update: sprint-2026-09 planning pack opened with reliability-first workstreams (WS-601 through WS-605) based on the architecture risk-reduction plan.
 - 2026-04-03 execution update: sprint-2026-09 moved to Active with WS-601 through WS-604 and TASK-601 through TASK-606 in progress.
+- 2026-04-04 closeout update: sprint-2026-09 is formally closed with WS-901 through WS-910 complete and all promotion gates approved.
+- 2026-04-04 initiation update: sprint-2026-10 planning pack is implementation-ready with scope lock, architecture contract, lead execution plans, and QA gate pack published.
+- 2026-04-04 readiness update: sprint-2026-10 remains implementation-ready with WS-1006 through WS-1008 and TASK-1007 through TASK-1014 staged Planned pending execution start authorization.

@@ -180,7 +180,7 @@ final class AppleStructuredWorkflowSlice1ViewModelTests: XCTestCase {
     func testSelectionWorkflow_summarizeTransitionsToResult() async {
         let summaryProposal = makeSummaryProposal()
         let vm = ArticleEditorViewModel(
-            summarizeSelectionWorkflow: { _ in
+            summarizeSelectionWorkflow: { _, _, _ in
                 .success(summaryProposal, userMessage: "Summary ready.")
             }
         )
@@ -201,7 +201,7 @@ final class AppleStructuredWorkflowSlice1ViewModelTests: XCTestCase {
     func testSelectionWorkflow_summarizePayloadWrapsAsSummary() async {
         let summaryProposal = makeSummaryProposal()
         let vm = ArticleEditorViewModel(
-            summarizeSelectionWorkflow: { _ in
+            summarizeSelectionWorkflow: { _, _, _ in
                 .success(summaryProposal, userMessage: "Summary ready.")
             }
         )
@@ -226,7 +226,7 @@ final class AppleStructuredWorkflowSlice1ViewModelTests: XCTestCase {
     func testSelectionWorkflow_improvePayloadWrapsAsRewrite() async {
         let rewriteProposal = makeRewriteProposal()
         let vm = ArticleEditorViewModel(
-            improveSelectionWorkflow: { _ in
+            improveSelectionWorkflow: { _, _, _ in
                 .success(rewriteProposal, userMessage: "Improved.")
             }
         )

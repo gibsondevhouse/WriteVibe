@@ -184,7 +184,7 @@ struct WriteVibeTests {
         )
 
         let vm = ArticleEditorViewModel(
-            summarizeSelectionWorkflow: { request in
+            summarizeSelectionWorkflow: { request, _, _ in
                 .success(
                     SelectionSummaryProposal(
                         summaryText: "A concise summary of the selected passage.",
@@ -231,7 +231,7 @@ struct WriteVibeTests {
         let selection = try #require(editorState.selectionPayload)
 
         let vm = ArticleEditorViewModel(
-            improveSelectionWorkflow: { request in
+            improveSelectionWorkflow: { request, _, _ in
                 .success(
                     SelectionRewriteProposal(
                         rewrittenText: "Refined draft",

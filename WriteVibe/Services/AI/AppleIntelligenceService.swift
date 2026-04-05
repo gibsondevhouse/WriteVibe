@@ -213,6 +213,254 @@ protocol AppleStructuredWorkflowServicing: Sendable {
     func generateVariants(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<VariantsProposal>
 }
 
+protocol AppleStructuredWorkflowCoordinating: Sendable {
+    func autofillDraft(from summary: String, articleSnapshot: DraftAutofillSeed?) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal>
+    func suggestOutline(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal>
+    func suggestContext(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal>
+    func summarizeSelectedText(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<SummarizeProposal>
+    func improveSelectedText(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<ImproveProposal>
+    func generateVariants(text: String, selection: EditorSelectionPayload, article: Article) async -> AppleStructuredWorkflowTaskResult<VariantsProposal>
+}
+
+@MainActor
+final class AppleStructuredWorkflowCoordinator: AppleStructuredWorkflowCoordinating {
+    private let router: any AppleStructuredWorkflowRouting
+    private let service: any AppleStructuredWorkflowServicing
+    private let rolloutPhase: AppleWorkflowRolloutPhase
+    private let featureFlagEvaluator: @MainActor () -> Bool
+
+    init(
+        router: any AppleStructuredWorkflowRouting,
+        service: any AppleStructuredWorkflowServicing,
+        rolloutPhase: AppleWorkflowRolloutPhase = .internalValidation,
+        featureFlagEvaluator: @escaping @MainActor () -> Bool = { AppConstants.isAppleStructuredWorkflowEnabled }
+    ) {
+        self.router = router
+        self.service = service
+        self.rolloutPhase = rolloutPhase
+        self.featureFlagEvaluator = featureFlagEvaluator
+    }
+
+    func autofillDraft(from summary: String, articleSnapshot: DraftAutofillSeed?) async -> AppleStructuredWorkflowTaskResult<DraftAutofillProposal> {
+        let decision = router.evaluateRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .draftAutofill,
+            entryPoint: .articleDraftCreation,
+            articleID: nil,
+            hasSelection: false,
+            rolloutPhase: rolloutPhase,
+            featureFlagEnabled: featureFlagEvaluator()
+        ))
+        switch decision {
+        case .allowed:
+            return await service.autofillDraft(from: summary, articleSnapshot: articleSnapshot)
+        case .blocked, .unavailable:
+            return routeDecisionResult(decision, taskKind: .draftAutofill)
+        }
+    }
+
+    func suggestOutline(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredOutlineSuggestionProposal> {
+        let decision = router.evaluateRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .outlineSuggestion,
+            entryPoint: .articleOutlinePlanning,
+            articleID: snapshot.articleID,
+            hasSelection: false,
+            rolloutPhase: rolloutPhase,
+            featureFlagEnabled: featureFlagEvaluator()
+        ))
+        switch decision {
+        case .allowed:
+            return await service.suggestOutline(from: snapshot)
+        case .blocked, .unavailable:
+            return routeDecisionResult(decision, taskKind: .outlineSuggestion)
+        }
+    }
+
+    func suggestContext(from snapshot: AppleStructuredPlanningSnapshot) async -> AppleStructuredWorkflowTaskResult<AppleStructuredContextSuggestionProposal> {
+        let decision = router.evaluateRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .contextSuggestion,
+            entryPoint: .articleContextPlanning,
+            articleID: snapshot.articleID,
+            hasSelection: false,
+            rolloutPhase: rolloutPhase,
+            featureFlagEnabled: featureFlagEvaluator()
+        ))
+        switch decision {
+        case .allowed:
+            return await service.suggestContext(from: snapshot)
+        case .blocked, .unavailable:
+            return routeDecisionResult(decision, taskKind: .contextSuggestion)
+        }
+    }
+
+    func summarizeSelectedText(
+        text: String,
+        selection: EditorSelectionPayload,
+        article: Article
+    ) async -> AppleStructuredWorkflowTaskResult<SummarizeProposal> {
+        let decision = router.evaluateRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .summarizeSelection,
+            entryPoint: .articleEditorSelection,
+            articleID: article.id,
+            hasSelection: true,
+            rolloutPhase: rolloutPhase,
+            featureFlagEnabled: featureFlagEvaluator()
+        ))
+        switch decision {
+        case .allowed:
+            return await service.summarizeSelectedText(text: text, selection: selection, article: article)
+        case .blocked, .unavailable:
+            return routeDecisionResult(decision, taskKind: .summarizeSelection)
+        }
+    }
+
+    func improveSelectedText(
+        text: String,
+        selection: EditorSelectionPayload,
+        article: Article
+    ) async -> AppleStructuredWorkflowTaskResult<ImproveProposal> {
+        let decision = router.evaluateRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .improveSelection,
+            entryPoint: .articleEditorSelection,
+            articleID: article.id,
+            hasSelection: true,
+            rolloutPhase: rolloutPhase,
+            featureFlagEnabled: featureFlagEvaluator()
+        ))
+        switch decision {
+        case .allowed:
+            return await service.improveSelectedText(text: text, selection: selection, article: article)
+        case .blocked, .unavailable:
+            return routeDecisionResult(decision, taskKind: .improveSelection)
+        }
+    }
+
+    func generateVariants(
+        text: String,
+        selection: EditorSelectionPayload,
+        article: Article
+    ) async -> AppleStructuredWorkflowTaskResult<VariantsProposal> {
+        let decision = router.evaluateRoute(for: AppleWorkflowRouteRequest(
+            taskKind: .generateVariants,
+            entryPoint: .articleEditorSelection,
+            articleID: article.id,
+            hasSelection: true,
+            rolloutPhase: rolloutPhase,
+            featureFlagEnabled: featureFlagEvaluator()
+        ))
+        switch decision {
+        case .allowed:
+            return await service.generateVariants(text: text, selection: selection, article: article)
+        case .blocked, .unavailable:
+            return routeDecisionResult(decision, taskKind: .generateVariants)
+        }
+    }
+
+    private func routeDecisionResult<Payload: Sendable>(
+        _ decision: AppleWorkflowRouteDecision,
+        taskKind: AppleWorkflowTaskKind
+    ) -> AppleStructuredWorkflowTaskResult<Payload> {
+        switch decision {
+        case .allowed:
+            return AppleStructuredWorkflowTaskResult<Payload>(
+                state: .executionFailed,
+                payload: nil,
+                unavailableReason: .executionFailed,
+                fallbackCode: .retrySameAction,
+                userMessage: "Unexpected Apple workflow route state.",
+                runID: UUID(),
+                schemaVersion: AppleStructuredWorkflowService.schemaVersion
+            )
+        case .blocked(let reason):
+            return AppleStructuredWorkflowTaskResult<Payload>(
+                state: .validationFailed,
+                payload: nil,
+                unavailableReason: .routeBlocked,
+                fallbackCode: fallbackCode(for: taskKind),
+                userMessage: reason,
+                runID: UUID(),
+                schemaVersion: AppleStructuredWorkflowService.schemaVersion
+            )
+        case .unavailable(let reason, let fallback):
+            return AppleStructuredWorkflowTaskResult<Payload>(
+                state: state(for: reason),
+                payload: nil,
+                unavailableReason: reason,
+                fallbackCode: fallback ?? fallbackCode(for: taskKind),
+                userMessage: unavailableMessage(for: taskKind, reason: reason),
+                runID: UUID(),
+                schemaVersion: AppleStructuredWorkflowService.schemaVersion
+            )
+        }
+    }
+
+    private func state(for reason: AppleWorkflowUnavailableReason) -> AppleStructuredWorkflowTaskState {
+        switch reason {
+        case .featureFlagDisabled:
+            return .featureFlagDisabled
+        case .unsupportedPlatform:
+            return .unsupportedPlatform
+        case .modelUnavailable:
+            return .modelUnavailable
+        case .validationFailed, .routeBlocked:
+            return .validationFailed
+        case .executionFailed:
+            return .executionFailed
+        }
+    }
+
+    private func unavailableMessage(
+        for taskKind: AppleWorkflowTaskKind,
+        reason: AppleWorkflowUnavailableReason
+    ) -> String {
+        if reason == .featureFlagDisabled {
+            switch taskKind {
+            case .draftAutofill:
+                return "Structured draft autofill is disabled for this build."
+            case .outlineSuggestion:
+                return "Structured outline suggestions are disabled for this build."
+            case .contextSuggestion:
+                return "Structured context suggestions are disabled for this build."
+            case .wordPlanSuggestion:
+                return "Structured word planning is disabled for this build."
+            case .summarizeSelection, .improveSelection, .generateVariants:
+                return "Structured selection workflows are disabled for this build."
+            }
+        }
+
+        switch taskKind {
+        case .draftAutofill:
+            return "Draft autofill is unavailable right now."
+        case .outlineSuggestion:
+            return "Outline suggestion is unavailable right now."
+        case .contextSuggestion:
+            return "Context suggestion is unavailable right now."
+        case .wordPlanSuggestion:
+            return "Word planning is unavailable right now."
+        case .summarizeSelection:
+            return "Summary is unavailable right now."
+        case .improveSelection:
+            return "Improve is unavailable right now."
+        case .generateVariants:
+            return "Variants are unavailable right now."
+        }
+    }
+
+    private func fallbackCode(for taskKind: AppleWorkflowTaskKind) -> AppleWorkflowFallbackCode {
+        switch taskKind {
+        case .draftAutofill:
+            return .localHeuristicDraftAutofill
+        case .outlineSuggestion:
+            return .manualOutlineEditing
+        case .contextSuggestion:
+            return .manualContextEditing
+        case .wordPlanSuggestion:
+            return .manualWordPlanning
+        case .summarizeSelection, .improveSelection, .generateVariants:
+            return .manualSelectionEditing
+        }
+    }
+}
+
 protocol AppleWorkflowObservabilityServicing: Sendable {
     func recordRun(_ artifact: AppleWorkflowRunArtifact) async
 }
@@ -251,14 +499,7 @@ struct DefaultAppleStructuredWorkflowRouter: AppleStructuredWorkflowRouting {
             return .blocked(reason: "This Apple workflow action requires an explicit text selection.")
         }
 
-        switch AppleStructuredWorkflowService.defaultAvailability() {
-        case .available:
-            return .allowed
-        case .unsupportedPlatform:
-            return .unavailable(reason: .unsupportedPlatform, fallback: fallbackCode(for: request.taskKind))
-        case .modelUnavailable:
-            return .unavailable(reason: .modelUnavailable, fallback: fallbackCode(for: request.taskKind))
-        }
+        return .allowed
     }
 
     private let supportedTaskKinds: Set<AppleWorkflowTaskKind> = [

@@ -26,6 +26,10 @@ final class AppleStructuredWorkflowSelectionSurfaceTests: XCTestCase {
             SelectionWorkflowKind.summarize.validationMessage,
             "Select more text to summarize."
         )
+        XCTAssertEqual(
+            SelectionWorkflowKind.summarize.fallbackMessage,
+            "Summarize completed with fallback. Your selected text is unchanged."
+        )
 
         XCTAssertEqual(
             SelectionWorkflowKind.improve.unavailableMessage,
@@ -39,6 +43,10 @@ final class AppleStructuredWorkflowSelectionSurfaceTests: XCTestCase {
             SelectionWorkflowKind.improve.validationMessage,
             "Select more text to improve."
         )
+        XCTAssertEqual(
+            SelectionWorkflowKind.improve.fallbackMessage,
+            "Improve completed with fallback. Your selected text is unchanged."
+        )
 
         XCTAssertEqual(
             SelectionWorkflowKind.variants.unavailableMessage,
@@ -51,6 +59,10 @@ final class AppleStructuredWorkflowSelectionSurfaceTests: XCTestCase {
         XCTAssertEqual(
             SelectionWorkflowKind.variants.validationMessage,
             "Select more text to generate variants."
+        )
+        XCTAssertEqual(
+            SelectionWorkflowKind.variants.fallbackMessage,
+            "Variants completed with fallback. Your selected text is unchanged."
         )
     }
 }

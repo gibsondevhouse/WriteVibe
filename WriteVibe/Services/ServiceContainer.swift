@@ -46,6 +46,7 @@ final class ServiceContainer {
     let articleBodyMutationAdapter: ArticleBodyMutationAdapter
     let appleStructuredWorkflowService: any AppleStructuredWorkflowServicing
     let appleStructuredWorkflowRouter: any AppleStructuredWorkflowRouting
+    let appleStructuredWorkflowCoordinator: any AppleStructuredWorkflowCoordinating
     let appleWorkflowObservabilityService: any AppleWorkflowObservabilityServicing
     private let hasOpenRouterKey: @MainActor () -> Bool
     private let blockedAppleIntelligenceChatProvider = BlockedAppleIntelligenceChatProvider()
@@ -58,6 +59,7 @@ final class ServiceContainer {
         articleDraftAutofillService: (any ArticleDraftAutofillServicing)? = nil,
         appleStructuredWorkflowService: (any AppleStructuredWorkflowServicing)? = nil,
         appleStructuredWorkflowRouter: (any AppleStructuredWorkflowRouting)? = nil,
+        appleStructuredWorkflowCoordinator: (any AppleStructuredWorkflowCoordinating)? = nil,
         appleWorkflowObservabilityService: (any AppleWorkflowObservabilityServicing)? = nil,
         webSearchProvider: (any SearchContextProviding)? = nil,
         hasSearchAPIKey: (@MainActor () -> Bool)? = nil
@@ -80,6 +82,10 @@ final class ServiceContainer {
             contextMutationAdapter: articleContextMutationAdapter,
             observabilityService: appleWorkflowObservabilityService
         )
+        let appleStructuredWorkflowCoordinator = appleStructuredWorkflowCoordinator ?? AppleStructuredWorkflowCoordinator(
+            router: appleStructuredWorkflowRouter,
+            service: appleStructuredWorkflowService
+        )
 
         self.ollamaProvider = ollamaProvider
         self.openRouterProvider = openRouterProvider
@@ -93,6 +99,7 @@ final class ServiceContainer {
         self.articleBodyMutationAdapter = articleBodyMutationAdapter
         self.appleStructuredWorkflowService = appleStructuredWorkflowService
         self.appleStructuredWorkflowRouter = appleStructuredWorkflowRouter
+        self.appleStructuredWorkflowCoordinator = appleStructuredWorkflowCoordinator
         self.appleWorkflowObservabilityService = appleWorkflowObservabilityService
         self.streamingService = StreamingService(
             conversationService: conversationService,
